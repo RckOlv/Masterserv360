@@ -1,0 +1,321 @@
+/* ===== Layout general ===== */
+.wrapper {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f6fa;
+  transition: all 0.3s ease-in-out;
+  font-family: "Inter", sans-serif;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  width: 250px;
+  background-color: #b30000; /* Rojo principal */
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  transition: width 0.3s ease, background 0.3s ease;
+  overflow: hidden;
+  z-index: 2000;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-collapsed .sidebar {
+  width: 70px;
+}
+
+/* ===== Header del sidebar ===== */
+.sidebar-header {
+  padding: 1.2rem;
+  background: #800000; /* Rojo más oscuro */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.brand {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.brand span {
+  color: #ffffff;
+  background-color: #ff4d4d;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.toggle-btn:hover {
+  transform: rotate(90deg);
+}
+
+/* ===== Links del sidebar ===== */
+.sidebar-nav {
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+}
+
+.sidebar-nav li {
+  width: 100%;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  color: #f5f5f5;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-nav a i {
+  font-size: 1.2rem;
+  margin-right: 12px;
+  min-width: 24px;
+  text-align: center;
+}
+
+.sidebar-nav a:hover {
+  background-color: #990000;
+  color: #fff;
+  border-left: 3px solid #fff;
+}
+
+.sidebar-nav a.active {
+  background-color: #800000;
+  color: #fff;
+  border-left: 3px solid #fff;
+}
+
+/* ===== Sidebar colapsado ===== */
+.sidebar-collapsed .sidebar-nav a {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.sidebar-collapsed .sidebar-nav a i {
+  margin: 0;
+}
+
+.sidebar-collapsed .sidebar-nav a span {
+  display: none;
+}
+
+/* ===== Contenido principal ===== */
+.main-content {
+  margin-left: 250px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.3s ease;
+  background-color: #ffffff;
+}
+
+.sidebar-collapsed .main-content {
+  margin-left: 70px;
+}
+
+/* ===== Topbar ===== */
+.topbar {
+  background: #ffffff;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar h4 {
+  color: #b30000;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* ===== Contenido ===== */
+.content {
+  padding: 1.5rem;
+  background-color: #f5f6fa;
+  flex-grow: 1;
+}
+
+/* ===== Layout general ===== */
+.wrapper {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f6fa;
+  transition: all 0.3s ease-in-out;
+  font-family: "Inter", sans-serif;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  width: 250px;
+  background-color: #b30000; /* Rojo principal */
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  transition: width 0.3s ease, background 0.3s ease;
+  overflow: hidden;
+  z-index: 2000;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-collapsed .sidebar {
+  width: 70px;
+}
+
+/* ===== Header del sidebar ===== */
+.sidebar-header {
+  padding: 1.2rem;
+  background: #800000; /* Rojo más oscuro */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.brand {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.brand span {
+  color: #ffffff;
+  background-color: #ff4d4d;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.toggle-btn:hover {
+  transform: rotate(90deg);
+}
+
+/* ===== Links del sidebar ===== */
+.sidebar-nav {
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+}
+
+.sidebar-nav li {
+  width: 100%;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  color: #f5f5f5;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-nav a i {
+  font-size: 1.2rem;
+  margin-right: 12px;
+  min-width: 24px;
+  text-align: center;
+}
+
+.sidebar-nav a:hover {
+  background-color: #990000;
+  color: #fff;
+  border-left: 3px solid #fff;
+}
+
+.sidebar-nav a.active {
+  background-color: #800000;
+  color: #fff;
+  border-left: 3px solid #fff;
+}
+
+/* ===== Sidebar colapsado ===== */
+.sidebar-collapsed .sidebar-nav a {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.sidebar-collapsed .sidebar-nav a i {
+  margin: 0;
+}
+
+.sidebar-collapsed .sidebar-nav a span {
+  display: none;
+}
+
+/* ===== Contenido principal ===== */
+.main-content {
+  margin-left: 250px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.3s ease;
+  background-color: #ffffff;
+}
+
+.sidebar-collapsed .main-content {
+  margin-left: 70px;
+}
+
+/* ===== Topbar ===== */
+.topbar {
+  background: #ffffff;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar h4 {
+  color: #b30000;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* ===== Contenido ===== */
+.content {
+  padding: 1.5rem;
+  background-color: #f5f6fa;
+  flex-grow: 1;
+}

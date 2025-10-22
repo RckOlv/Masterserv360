@@ -1,0 +1,128 @@
+<div class="container mt-4">
+  <h2 class="mb-3 text-center">Gestión de Categorías</h2>
+
+  <!-- 🔹 Barra de búsqueda -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <input
+        type="text"
+        class="form-control"
+        placeholder="Buscar categoría por nombre..."
+        [(ngModel)]="terminoBusqueda"
+        (input)="buscarCategoria()"
+      />
+    </div>
+    <div class="col-md-3">
+      <select class="form-select" [(ngModel)]="filtroEstado" (change)="filtrarCategorias()">
+        <option value="todas">Todas</option>
+        <option value="activas">Activas</option>
+        <option value="inactivas">Inactivas</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <button class="btn btn-outline-secondary w-100" (click)="reiniciarFiltros()">
+        Reiniciar
+      </button>
+    </div>
+  </div>
+
+  <!-- 🔹 Botón nueva categoría -->
+  <div class="text-end mb-3">
+    <button class="btn btn-primary" (click)="toggleModal()">
+      <i class="bi bi-plus-circle"></i> Nueva Categoría
+    </button>
+  </div>
+
+  <!-- 🔹 Tabla de categorías -->
+  <table class="table table-striped table-bordered text-center">
+    <thead class="table-dark">
+      <tr>
+        <th>Nombre</th>
+        <th>Descripción</th>
+        <th>Estado</th>
+        <th style="width: 200px;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let cat of categoriasFiltradas">
+        <td>{{ cat.nombreCategoria }}</td>
+        <td>{{ cat.descripcion }}</td>
+        <td>
+          <span [ngClass]="{'text-success': cat.activo, 'text-danger': !cat.activo}">
+            {{ cat.activo ? 'Activo' : 'Inactivo' }}
+          </span>
+        </td>
+        <td>
+          <button class="btn btn-sm btn-warning me-2" (click)="toggleModal(cat)">
+            <i class="bi bi-pencil"></i> Editar
+          </button>
+          <button class="btn btn-sm btn-danger me-2" *ngIf="cat.activo" (click)="eliminarCategoria(cat.idCategoria)">
+            <i class="bi bi-trash"></i> Eliminar
+          </button>
+          <button class="btn btn-sm btn-success" *ngIf="!cat.activo" (click)="reactivarCategoria(cat.idCategoria)">
+            <i class="bi bi-arrow-clockwise"></i> Reactivar
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 🔹 Modal de categoría -->
+  <div
+    class="modal fade"
+    id="categoriaModal"
+    tabindex="-1"
+    aria-labelledby="categoriaModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="categoriaModalLabel">
+            {{ esEdicion ? 'Editar Categoría' : 'Nueva Categoría' }}
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Nombre:</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="nuevaCategoria.nombreCategoria"
+            />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Descripción:</label>
+            <textarea
+              class="form-control"
+              [(ngModel)]="nuevaCategoria.descripcion"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            (click)="guardarCategoria()"
+            data-bs-dismiss="modal"
+          >
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,66 @@
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Gestión de Usuarios</h3>
+
+    <!-- 🔹 Botón para alternar entre lista y formulario -->
+    <button
+      *ngIf="authService.tienePermiso('USUARIO_CREAR')"
+      class="btn btn-primary"
+      (click)="alternarFormulario()"
+    >
+      <i class="bi" [ngClass]="mostrarFormulario ? 'bi-arrow-left' : 'bi-person-plus'"></i>
+      {{ mostrarFormulario ? 'Volver a la lista' : 'Registrar Usuario' }}
+    </button>
+  </div>
+
+  <!-- 🔹 Si no está mostrando el formulario, mostrar tabla -->
+  <div *ngIf="!mostrarFormulario">
+    <table class="table table-striped mt-3 align-middle text-center">
+      <thead class="table-light">
+        <tr>
+          <th>Nombre</th>
+          <th>Apellido</th>
+          <th>Documento</th>
+          <th>Email</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let u of usuarios">
+          <td>{{ u.nombre }}</td>
+          <td>{{ u.apellido }}</td>
+          <td>{{ u.documento }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.rol?.nombre }}</td>
+          <td>
+            <span class="badge" [ngClass]="u.estado ? 'bg-success' : 'bg-secondary'">
+              {{ u.estado ? 'Activo' : 'Inactivo' }}
+            </span>
+          </td>
+          <td>
+            <button
+              *ngIf="authService.tienePermiso('USUARIO_ELIMINAR')"
+              class="btn btn-danger btn-sm"
+              (click)="eliminarUsuario(u.idUsuario!)"
+            >
+              <i class="bi bi-trash"></i> Eliminar
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="usuarios.length === 0">
+          <td colspan="7" class="text-muted py-3">
+            No hay usuarios registrados.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 🔹 Formulario de registro -->
+  <div *ngIf="mostrarFormulario" class="mt-4">
+    <app-registro-admin></app-registro-admin>
+  </div>
+</div>

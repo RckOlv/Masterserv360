@@ -1,0 +1,15 @@
+<div class="registro-container">
+  <h2>Registro de Cliente</h2>
+  <form #registroForm="ngForm" (ngSubmit)="registrarUsuario(registroForm)">
+    <input type="text" name="nombre" [(ngModel)]="usuario.nombre" placeholder="Nombre" required>
+    <input type="text" name="apellido" [(ngModel)]="usuario.apellido" placeholder="Apellido" required>
+    <input type="text" name="documento" [(ngModel)]="usuario.documento" placeholder="Documento" required>
+    <input type="email" name="email" [(ngModel)]="usuario.email" placeholder="Email" required>
+    <input type="password" name="password" [(ngModel)]="usuario.password" placeholder="Contraseña" required>
+
+    <div class="buttons">
+      <button type="submit" [disabled]="!registroForm.valid">Registrarse</button>
+      <button type="button" (click)="router.navigate(['/login'])" class="cancel">Cancelar</button>
+    </div>
+  </form>
+</div>
