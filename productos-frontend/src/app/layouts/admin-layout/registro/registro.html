@@ -1,0 +1,19 @@
+<div class="registro-container">
+  <h2>Crear Usuario</h2>
+  <form #registroForm="ngForm" (ngSubmit)="registrarUsuario(registroForm)">
+    <input type="text" name="nombre" [(ngModel)]="usuario.nombre" placeholder="Nombre" required>
+    <input type="text" name="apellido" [(ngModel)]="usuario.apellido" placeholder="Apellido" required>
+    <input type="text" name="documento" [(ngModel)]="usuario.documento" placeholder="Documento" required>
+    <input type="email" name="email" [(ngModel)]="usuario.email" placeholder="Email" required>
+    <input type="password" name="password" [(ngModel)]="usuario.password" placeholder="Contraseña" required>
+
+    <select name="rol" [(ngModel)]="usuario.rol" required>
+      <option *ngFor="let r of roles" [ngValue]="r">{{ r.nombre }}</option>
+    </select>
+
+    <div class="buttons">
+      <button type="submit" [disabled]="!registroForm.valid">Guardar</button>
+      <button type="button" (click)="router.navigate(['/admin/usuarios'])" class="cancel">Cancelar</button>
+    </div>
+  </form>
+</div>

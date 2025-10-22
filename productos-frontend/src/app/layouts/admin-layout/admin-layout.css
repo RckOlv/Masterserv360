@@ -1,0 +1,20 @@
+.admin-container {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f6fa;
+}
+
+.content {
+  flex: 1;
+  margin-left: 250px; /* 🔹 Espacio para el sidebar */
+  padding: 2rem;
+  transition: margin-left 0.3s ease;
+  background: #f9f9f9;
+}
+
+/* 🔸 Para pantallas chicas: el sidebar se oculta y el contenido ocupa todo */
+@media (max-width: 992px) {
+  .content {
+    margin-left: 0;
+  }
+}

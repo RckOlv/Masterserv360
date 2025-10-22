@@ -1,0 +1,50 @@
+<div class="container mt-4">
+  <h3>Gestión de Permisos</h3>
+
+  <!-- Formulario de Permiso -->
+  <form [formGroup]="permisoForm" (ngSubmit)="guardarPermiso()" class="mb-4 mt-3">
+    <div class="mb-3">
+      <label>Nombre del Permiso</label>
+      <input type="text" formControlName="nombre" class="form-control" placeholder="Nombre del permiso">
+      <div class="text-danger" *ngIf="permisoForm.get('nombre')?.touched && permisoForm.get('nombre')?.invalid">
+        El nombre es obligatorio.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label>Descripción</label>
+      <input type="text" formControlName="descripcion" class="form-control" placeholder="Descripción (opcional)">
+    </div>
+
+    <button type="submit" class="btn btn-primary">{{ editMode ? 'Actualizar' : 'Agregar' }}</button>
+    <button type="button" class="btn btn-secondary ms-2" (click)="resetForm()">Cancelar</button>
+  </form>
+
+  <!-- Tabla de permisos -->
+  <table class="table table-striped table-hover text-center align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Nombre</th>
+        <th>Descripción</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let p of permisos">
+        <td>{{ p.nombre }}</td>
+        <td>{{ p.descripcion }}</td>
+        <td>
+          <button class="btn btn-warning btn-sm me-2" (click)="editarPermiso(p)">
+            <i class="bi bi-pencil"></i> Editar
+          </button>
+          <button class="btn btn-danger btn-sm" (click)="eliminarPermiso(p.id!)">
+            <i class="bi bi-trash"></i> Eliminar
+          </button>
+        </td>
+      </tr>
+      <tr *ngIf="permisos.length === 0">
+        <td colspan="3" class="text-muted py-3">No hay permisos registrados.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

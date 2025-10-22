@@ -1,0 +1,61 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f4f6f8;
+}
+
+.registro-container {
+  flex: 1;
+  padding: 40px;
+  margin-left: 260px; /* espacio para el sidebar */
+  background-color: #fff;
+  border-radius: 10px;
+  max-width: 800px;
+  margin-top: 40px;
+}
+
+h2 {
+  margin-bottom: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  color: #555;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 15px;
+}
+
+.buttons {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+}
+
+button[type="submit"] {
+  background-color: #007bff;
+}
+
+button.cancel {
+  background-color: #6c757d;
+}

@@ -1,0 +1,225 @@
+<div class="container mt-4">
+  <h2 class="mb-4">Gestión de Productos</h2>
+
+  <!-- 🔍 Búsqueda rápida -->
+  <div class="card p-3 mb-3">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-8">
+        <input type="text" class="form-control" placeholder="Buscar por nombre"
+               [(ngModel)]="filtroNombre" (ngModelChange)="listarProductos()">
+      </div>
+      <div class="col-md-4 text-end">
+        <button class="btn btn-outline-secondary" (click)="mostrarFiltroAvanzado = !mostrarFiltroAvanzado">
+          {{ mostrarFiltroAvanzado ? 'Ocultar filtros avanzados' : 'Mostrar filtros avanzados' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⚙️ Filtro avanzado -->
+  <div *ngIf="mostrarFiltroAvanzado" class="card p-3 mb-3 bg-light border-secondary">
+    <div class="row g-3">
+      <div class="col-md-6 col-lg-4">
+        <label class="form-label fw-bold">Categoría:</label>
+        <select class="form-select" [(ngModel)]="categoriaSeleccionada">
+          <option value="0">-- Todas las categorías --</option>
+          <option *ngFor="let c of categorias" [value]="c.idCategoria">{{ c.nombreCategoria }}</option>
+        </select>
+      </div>
+
+      <div class="col-md-6 col-lg-4">
+        <label class="form-label fw-bold">Activo:</label>
+        <select class="form-select" [(ngModel)]="activoSeleccionado">
+          <option value="todos">Todos</option>
+          <option value="activos">Activos</option>
+          <option value="inactivos">Inactivos</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-2">
+      <div class="col-md-6 col-lg-4">
+        <label class="form-label fw-bold">Fecha desde:</label>
+        <input type="date" class="form-control" [(ngModel)]="fechaDesde">
+      </div>
+      <div class="col-md-6 col-lg-4">
+        <label class="form-label fw-bold">Fecha hasta:</label>
+        <input type="date" class="form-control" [(ngModel)]="fechaHasta">
+      </div>
+      <div class="col-md-12 col-lg-4 d-flex align-items-end justify-content-end">
+        <button class="btn btn-primary me-2" (click)="listarProductos()">🔍 Aplicar Filtros</button>
+        <button class="btn btn-secondary" (click)="limpiarFiltros()">♻ Limpiar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ➕ Botón crear -->
+  <div class="mb-3">
+    <button class="btn btn-success" (click)="toggleModal()">+ Nuevo Producto</button>
+  </div>
+
+  <!-- 📦 Tabla de productos -->
+  <table class="table table-bordered table-striped">
+    <thead class="table-dark">
+      <tr>
+        <th>Código</th>
+        <th>Nombre</th>
+        <th>Descripción</th>
+        <th>Categoría</th>
+        <th>Precio Costo</th>
+        <th>Precio Venta</th>
+        <th>Stock Actual</th>
+        <th>Stock Mínimo</th>
+        <th>Fecha Alta</th>
+        <th>Imagen</th>
+        <th>Activo</th>
+        <th style="width: 150px;">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let p of productosPaginados">
+        <td>{{ p.codigo }}</td>
+        <td>{{ p.nombreProducto }}</td>
+        <td>{{ p.descripcion }}</td>
+        <td>{{ p.categoria?.nombreCategoria }}</td>
+        <td>{{ p.precioCosto | currency:'USD' }}</td>
+        <td>{{ p.precioVenta | currency:'USD' }}</td>
+        <td>{{ p.stockActual }}</td>
+        <td>{{ p.stockMinimo }}</td>
+        <td>{{ p.fechaAlta ? (p.fechaAlta | date:'dd/MM/yyyy') : '-' }}</td>
+        <td>
+          <img *ngIf="p.imagen" [src]="p.imagen" alt="Imagen" width="50" height="50" class="rounded">
+          <span *ngIf="!p.imagen" class="text-muted">Sin imagen</span>
+        </td>
+        <td>
+          <span [class.text-success]="p.activo" [class.text-danger]="!p.activo">
+            {{ p.activo ? 'Activo' : 'Inactivo' }}
+          </span>
+        </td>
+        <td>
+          <button class="btn btn-sm btn-primary me-1" (click)="toggleModal(p)">Editar</button>
+          <ng-container *ngIf="p.activo; else reactivarBtn">
+            <button class="btn btn-sm btn-danger" (click)="eliminar(p.idProducto!)">Eliminar</button>
+          </ng-container>
+          <ng-template #reactivarBtn>
+            <button class="btn btn-sm btn-success" (click)="reactivar(p.idProducto!)">Reactivar</button>
+          </ng-template>
+        </td>
+      </tr>
+      <tr *ngIf="productos.length === 0">
+        <td colspan="12" class="text-center">No se encontraron productos</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 📄 Paginación -->
+  <nav *ngIf="totalPaginas > 1">
+    <ul class="pagination justify-content-center">
+      <li class="page-item" [class.disabled]="paginaActual === 1">
+        <button class="page-link" (click)="paginaActual = paginaActual - 1">Anterior</button>
+      </li>
+      <li class="page-item" *ngFor="let pagina of [].constructor(totalPaginas); let i = index"
+          [class.active]="paginaActual === (i+1)">
+        <button class="page-link" (click)="paginaActual = i+1">{{ i+1 }}</button>
+      </li>
+      <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+        <button class="page-link" (click)="paginaActual = paginaActual + 1">Siguiente</button>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- 🧩 Modal Crear/Editar -->
+  <div *ngIf="mostrarModal" class="modal">
+    <div class="modal-content p-4">
+      <span class="close" (click)="mostrarModal = false">&times;</span>
+      <h5 class="mb-3 text-center fw-bold">
+        {{ esEdicion ? '✏️ Editar Producto' : '🆕 Nuevo Producto' }}
+      </h5>
+
+      <form (ngSubmit)="guardarProducto()">
+        <div class="row g-3">
+          <!-- Código -->
+          <div class="col-md-6" *ngIf="esEdicion">
+            <label class="form-label">Código:</label>
+            <input type="text" class="form-control" [(ngModel)]="nuevoProducto.codigo" name="codigo" readonly>
+          </div>
+
+          <!-- Nombre -->
+          <div class="col-md-6">
+            <label class="form-label">Nombre:</label>
+            <input type="text" class="form-control" [(ngModel)]="nuevoProducto.nombreProducto" name="nombreProducto" required>
+          </div>
+
+          <!-- Descripción -->
+          <div class="col-12">
+            <label class="form-label">Descripción:</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="nuevoProducto.descripcion" name="descripcion"></textarea>
+          </div>
+
+          <!-- Precio Costo -->
+          <div class="col-md-6">
+            <label class="form-label">Precio Costo:</label>
+            <input type="number" step="0.01" class="form-control" [(ngModel)]="nuevoProducto.precioCosto" name="precioCosto" required>
+          </div>
+
+          <!-- Precio Venta -->
+          <div class="col-md-6">
+            <label class="form-label">Precio Venta:</label>
+            <input type="number" step="0.01" class="form-control" [(ngModel)]="nuevoProducto.precioVenta" name="precioVenta" required>
+          </div>
+
+          <!-- Stock Actual -->
+          <div class="col-md-6">
+            <label class="form-label">Stock Actual:</label>
+            <input type="number" class="form-control" [(ngModel)]="nuevoProducto.stockActual" name="stockActual" min="0">
+          </div>
+
+          <!-- Stock Mínimo -->
+          <div class="col-md-6">
+            <label class="form-label">Stock Mínimo:</label>
+            <input type="number" class="form-control" [(ngModel)]="nuevoProducto.stockMinimo" name="stockMinimo" min="0">
+          </div>
+
+          <!-- Imagen -->
+          <div class="col-md-8">
+            <label class="form-label">URL de Imagen:</label>
+            <input type="text" class="form-control" [(ngModel)]="nuevoProducto.imagen" name="imagen" placeholder="https://...">
+          </div>
+
+          <!-- Vista previa -->
+          <div class="col-md-4 d-flex align-items-center justify-content-center">
+            <img *ngIf="nuevoProducto.imagen" [src]="nuevoProducto.imagen" alt="Vista previa"
+                 class="rounded border" style="max-height: 80px; object-fit: cover;">
+          </div>
+
+          <!-- Categoría -->
+          <div class="col-md-8">
+            <label class="form-label">Categoría:</label>
+            <select class="form-select" [(ngModel)]="categoriaSeleccionada" name="categoria" required>
+              <option value="0">-- Seleccione --</option>
+              <option *ngFor="let c of categorias" [value]="c.idCategoria">{{ c.nombreCategoria }}</option>
+            </select>
+          </div>
+
+          <!-- Activo -->
+          <div class="col-md-4 d-flex align-items-center">
+            <div class="form-check mt-3">
+              <input type="checkbox" class="form-check-input" id="activo" [(ngModel)]="nuevoProducto.activo" name="activo">
+              <label class="form-check-label" for="activo">Activo</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="text-end mt-4">
+          <button type="button" class="btn btn-outline-secondary me-2" (click)="mostrarModal = false">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            {{ esEdicion ? '💾 Guardar Cambios' : '➕ Crear Producto' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
