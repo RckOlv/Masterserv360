@@ -1,14 +1,15 @@
-export interface Producto {
-  idProducto?: number;
+// src/app/models/producto.model.ts
+export interface ProductoDTO {
+  id?: number; // Es opcional porque al crear, no lo tenemos
   codigo: string;
-  nombreProducto: string;
-  descripcion?: string;
+  nombre: string;
+  descripcion?: string; // Opcional
+  precioVenta: number; // Angular/TS maneja bien 'number' para BigDecimal
   precioCosto: number;
-  precioVenta: number; 
+  imagenUrl?: string; // Opcional
   stockActual: number;
   stockMinimo: number;
-  activo: boolean;
-  fechaAlta?: string;      // 🔹 Fecha de alta (ISO string)
-  imagen?: string;         // 🔹 URL o nombre de archivo
-  categoria: { idCategoria: number; nombreCategoria?: string };
+  estado?: string; // Opcional
+  categoriaId: number;
+  categoriaNombre?: string; // Solo lectura, para mostrar
 }

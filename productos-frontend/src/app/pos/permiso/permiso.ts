@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { PermisoService } from '../../service/permiso.service';
-import { Permiso } from '../../models/permiso.model';
+import { PermisoDTO } from '../../models/permiso.model';
 
 @Component({
   selector: 'app-permiso',
@@ -14,7 +14,7 @@ import { Permiso } from '../../models/permiso.model';
   styleUrls: ['./permiso.css']
 })
 export class PermisoComponent implements OnInit {
-  permisos: Permiso[] = [];
+  permisos: PermisoDTO[] = [];
   permisoForm!: FormGroup;
   editMode: boolean = false;
   permisoEditId?: number;
@@ -42,7 +42,7 @@ export class PermisoComponent implements OnInit {
       return;
     }
 
-    const permiso: Permiso = this.permisoForm.value;
+    const permiso: PermisoDTO = this.permisoForm.value;
 
     if (this.editMode && this.permisoEditId != null) {
       permiso.id = this.permisoEditId;
@@ -58,11 +58,11 @@ export class PermisoComponent implements OnInit {
     }
   }
 
-  editarPermiso(permiso: Permiso) {
+  editarPermiso(permiso: PermisoDTO) {
     this.editMode = true;
     this.permisoEditId = permiso.id;
     this.permisoForm.patchValue({
-      nombre: permiso.nombre,
+      nombre: permiso.nombrePermiso,
       descripcion: permiso.descripcion
     });
   }

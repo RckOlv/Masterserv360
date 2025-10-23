@@ -1,42 +1,33 @@
 import { Routes } from '@angular/router';
-import { AdminLayoutComponent } from './layouts/admin-layout/admin-layout';
-import { PublicLayoutComponent } from './layouts/public-layout/public-layout';
-import { LoginComponent } from './pages/login/login';
-import { RegistroAdminComponent } from './layouts/admin-layout/registro/registro';
-import { DashboardComponent } from './pos/dashboard/dashboard';
-import { ProductosComponent } from './pos/productos/productos';
-import { CategoriasComponent } from './pos/categorias/categorias';
-import { UsuarioListComponent } from './pos/usuarios-list/usuarios-list';
-import { AuthGuard } from './service/auth.guard';
+import { AuthGuard } from './guards/auth.guard'; // Importa nuestro guard
 
 export const routes: Routes = [
-  // 🔹 Páginas públicas
+  
+  // --- Rutas Públicas (Layout Público) ---
   {
     path: '',
-    component: PublicLayoutComponent,
+    // component: PublicLayoutComponent, // Tu layout público
     children: [
-      { path: '', redirectTo: 'login', pathMatch: 'full' },
-      { path: 'login', component: LoginComponent },
-      { path: 'registro', component: RegistroAdminComponent },
-      // 🔹 Página principal para clientes logueados
-    { path: 'home', loadComponent: () => import('./pages/reg-cli/reg-cli').then(m => m.RegistroClienteComponent) }
-    ],
+      { path: 'login', loadComponent: () => import('./pages/login/login') },
+      { path: 'register', loadComponent: () => import('./pages/reg-cli/reg-cli') }, // Asumo que reg-cli es tu registro
+      { path: '', redirectTo: 'login', pathMatch: 'full' }
+    ]
   },
 
-  // 🔹 Páginas del POS (solo autenticados)
+  // --- Rutas Protegidas (Layout de Admin/POS) ---
   {
-    path: 'pos',
-    component: AdminLayoutComponent,
-    canActivate: [AuthGuard],
+    path: '', // O 'admin', 'pos', etc.
+    // component: AdminLayoutComponent, // Tu layout de admin (con el sidebar)
+    canActivate: [AuthGuard], // <-- ¡AQUÍ ESTÁ LA MAGIA!
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-      { path: 'dashboard', component: DashboardComponent },
-      { path: 'productos', component: ProductosComponent },
-      { path: 'categorias', component: CategoriasComponent },
-      { path: 'usuarios', component: UsuarioListComponent },
-    ],
+      { path: 'dashboard', loadComponent: () => import('./pos/dashboard/dashboard') },
+      { path: 'productos', loadComponent: () => import('./pos/productos/productos') },
+      { path: 'categorias', loadComponent: () => import('./pos/categorias/categorias') },
+      { path: 'usuarios', loadComponent: () => import('./pos/usuarios-list/usuarios-list') },
+      // ... más rutas protegidas ...
+    ]
   },
 
-  // 🔹 Ruta fallback
-  { path: '**', redirectTo: '' },
+  // Redirección general
+  { path: '**', redirectTo: 'login' }
 ];

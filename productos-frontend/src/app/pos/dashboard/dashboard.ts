@@ -9,7 +9,7 @@ import { HttpClient } from '@angular/common/http';
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
-export class DashboardComponent implements OnInit {
+export default class DashboardComponent implements OnInit {
 
   ultimosProductos: any[] = []; // 👈 cambié el nombre para que sea más claro
   stats = [

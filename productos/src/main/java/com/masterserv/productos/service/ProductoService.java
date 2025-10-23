@@ -1,112 +1,140 @@
 package com.masterserv.productos.service;
 
+import com.masterserv.productos.dto.ProductoDTO;
 import com.masterserv.productos.dto.ProductoFiltroDTO;
+import com.masterserv.productos.entity.Categoria;
 import com.masterserv.productos.entity.Producto;
+import com.masterserv.productos.mapper.ProductoMapper;
+import com.masterserv.productos.repository.CategoriaRepository;
 import com.masterserv.productos.repository.ProductoRepository;
+import com.masterserv.productos.specification.ProductoSpecification;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Random;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProductoService {
 
-    private final ProductoRepository productoRepository;
-    private final Random random = new Random();
+    @Autowired
+    private ProductoRepository productoRepository;
 
-    public ProductoService(ProductoRepository productoRepository) {
-        this.productoRepository = productoRepository;
+    @Autowired
+    private CategoriaRepository categoriaRepository;
+
+    @Autowired
+    private ProductoMapper productoMapper;
+
+    @Autowired
+    private ProductoSpecification productoSpecification;
+
+    @Transactional(readOnly = true)
+    public Page<ProductoDTO> findAll(Pageable pageable) {
+        // Obtenemos la página de Entidades
+        Page<Producto> productoPage = productoRepository.findAll(pageable);
+        // Convertimos la página de Entidades a una página de DTOs
+        return productoPage.map(productoMapper::toProductoDTO);
     }
 
-    public List<Producto> listarProductos() {
-        return productoRepository.findAll();
+    @Transactional(readOnly = true)
+    public ProductoDTO findById(Long id) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + id));
+        return productoMapper.toProductoDTO(producto);
     }
 
-    public List<Producto> listarActivos() {
-        return productoRepository.findByActivoTrue();
-    }
-
-    public Producto creaProducto(Producto producto) {
-        if (productoRepository.existsByCodigo(producto.getCodigo())) {
-            throw new RuntimeException("Código de producto ya existe");
+    @Transactional
+    public ProductoDTO create(ProductoDTO productoDTO) {
+        // Validación de negocio
+        if (productoRepository.existsByCodigo(productoDTO.codigo())) {
+            throw new RuntimeException("Error: El código de producto ya existe.");
         }
-        return guardarProducto(producto);
+
+        // Convertimos DTO a Entidad
+        Producto producto = productoMapper.toProducto(productoDTO);
+
+        // Buscamos y asignamos la entidad Categoria completa
+        Categoria categoria = categoriaRepository.findById(productoDTO.categoriaId())
+                .orElseThrow(() -> new RuntimeException("Categoría no encontrada con id: " + productoDTO.categoriaId()));
+        producto.setCategoria(categoria);
+        
+        // Ponemos el stock en 0 por defecto (como hablamos)
+        producto.setStockActual(0);
+
+        // Guardamos la entidad
+        Producto productoGuardado = productoRepository.save(producto);
+
+        // Retornamos el DTO
+        return productoMapper.toProductoDTO(productoGuardado);
     }
 
-    public Producto actualizarProducto(Producto producto) {
-        if (!productoRepository.existsById(producto.getIdProducto())) {
-            throw new RuntimeException("Producto no encontrado");
+    @Transactional
+    public ProductoDTO update(Long id, ProductoDTO productoDTO) {
+        // 1. Verificar que el producto exista
+        Producto productoExistente = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + id));
+
+        // 2. Validar que el nuevo código (si cambió) no esté tomado por OTRO producto
+        if (!productoExistente.getCodigo().equals(productoDTO.codigo()) && 
+            productoRepository.existsByCodigo(productoDTO.codigo())) {
+            throw new RuntimeException("Error: El nuevo código de producto ya está en uso por otro producto.");
         }
-        return guardarProducto(producto);
+
+        // 3. Actualizar los campos (mapeo DTO -> Entidad existente)
+        productoExistente.setCodigo(productoDTO.codigo());
+        productoExistente.setNombre(productoDTO.nombre());
+        productoExistente.setDescripcion(productoDTO.descripcion());
+        productoExistente.setPrecioVenta(productoDTO.precioVenta());
+        productoExistente.setPrecioCosto(productoDTO.precioCosto());
+        productoExistente.setImagenUrl(productoDTO.imagenUrl());
+        productoExistente.setStockMinimo(productoDTO.stockMinimo());
+        productoExistente.setEstado(productoDTO.estado());
+        // El stockActual no se actualiza por esta vía, se usa MovimientoStockService
+
+        // 4. Verificar si la categoría cambió
+        if (!productoExistente.getCategoria().getId().equals(productoDTO.categoriaId())) {
+            Categoria nuevaCategoria = categoriaRepository.findById(productoDTO.categoriaId())
+                    .orElseThrow(() -> new RuntimeException("Categoría no encontrada con id: " + productoDTO.categoriaId()));
+            productoExistente.setCategoria(nuevaCategoria);
+        }
+
+        // 5. Guardar
+        Producto productoActualizado = productoRepository.save(productoExistente);
+        return productoMapper.toProductoDTO(productoActualizado);
     }
 
-    public void cambiarActivo(Long idProducto, boolean activo) {
-        Producto producto = productoRepository.findById(idProducto)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
-        producto.setActivo(activo);
+    @Transactional
+    public void softDelete(Long id) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + id));
+
+        // Validación adicional (opcional pero recomendada):
+        // ¿Está este producto en alguna venta activa? ¿O en stock?
+        // Si es así, quizás no deberías permitir borrarlo lógicamente.
+        producto.setEstado("INACTIVO"); // O "DESCONTINUADO"
         productoRepository.save(producto);
     }
 
-    public Producto guardarProducto(Producto producto) {
-        if (producto.getCodigo() == null || producto.getCodigo().isBlank()) {
-            producto.setCodigo(generarCodigoProducto(producto));
-        }
-
-        if (producto.getPrecioCosto() == null)
-            producto.setPrecioCosto(0.0);
-        if (producto.getPrecioVenta() == null)
-            producto.setPrecioVenta(0.0);
-        if (producto.getStockActual() == null)
-            producto.setStockActual(0);
-        if (producto.getStockMinimo() == null)
-            producto.setStockMinimo(0);
-        if (producto.getActivo() == null)
-            producto.setActivo(true);
-
-        return productoRepository.save(producto);
+    // Opcional: Método para reactivar
+    @Transactional
+    public void activate(Long id) {
+       Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + id));
+       producto.setEstado("ACTIVO");
+       productoRepository.save(producto);
     }
 
-    private String generarCodigoProducto(Producto producto) {
-        String catPart = (producto.getCategoria() != null && producto.getCategoria().getNombreCategoria() != null)
-                ? String.valueOf(producto.getCategoria().getNombreCategoria().charAt(0)).toUpperCase()
-                : "C";
-
-        String prodPart = (producto.getNombreProducto() != null)
-                ? producto.getNombreProducto().substring(0, Math.min(2, producto.getNombreProducto().length()))
-                        .toUpperCase()
-                : "PR";
-
-        int num = 1 + random.nextInt(99);
-        return catPart + prodPart + String.format("%02d", num);
-    }
-
-    //Filtrado por DTO
-    public List<Producto> filtrarProductos(ProductoFiltroDTO filtro) {
-    // Evitar pasar null al LOWER()
-    String nombre = filtro.getNombre();
-    if (nombre != null && nombre.isBlank()) {
-        nombre = null;
-    }
-
-    return productoRepository.filtrarProductos(
-        nombre,
-        filtro.getCategoriaId(),
-        filtro.getActivo(),
-        filtro.getFechaDesde(),
-        filtro.getFechaHasta()
-    );
-}
-
-    public List<Producto> filtrarPorFechas(LocalDate desde, LocalDate hasta) {
-        if (desde == null && hasta == null)
-            return productoRepository.findAll();
-        if (desde != null && hasta != null)
-            return productoRepository.findByFechaAltaBetween(desde, hasta);
-        return productoRepository.findByFechaAltaAfter(desde != null ? desde : hasta);
-    }
-
-    public List<Producto> obtenerUltimosProductos() {
-        return productoRepository.findTop5ByOrderByFechaAltaDesc();
+    @Transactional(readOnly = true)
+    public Page<ProductoDTO> filter(ProductoFiltroDTO filtro, Pageable pageable) {
+        // Usamos la Specification para crear la consulta dinámica
+        Specification<Producto> spec = productoSpecification.getProductosByFilters(filtro);
+        
+        // Ejecutamos la consulta con paginación
+        Page<Producto> productoPage = productoRepository.findAll(spec, pageable);
+        
+        // Mapeamos y devolvemos
+        return productoPage.map(productoMapper::toProductoDTO);
     }
 }

@@ -1,81 +1,65 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
-import { LoginResponse } from '../models/login-response.model';
+// import { environment } from '../../environments/environment'; // <-- LÍNEA ELIMINADA
+import { Observable, BehaviorSubject, tap } from 'rxjs';
+import { LoginRequestDTO } from '../models/login-request.model';
+import { AuthResponseDTO } from '../models/auth-response.model';
+import { RegisterRequestDTO } from '../models/register-request.model';
+import { Router } from '@angular/router';
+
+// Solución Rápida: Definimos la URL de la API aquí
+const API_URL = 'http://localhost:8080'; // Esta es la URL de tu backend Spring Boot
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
 
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private http = inject(HttpClient);
+  private router = inject(Router);
+  private apiUrl = `${API_URL}/api/auth`; // Usamos la constante
+  private readonly TOKEN_KEY = 'jwt_token';
 
-  constructor(private http: HttpClient) {}
+  private loggedIn = new BehaviorSubject<boolean>(this.hasToken());
+  isLoggedIn$ = this.loggedIn.asObservable();
 
-  /**
-   * Inicia sesión enviando email y password al backend.
-   * Si la respuesta es exitosa, guarda el token JWT y los datos del usuario.
-   */
-  login(email: string, password: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, { email, password }).pipe(
-      tap((response) => {
-        if (response.status === 'success' && response.usuario && response.token) {
-          // 🔹 Guardar token JWT
-          localStorage.setItem('token', response.token);
+  constructor() { }
 
-          // 🔹 Guardar información del usuario
-          localStorage.setItem('user', JSON.stringify(response.usuario));
-        }
+  login(credentials: LoginRequestDTO): Observable<AuthResponseDTO> {
+    return this.http.post<AuthResponseDTO>(`${this.apiUrl}/login`, credentials).pipe(
+      tap(response => {
+        this.saveToken(response.token);
+        this.loggedIn.next(true);
       })
     );
   }
 
-  /**
-   * Cierra sesión eliminando token y usuario del almacenamiento.
-   */
-  logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  register(data: RegisterRequestDTO): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/register`, data);
   }
 
-  /**
-   * Retorna el usuario logueado (si existe).
-   */
-  getUser(): any {
-    const data = localStorage.getItem('user');
-    return data ? JSON.parse(data) : null;
+  logout(): void {
+    localStorage.removeItem(this.TOKEN_KEY);
+    this.loggedIn.next(false);
+    this.router.navigate(['/login']);
   }
 
-  /**
-   * Retorna el rol actual del usuario.
-   */
-  getUserRole(): string | null {
-    const user = this.getUser();
-    return user ? user.rol : null;
+  private saveToken(token: string): void {
+    localStorage.setItem(this.TOKEN_KEY, token);
   }
 
-  /**
-   * Retorna true si hay usuario logueado.
-   */
-  isLoggedIn(): boolean {
-    return !!localStorage.getItem('token');
+  getToken(): string | null {
+    return localStorage.getItem(this.TOKEN_KEY);
   }
 
-  /**
-   * Control de permisos básico por rol.
-   */
-  tienePermiso(permiso: string): boolean {
-    const user = this.getUser();
-    if (!user) return false;
+  hasToken(): boolean {
+    return !!this.getToken();
+  }
 
-    if (user.rol === 'ADMIN') return true;
-
-    const permisosPorRol: Record<string, string[]> = {
-      'VENDEDOR': ['USUARIO_VER', 'PRODUCTO_VER'],
-      'CLIENTE': ['PRODUCTO_VER']
-    };
-
-    const permisos = permisosPorRol[user.rol] || [];
-    return permisos.includes(permiso);
+  // --- Helper para el Interceptor ---
+  // El interceptor necesita saber la URL base para no enviar el
+  // token a APIs de terceros (ej. Google Maps)
+  getApiUrlBase(): string {
+    return API_URL;
   }
 }

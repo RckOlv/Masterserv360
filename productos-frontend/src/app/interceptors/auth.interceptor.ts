@@ -1,25 +1,24 @@
-import { Injectable } from '@angular/core';
-import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpInterceptorFn } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { AuthService } from '../service/auth.service';
 
-@Injectable()
-export class AuthInterceptor implements HttpInterceptor {
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  
+  const authService = inject(AuthService);
+  const token = authService.getToken();
+  
+  // Obtenemos la URL base del servicio
+  const apiUrlBase = authService.getApiUrlBase();
+  const isApiUrl = req.url.startsWith(apiUrlBase);
 
-  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    // 🔹 Obtener token del localStorage
-    const token = localStorage.getItem('token');
-
-    // 🔹 Si hay token, clonamos la request y añadimos el header Authorization
-    if (token) {
-      const authReq = req.clone({
-        setHeaders: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      return next.handle(authReq);
-    }
-
-    // 🔹 Si no hay token, seguimos normal
-    return next.handle(req);
+  if (token && isApiUrl) {
+    const clonedReq = req.clone({
+      setHeaders: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return next(clonedReq);
   }
-}
+
+  return next(req);
+};

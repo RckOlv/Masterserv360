@@ -1,105 +1,67 @@
 package com.masterserv.productos.controller;
 
+import com.masterserv.productos.dto.ProductoDTO;
 import com.masterserv.productos.dto.ProductoFiltroDTO;
-import com.masterserv.productos.entity.Producto;
 import com.masterserv.productos.service.ProductoService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/productos")
-@CrossOrigin(origins = "http://localhost:4200")
+@RequestMapping("/api/productos")
+// @CrossOrigin(origins = "http://localhost:4200") // No es necesario, lo pusimos global en SecurityConfig
 public class ProductoController {
 
-    private final ProductoService productoService;
+    @Autowired
+    private ProductoService productoService;
 
-    public ProductoController(ProductoService productoService) {
-        this.productoService = productoService;
+    // --- Endpoint de Filtrado (Público o Semi-público) ---
+    // Este POST es para la búsqueda. Lo hacemos POST para poder enviar un body (el DTO de filtro).
+    @PostMapping("/filtrar")
+    public ResponseEntity<Page<ProductoDTO>> filterProductos(
+            @RequestBody ProductoFiltroDTO filtro,
+            @PageableDefault(page = 0, size = 10) Pageable pageable) {
+        
+        Page<ProductoDTO> productoPage = productoService.filter(filtro, pageable);
+        return ResponseEntity.ok(productoPage);
     }
 
-    /** 🔹 Listar productos activos */
-    @GetMapping
-    public ResponseEntity<List<Producto>> listarActivos() {
-        return ResponseEntity.ok(productoService.listarActivos());
+    // --- Endpoints CRUD (Protegidos) ---
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<ProductoDTO> getProductoById(@PathVariable Long id) {
+        ProductoDTO producto = productoService.findById(id);
+        return ResponseEntity.ok(producto);
     }
 
-    /** 🔹 Listar todos los productos (activos e inactivos) */
-    @GetMapping("/todos")
-    public ResponseEntity<List<Producto>> listarTodos() {
-        return ResponseEntity.ok(productoService.listarProductos());
-    }
-
-    /** 🔹 Crear producto con validación */
     @PostMapping
-    public ResponseEntity<?> crear(@RequestBody Producto producto) {
-        try {
-            Producto nuevo = productoService.creaProducto(producto);
-            return ResponseEntity.ok(nuevo);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductoDTO> createProducto(@Valid @RequestBody ProductoDTO productoDTO) {
+        ProductoDTO nuevoProducto = productoService.create(productoDTO);
+        return new ResponseEntity<>(nuevoProducto, HttpStatus.CREATED);
     }
 
-    /** 🔹 Actualizar producto existente */
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizar(@PathVariable Long id, @RequestBody Producto producto) {
-        try {
-            producto.setIdProducto(id);
-            Producto actualizado = productoService.actualizarProducto(producto);
-            return ResponseEntity.ok(actualizado);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductoDTO> updateProducto(@PathVariable Long id, @Valid @RequestBody ProductoDTO productoDTO) {
+        ProductoDTO productoActualizado = productoService.update(id, productoDTO);
+        return ResponseEntity.ok(productoActualizado);
     }
 
-    /**
-     * 🔹 Filtrado combinado flexible (con conversión de fechas String → LocalDate)
-     */
-     @PostMapping("/filtrar")
-    public List<Producto> filtrarProductos(@RequestBody ProductoFiltroDTO filtro) {
-        System.out.println("Nombre recibido desde DTO: " + filtro.getNombre());
-        return productoService.filtrarProductos(filtro);
-    }
-
-    /** 🔹 Inactivar producto */
-    @PutMapping("/{id}/inactivar")
-    public ResponseEntity<Map<String, String>> inactivarProducto(@PathVariable Long id) {
-        productoService.cambiarActivo(id, false);
-        Map<String, String> response = new HashMap<>();
-        response.put("mensaje", "Producto inactivado correctamente");
-        return ResponseEntity.ok(response);
-    }
-
-    /** 🔹 Reactivar producto */
-    @PutMapping("/{id}/reactivar")
-    public ResponseEntity<Map<String, String>> reactivarProducto(@PathVariable Long id) {
-        productoService.cambiarActivo(id, true);
-        Map<String, String> response = new HashMap<>();
-        response.put("mensaje", "Producto reactivado correctamente");
-        return ResponseEntity.ok(response);
-    }
-
-    /** 🔹 Filtrar solo por fechas */
-    @GetMapping("/filtrar-fecha")
-    public ResponseEntity<List<Producto>> filtrarPorFecha(
-            @RequestParam(required = false) String desde,
-            @RequestParam(required = false) String hasta) {
-
-        LocalDate fechaDesde = (desde != null && !desde.isEmpty()) ? LocalDate.parse(desde) : null;
-        LocalDate fechaHasta = (hasta != null && !hasta.isEmpty()) ? LocalDate.parse(hasta) : null;
-
-        List<Producto> productos = productoService.filtrarPorFechas(fechaDesde, fechaHasta);
-        return ResponseEntity.ok(productos);
-    }
-
-    /** 🔹 Últimos 5 productos */
-    @GetMapping("/ultimos")
-    public ResponseEntity<List<Producto>> obtenerUltimosProductos() {
-        return ResponseEntity.ok(productoService.obtenerUltimosProductos());
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> deleteProducto(@PathVariable Long id) {
+        // Llamamos al nuevo método
+        productoService.softDelete(id); 
+        return ResponseEntity.ok(Map.of("message", "Producto marcado como inactivo exitosamente"));
     }
 }

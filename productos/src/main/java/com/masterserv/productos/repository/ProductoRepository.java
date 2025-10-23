@@ -1,52 +1,26 @@
 package com.masterserv.productos.repository;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-
+import com.masterserv.productos.entity.Producto;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
-import com.masterserv.productos.entity.Producto;
+import java.util.Optional;
 
 @Repository
-public interface ProductoRepository extends JpaRepository<Producto, Long> {
+public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSpecificationExecutor<Producto> {
 
-    List<Producto> findByCategoria_IdCategoria(Long idCategoria);
+    // Método para buscar por el código de producto que definimos
+    Optional<Producto> findByCodigo(String codigo);
 
-    List<Producto> findByNombreProductoContainingIgnoreCase(String nombre);
-
-    Optional<Producto> findByNombreProducto(String nombreProducto);
-
+    // Método para verificar si ya existe un producto con ese código
     boolean existsByCodigo(String codigo);
 
-    boolean existsByNombreProductoIgnoreCase(String nombreProducto);
-
-    List<Producto> findByActivoTrue();
-
-    List<Producto> findTop5ByOrderByFechaAltaDesc();
-
-    boolean existsByCategoria_IdCategoria(Long idCategoria);
-
-    List<Producto> findByFechaAltaBetween(LocalDate desde, LocalDate hasta);
-
-    List<Producto> findByFechaAltaAfter(LocalDate desde);
-
-    /** 🔹 Filtro combinado flexible - EXCLUYENDO la imagen de operaciones LOWER */
-    @Query(value = "SELECT p FROM Producto p " +
-                   "LEFT JOIN p.categoria c " +
-                   "WHERE (:nombre IS NULL OR LOWER(p.nombreProducto) LIKE LOWER(CONCAT('%', :nombre, '%'))) " +
-                   "AND (:categoriaId IS NULL OR c.idCategoria = :categoriaId) " +
-                   "AND (:activo IS NULL OR p.activo = :activo) " +
-                   "AND (:fechaDesde IS NULL OR p.fechaAlta >= :fechaDesde) " +
-                   "AND (:fechaHasta IS NULL OR p.fechaAlta <= :fechaHasta)")
-    List<Producto> filtrarProductos(
-            @Param("nombre") String nombre,
-            @Param("categoriaId") Long categoriaId,
-            @Param("activo") Boolean activo,
-            @Param("fechaDesde") LocalDate fechaDesde,
-            @Param("fechaHasta") LocalDate fechaHasta
-    );
+    Optional<Producto> findByNombre(String nombre);
+    
+    // NOTA DE MENTOR:
+    // Extendemos JpaSpecificationExecutor<Producto>. Esto es clave.
+    // Nos permitirá construir consultas dinámicas complejas más adelante 
+    // (filtrar por nombre, categoría, precio, etc.) 
+    // usando el "Criteria API" y el `ProductoFiltroDTO` que tenías.
 }

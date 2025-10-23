@@ -1,101 +1,70 @@
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
-import { Categoria } from '../models/categoria.model';
+// src/app/service/categoria.service.ts
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { API_URL } from '../app.config'; // Asegúrate de tener esta constante
+import { CategoriaDTO } from '../models/categoria.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CategoriaService {
-  private apiUrl = 'http://localhost:8080/categorias';
 
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private apiUrl = `${API_URL}/api/categorias`; // Endpoint del backend para categorías
 
-  /** 🔹 Listar todas las categorías */
-  listarCategorias(): Observable<Categoria[]> {
-    return this.http.get<Categoria[]>(this.apiUrl).pipe(
-      catchError(this.manejarError)
-    );
+  constructor() { }
+
+  /**
+   * Obtiene todas las categorías (idealmente, solo las activas).
+   * El backend debería encargarse de filtrar por estado si implementaste soft delete.
+   */
+  listarCategorias(): Observable<CategoriaDTO[]> {
+    return this.http.get<CategoriaDTO[]>(this.apiUrl);
   }
 
-  /** 🔹 Listar solo las activas */
-  listarActivas(): Observable<Categoria[]> {
-    return this.http.get<Categoria[]>(`${this.apiUrl}/activas`).pipe(
-      catchError(this.manejarError)
-    );
+  /**
+   * Obtiene una categoría por su ID.
+   */
+  getById(id: number): Observable<CategoriaDTO> {
+    return this.http.get<CategoriaDTO>(`${this.apiUrl}/${id}`);
   }
 
-  /** 🔹 Listar solo las inactivas */
-  listarInactivas(): Observable<Categoria[]> {
-    return this.http.get<Categoria[]>(`${this.apiUrl}/inactivas`).pipe(
-      catchError(this.manejarError)
-    );
+  /**
+   * Crea una nueva categoría.
+   */
+  crear(categoria: CategoriaDTO): Observable<CategoriaDTO> {
+    // Quitamos el ID si existe, el backend lo genera
+    const { id, ...categoriaParaCrear } = categoria;
+    return this.http.post<CategoriaDTO>(this.apiUrl, categoriaParaCrear);
   }
 
-  /** 🔹 Buscar por nombre */
-  buscarPorNombre(nombre: string): Observable<Categoria[]> {
-    return this.http.get<Categoria[]>(`${this.apiUrl}/buscar?nombre=${nombre}`).pipe(
-      catchError(this.manejarError)
-    );
+  /**
+   * Actualiza una categoría existente.
+   * El DTO debe contener el ID.
+   */
+  actualizar(categoria: CategoriaDTO): Observable<CategoriaDTO> {
+     if (!categoria.id) {
+       // En un caso real, devolveríamos un Observable con error
+       throw new Error('ID de categoría es requerido para actualizar');
+     }
+     return this.http.put<CategoriaDTO>(`${this.apiUrl}/${categoria.id}`, categoria);
   }
 
-  /** 🔹 Crear nueva categoría */
-  crear(categoria: Categoria): Observable<Categoria> {
-    return this.http.post<Categoria>(this.apiUrl, categoria).pipe(
-      map((data) => data as Categoria),
-      catchError(this.manejarError)
-    );
+  /**
+   * Realiza un borrado lógico (soft delete) de la categoría.
+   */
+  softDelete(id: number): Observable<any> {
+    // Asume que el backend DELETE /api/categorias/{id} hace el soft delete
+    return this.http.delete<any>(`${this.apiUrl}/${id}`);
   }
 
-  /** 🔹 Actualizar categoría existente */
-  actualizar(categoria: Categoria): Observable<Categoria> {
-    return this.http.put<Categoria>(`${this.apiUrl}/${categoria.idCategoria}`, categoria).pipe(
-      map((data) => data as Categoria),
-      catchError(this.manejarError)
-    );
+  /**
+   * Reactiva una categoría marcada como inactiva.
+   */
+  reactivar(id: number): Observable<any> {
+     // Asume un endpoint PATCH (o PUT) para reactivar
+     // Ajusta la URL si tu endpoint es diferente
+     return this.http.patch<any>(`${this.apiUrl}/${id}/reactivar`, {});
   }
-
-  /** 🔹 Eliminar categoría (lógico o físico según backend) */
-  darDebajaLogico(idCategoria: number): Observable<Categoria> {
-    return this.http.delete<Categoria>(`${this.apiUrl}/${idCategoria}`).pipe(
-      map((data) => data as Categoria),
-      catchError(this.manejarError)
-    );
-  }
-
-  /** 🔹 Reactivar categoría */
-  reactivar(idCategoria: number): Observable<Categoria> {
-    return this.http.post<Categoria>(`${this.apiUrl}/${idCategoria}/reactivar`, {}).pipe(
-      map((data) => data as Categoria),
-      catchError(this.manejarError)
-    );
-  }
-
-  /** ⚠️ Manejo centralizado de errores */
-  private manejarError(error: HttpErrorResponse) {
-    let mensaje = 'Ocurrió un error desconocido';
-
-    if (error.status === 0) {
-      mensaje = 'No se puede conectar con el servidor.';
-    } else if (error.status === 404) {
-      mensaje = 'Categoría no encontrada.';
-    } else if (error.status >= 400 && error.status < 500) {
-      mensaje = 'Error en la solicitud (verifique los datos).';
-    } else if (error.status >= 500) {
-      mensaje = 'Error interno del servidor.';
-    }
-
-    console.error('Error HTTP:', error);
-    return throwError(() => new Error(mensaje));
-  }
-
-  inactivarCategoria(id: number): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}/inactivar`, {});
-  }
-
-  reactivarCategoria(id: number): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}/reactivar`, {});
-  }
-
 }
