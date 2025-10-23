@@ -1,21 +1,57 @@
-<div class="login-container">
-  <h2>Iniciar sesión</h2>
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="card-title text-center mb-4">Iniciar Sesión</h2>
+          
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+            
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" 
+                     id="email"
+                     class="form-control" 
+                     formControlName="email"
+                     [ngClass]="{ 'is-invalid': email?.invalid && (email?.dirty || email?.touched) }">
+              
+              <div *ngIf="email?.invalid && (email?.dirty || email?.touched)" class="invalid-feedback">
+                <div *ngIf="email?.errors?.['required']">El email es obligatorio.</div>
+                <div *ngIf="email?.errors?.['email']">Debe ser un email válido.</div>
+              </div>
+            </div>
 
-  <form (ngSubmit)="onSubmit()">
-    <input
-      type="email"
-      placeholder="Correo electrónico"
-      [(ngModel)]="email"
-      name="email"
-      required
-    />
-    <input
-      type="password"
-      placeholder="Contraseña"
-      [(ngModel)]="password"
-      name="password"
-      required
-    />
-    <button type="submit">Ingresar</button>
-  </form>
+            <div class="mb-3">
+              <label for="password" class="form-label">Contraseña</label>
+              <input type="password" 
+                     id="password"
+                     class="form-control" 
+                     formControlName="password"
+                     [ngClass]="{ 'is-invalid': password?.invalid && (password?.dirty || password?.touched) }">
+              
+              <div *ngIf="password?.invalid && (password?.dirty || password?.touched)" class="invalid-feedback">
+                <div *ngIf="password?.errors?.['required']">La contraseña es obligatoria.</div>
+                <div *ngIf="password?.errors?.['minlength']">Debe tener al menos 6 caracteres.</div>
+              </div>
+            </div>
+
+            <div *ngIf="errorMessage" class="alert alert-danger p-2 text-center">
+              {{ errorMessage }}
+            </div>
+
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary" [disabled]="loginForm.invalid">
+                Ingresar
+              </button>
+            </div>
+            
+            <div class="text-center mt-3">
+              <a [routerLink]="['/register']">¿No tienes cuenta? Regístrate</a>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

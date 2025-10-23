@@ -1,70 +1,78 @@
-import { Injectable } from '@angular/core';
+// src/app/service/producto.service.ts
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { Producto } from '../models/producto.model';
+import { Observable } from 'rxjs';
+// Asumimos que tienes la URL base definida como constante
+// Si no, deberías tenerla en environment.ts
+import { API_URL } from '../app.config'; // <-- ¡IMPORTANTE! Asegúrate de tener esta constante
+import { ProductoDTO } from '../models/producto.model';
+import { ProductoFiltroDTO } from '../models/producto-filtro.model';
+
+// Interfaz para la respuesta paginada de Spring Boot
+export interface Page<T> {
+  content: T[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number; // Página actual (basada en 0)
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductoService {
-  private apiUrl = 'http://localhost:8080/productos'; // ✅ URL base del backend
 
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private apiUrl = `${API_URL}/api/productos`; // Ajusta API_URL según tu constante
 
-  /** 🔹 Listar todos los productos (activos e inactivos) */
-  listarTodos(): Observable<Producto[]> {
-    return this.http.get<Producto[]>(`${this.apiUrl}/todos`)
-      .pipe(catchError(this.manejarError));
+  constructor() { }
+
+  /**
+   * Obtiene productos usando filtros y paginación.
+   * Llama al endpoint POST /filtrar del backend.
+   */
+  filtrarProductos(filtro: ProductoFiltroDTO, page: number, size: number): Observable<Page<ProductoDTO>> {
+    // Los parámetros de paginación van en la URL
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    return this.http.post<Page<ProductoDTO>>(`${this.apiUrl}/filtrar`, filtro, { params });
   }
 
-  /** 🔹 Crear producto */
-  crearProducto(producto: Producto): Observable<any> {
-    return this.http.post(this.apiUrl, producto)
-      .pipe(catchError(this.manejarError));
+  /**
+   * Obtiene un producto por su ID.
+   */
+  getProductoById(id: number): Observable<ProductoDTO> {
+    return this.http.get<ProductoDTO>(`${this.apiUrl}/${id}`);
   }
 
-  /** 🔹 Actualizar producto */
-  actualizarProducto(producto: Producto): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${producto.idProducto}`, producto)
-      .pipe(catchError(this.manejarError));
+  /**
+   * Crea un nuevo producto.
+   */
+  crearProducto(producto: ProductoDTO): Observable<ProductoDTO> {
+    // Quitamos el ID y el nombre de categoría, el backend los ignora/genera
+    const { id, categoriaNombre, ...productoParaCrear } = producto;
+    return this.http.post<ProductoDTO>(this.apiUrl, productoParaCrear);
   }
 
-  /** 🔹 Inactivar producto */
-  inactivarProducto(id: number): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}/inactivar`, {})
-      .pipe(catchError(this.manejarError));
+  /**
+   * Actualiza un producto existente.
+   */
+  actualizarProducto(id: number, producto: ProductoDTO): Observable<ProductoDTO> {
+    const { categoriaNombre, ...productoParaActualizar } = producto;
+    return this.http.put<ProductoDTO>(`${this.apiUrl}/${id}`, productoParaActualizar);
   }
 
-  /** 🔹 Reactivar producto */
-  reactivarProducto(id: number): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}/reactivar`, {})
-      .pipe(catchError(this.manejarError));
+  /**
+   * Elimina un producto por su ID.
+   */
+  eliminarProducto(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/${id}`);
   }
 
- /** 🔹 Filtrar productos por varios criterios combinados */
-filtrarProductos(
-  nombre?: string,
-  categoriaId?: number,
-  activo?: boolean,
-  desde?: string,
-  hasta?: string
-): Observable<Producto[]> {
-  let params = new HttpParams();
+  // --- Helpers Adicionales (Ejemplos) ---
 
-  if (nombre) params = params.set('nombre', nombre);
-  if (categoriaId) params = params.set('categoriaId', categoriaId.toString());
-  if (activo !== undefined) params = params.set('activo', String(activo)); // 🔹 clave correcta
-  if (desde) params = params.set('desde', desde);
-  if (hasta) params = params.set('hasta', hasta);
-
-  return this.http.get<Producto[]>(`${this.apiUrl}/filtrar`, { params })
-    .pipe(catchError(this.manejarError));
-}
-
-  /** 🔹 Manejo de errores */
-  private manejarError(error: any) {
-    console.error('Error HTTP:', error);
-    return throwError(() => new Error('Error en la solicitud HTTP'));
-  }
+  // Podríamos necesitar un servicio de Categorías para obtener la lista
+  // getAllCategorias(): Observable<CategoriaDTO[]> { ... }
 }

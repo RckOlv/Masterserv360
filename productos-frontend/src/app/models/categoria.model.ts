@@ -1,6 +1,7 @@
-export interface Categoria {
-  idCategoria?: number;  // opcional al crear
-  nombreCategoria: string;
-  descripcion?: string;
-  activo?: boolean;
+// src/app/models/categoria.model.ts
+export interface CategoriaDTO {
+  id?: number; // El ID es opcional al crear
+  nombre: string;
+  descripcion?: string; // Opcional
+  // estado?: string; // Podríamos añadirlo si el backend lo devuelve (para soft delete)
 }

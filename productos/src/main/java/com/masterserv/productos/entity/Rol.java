@@ -1,27 +1,24 @@
 package com.masterserv.productos.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import java.util.Set;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "roles")
-@Getter
-@Setter
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Rol {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idRol;
+    private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String nombre; // Ej: "ADMIN", "VENDEDOR", "CLIENTE"
+    @Column(name = "nombre_rol", nullable = false, unique = true, length = 50)
+    private String nombreRol;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-        name = "rol_permisos",
-        joinColumns = @JoinColumn(name = "id_rol"),
-        inverseJoinColumns = @JoinColumn(name = "id_permiso")
-    )
-    private Set<Permiso> permisos;
+    @Column(length = 255)
+    private String descripcion;
 }

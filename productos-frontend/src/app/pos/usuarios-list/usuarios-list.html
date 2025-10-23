@@ -1,20 +1,10 @@
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="mb-0">Gestión de Usuarios</h3>
-
-    <!-- 🔹 Botón para alternar entre lista y formulario -->
-    <button
-      *ngIf="authService.tienePermiso('USUARIO_CREAR')"
-      class="btn btn-primary"
-      (click)="alternarFormulario()"
-    >
-      <i class="bi" [ngClass]="mostrarFormulario ? 'bi-arrow-left' : 'bi-person-plus'"></i>
-      {{ mostrarFormulario ? 'Volver a la lista' : 'Registrar Usuario' }}
-    </button>
   </div>
 
-  <!-- 🔹 Si no está mostrando el formulario, mostrar tabla -->
-  <div *ngIf="!mostrarFormulario">
+  <!-- 🔹 Tabla de usuarios -->
+  <div>
     <table class="table table-striped mt-3 align-middle text-center">
       <thead class="table-light">
         <tr>
@@ -33,17 +23,21 @@
           <td>{{ u.apellido }}</td>
           <td>{{ u.documento }}</td>
           <td>{{ u.email }}</td>
-          <td>{{ u.rol?.nombre }}</td>
+
+          <!-- ✅ Muestra el primer rol del arreglo de roles -->
+          <td>{{ u.roles && u.roles.length > 0 ? u.roles[0].nombreRol : 'Sin Rol' }}</td>
+
           <td>
             <span class="badge" [ngClass]="u.estado ? 'bg-success' : 'bg-secondary'">
               {{ u.estado ? 'Activo' : 'Inactivo' }}
             </span>
           </td>
+
           <td>
+            <!-- ✅ Eliminado el *ngIf del permiso -->
             <button
-              *ngIf="authService.tienePermiso('USUARIO_ELIMINAR')"
               class="btn btn-danger btn-sm"
-              (click)="eliminarUsuario(u.idUsuario!)"
+              (click)="eliminarUsuario(u.id)"
             >
               <i class="bi bi-trash"></i> Eliminar
             </button>
@@ -57,10 +51,5 @@
         </tr>
       </tbody>
     </table>
-  </div>
-
-  <!-- 🔹 Formulario de registro -->
-  <div *ngIf="mostrarFormulario" class="mt-4">
-    <app-registro-admin></app-registro-admin>
   </div>
 </div>

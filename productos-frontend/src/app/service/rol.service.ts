@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Rol } from '../models/rol.model';
+import { RolDTO } from '../models/rol.model';
 
 @Injectable({ providedIn: 'root' })
 export class RolService {
@@ -9,7 +9,7 @@ export class RolService {
 
   constructor(private http: HttpClient) {}
 
-  listarRoles(): Observable<Rol[]> {
-    return this.http.get<Rol[]>(this.apiUrl);
+  listarRoles(): Observable<RolDTO[]> {
+    return this.http.get<RolDTO[]>(this.apiUrl);
   }
 }

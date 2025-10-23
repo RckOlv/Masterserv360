@@ -1,142 +1,54 @@
 package com.masterserv.productos.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDate;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal; // Usamos BigDecimal para dinero
 
 @Entity
-@Table(name = "producto")
+@Table(name = "productos")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Producto {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idProducto;
+    private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true, length = 50) // El código de producto que agregaste
     private String codigo;
 
-    @Column(nullable = false)
-    private String nombreProducto;
+    @Column(nullable = false, length = 255)
+    private String nombre;
 
-    @Column(length = 500)
+    @Lob // Indica que puede ser un texto largo
+    @Column(columnDefinition = "TEXT")
     private String descripcion;
 
-    @Column(nullable = false)
-    private Double precioCosto = 0.0;
+    // Usamos BigDecimal para precisión monetaria. Evita errores de redondeo de float/double
+    @Column(name = "precio_venta", nullable = false, precision = 10, scale = 2)
+    private BigDecimal precioVenta;
 
+    @Column(name = "precio_costo", nullable = false, precision = 10, scale = 2)
+    private BigDecimal precioCosto;
 
-    @Column(nullable = false)
-    private Double precioVenta = 0.0;
+    @Column(name = "imagen_url", length = 255) // Solo la URL de la imagen
+    private String imagenUrl;
 
-    private Integer stockActual = 0;
-    private Integer stockMinimo = 0;
+    @Column(name = "stock_actual", nullable = false)
+    private int stockActual; // `int` primitivo (no puede ser NULL)
 
-    @Column(nullable = false)
-    private Boolean activo = true;
+    @Column(name = "stock_minimo", nullable = false)
+    private int stockMinimo; // `int` primitivo (no puede ser NULL)
 
-    private LocalDate fechaAlta = LocalDate.now();
-    
-    private String imagen;
+    @Column(length = 50)
+    private String estado; // Podríamos hacer un Enum para esto más tarde si es necesario
 
-    @ManyToOne
-    @JoinColumn(name = "id_categoria")
+    // --- Relaciones ---
+
+    @ManyToOne(fetch = FetchType.LAZY) // Un producto pertenece a UNA Categoria
+    @JoinColumn(name = "categoria_id", nullable = false) // La FK no puede ser nula
     private Categoria categoria;
-
-    // Getters y Setters
-    public Long getIdProducto() {
-        return idProducto;
-    }
-
-    public void setIdProducto(Long idProducto) {
-        this.idProducto = idProducto;
-    }
-
-    public String getCodigo() {
-        return codigo;
-    }
-
-    public void setCodigo(String codigo) {
-        this.codigo = codigo;
-    }
-
-    public String getNombreProducto() {
-        return nombreProducto;
-    }
-
-    public void setNombreProducto(String nombreProducto) {
-        this.nombreProducto = nombreProducto;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
-    }
-
-    public Double getPrecioCosto() {
-        return precioCosto;
-    }
-
-    public void setPrecioCosto(Double precioCosto) {
-        this.precioCosto = precioCosto;
-    }
-
-    public Double getPrecioVenta() {
-        return precioVenta;
-    }
-
-    public void setPrecioVenta(Double precioVenta) {
-        this.precioVenta = precioVenta;
-    }
-
-    public Integer getStockActual() {
-        return stockActual;
-    }
-
-    public void setStockActual(Integer stockActual) {
-        this.stockActual = stockActual;
-    }
-
-    public Integer getStockMinimo() {
-        return stockMinimo;
-    }
-
-    public void setStockMinimo(Integer stockMinimo) {
-        this.stockMinimo = stockMinimo;
-    }
-
-    
-
-    public LocalDate getFechaAlta() {
-        return fechaAlta;
-    }
-
-    public void setFechaAlta(LocalDate fechaAlta) {
-        this.fechaAlta = fechaAlta;
-    }
-
-    public String getImagen() {
-        return imagen;
-    }
-
-    public void setImagen(String imagen) {
-        this.imagen = imagen;
-    }
-
-    public Categoria getCategoria() {
-        return categoria;
-    }
-
-    public void setCategoria(Categoria categoria) {
-        this.categoria = categoria;
-    }
-
-    public Boolean getActivo() {
-        return activo;
-    }
-
-    public void setActivo(Boolean activo) {
-        this.activo = activo;
-    }
 }

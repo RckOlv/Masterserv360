@@ -1,53 +1,27 @@
 package com.masterserv.productos.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "categoria")
+@Table(name = "categorias")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Categoria {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_categoria")
-    private Long idCategoria;
+    private Long id;
 
-    @Column(name = "nombre_categoria", nullable = false)
-    private String nombreCategoria;
+    @Column(nullable = false, unique = true, length = 100)
+    private String nombre;
 
+    @Column(length = 255)
     private String descripcion;
-
-    private boolean activo = true;
-
-    // Getters y Setters
-    public Long getIdCategoria() {
-        return idCategoria;
-    }
-
-    public void setIdCategoria(Long idCategoria) {
-        this.idCategoria = idCategoria;
-    }
-
-    public String getNombreCategoria() {
-        return nombreCategoria;
-    }
-
-    public void setNombreCategoria(String nombreCategoria) {
-        this.nombreCategoria = nombreCategoria;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
-    }
-
-    public boolean isActivo() {
-        return activo;
-    }
-
-    public void setActivo(boolean activo) {
-        this.activo = activo;
-    }
+    
+    // NOTA: No necesitamos el @OneToMany a Productos aquí.
+    // Mantenemos la entidad "limpia". La relación la maneja Producto.
 }

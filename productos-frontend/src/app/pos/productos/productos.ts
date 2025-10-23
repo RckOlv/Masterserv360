@@ -1,221 +1,138 @@
-import { Component, OnInit } from '@angular/core';
-import { ProductoService } from '../../service/producto.service';
-import { CategoriaService } from '../../service/categoria.service';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Producto } from '../../models/producto.model';
-import { mostrarToast } from '../../utils/toast';
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common'; // Para *ngFor, *ngIf
+import { HttpClientModule } from '@angular/common/http';
+import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms'; // Para filtros
+import { RouterLink } from '@angular/router'; // Para botones de acción
+
+import { ProductoService, Page } from '../../service/producto.service'; // Ajusta ruta
+import { ProductoDTO } from '../../models/producto.model';
+import { ProductoFiltroDTO } from '../../models/producto-filtro.model';
 
 @Component({
   selector: 'app-productos',
   standalone: true,
-  templateUrl: '../productos/productos.html',
-  styleUrls: ['../productos/productos.css'],
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    HttpClientModule,
+    ReactiveFormsModule,
+    RouterLink
+  ],
+  templateUrl: './productos.html',
+  styleUrls: ['./productos.css']
 })
-export class ProductosComponent implements OnInit {
-  productos: Producto[] = [];
-  categorias: any[] = [];
+export default class ProductosComponent implements OnInit {
 
-  // 🔹 Filtros
-  filtroNombre: string = '';
-  categoriaSeleccionada: any = 0;
-  activoSeleccionado: string = 'todos';
-  fechaDesde: string = '';
-  fechaHasta: string = '';
-  mostrarFiltroAvanzado = false;
+  // Inyección de dependencias
+  private productoService = inject(ProductoService);
+  private fb = inject(FormBuilder);
 
-  // 🔹 Modal / formulario
-  mostrarModal = false;
-  esEdicion = false;
-  nuevoProducto: Producto = this.crearProductoVacio();
+  // Estado del componente
+  public productosPage: Page<ProductoDTO> | null = null;
+  public filtroForm: FormGroup;
+  public currentPage = 0;
+  public pageSize = 10;
+  public errorMessage: string | null = null;
+  public isLoading = false;
 
-  // 🔹 Paginación
-  paginaActual = 1;
-  totalPaginas = 1;
-
-  constructor(
-    private productoService: ProductoService,
-    private categoriaService: CategoriaService
-  ) {}
+  constructor() {
+    // Inicializamos el formulario de filtros
+    this.filtroForm = this.fb.group({
+      nombre: [''],
+      codigo: [''],
+      categoriaId: [null],
+      // precioMax: [null], // Añadir si necesitas
+      conStock: [null] // null = Todos, true = Con stock, false = Sin stock
+    });
+  }
 
   ngOnInit(): void {
-    this.listarProductos();
-    this.cargarCategorias();
+    this.cargarProductos(); // Carga inicial
   }
 
- /** 🔹 Listar productos con filtros */
-listarProductos(): void {
-  // Determinar el valor booleano del filtro "activo"
-  let activoParam: boolean | undefined;
-  if (this.activoSeleccionado === 'activos') activoParam = true;
-  else if (this.activoSeleccionado === 'inactivos') activoParam = false;
+  /**
+   * Llama al servicio para cargar/filtrar productos
+   */
+  cargarProductos(): void {
+    this.isLoading = true;
+    this.errorMessage = null;
+    const filtro = this.filtroForm.value as ProductoFiltroDTO;
 
-  // Si algún filtro está vacío, se envía como undefined
-  const nombre = this.filtroNombre?.trim() || undefined;
-  const categoriaId =
-    this.categoriaSeleccionada && this.categoriaSeleccionada > 0
-      ? this.categoriaSeleccionada
-      : undefined;
-  const desde = this.fechaDesde || undefined;
-  const hasta = this.fechaHasta || undefined;
-
-  // Llamada al servicio
-  this.productoService
-    .filtrarProductos(nombre, categoriaId, activoParam, desde, hasta)
-    .subscribe({
-      next: (res: Producto[]) => {
-        this.productos = res.map(p => ({
-          ...p,
-          // Corrige el tipo, por si el backend devuelve boolean o string
-          activo: String(p.activo ?? p.activo) === 'true' || p.activo === true,
-        }));
-
-        // Si el backend devuelve todos y el filtro es solo por activo, filtramos acá también
-        if (activoParam !== undefined) {
-          this.productos = this.productos.filter(p => p.activo === activoParam);
-        }
-
-        this.totalPaginas = Math.ceil(this.productos.length / 10);
-        this.paginaActual = 1;
+    this.productoService.filtrarProductos(filtro, this.currentPage, this.pageSize).subscribe({
+      next: (page) => {
+        this.productosPage = page;
+        this.isLoading = false;
       },
       error: (err) => {
-        console.error('Error al filtrar productos:', err);
-        mostrarToast('Error al cargar productos', 'danger');
-      },
-    });
-}
-
-  /** 🔹 Cargar categorías */
-  cargarCategorias(): void {
-    this.categoriaService.listarCategorias().subscribe({
-      next: (res: any) => (this.categorias = res),
-      error: (err) => {
-        console.error('Error al cargar categorías:', err);
-        mostrarToast('Error al cargar categorías', 'danger');
-      },
+        console.error('Error al cargar productos:', err);
+        this.errorMessage = 'Error al cargar productos. Intente más tarde.';
+        this.isLoading = false;
+      }
     });
   }
 
-  /** 🔹 Limpiar filtros */
-  limpiarFiltros(): void {
-    this.resetFiltros();
-    this.listarProductos();
-  }
-
-  /** 🔹 Abrir modal */
-  toggleModal(producto?: Producto): void {
-    this.esEdicion = !!producto;
-    if (producto) {
-      this.nuevoProducto = { ...producto };
-      this.categoriaSeleccionada = producto.categoria?.idCategoria ?? 0;
-    } else {
-      this.nuevoProducto = this.crearProductoVacio();
-      this.categoriaSeleccionada = 0;
-    }
-    this.mostrarModal = true;
-  }
-
-  /** 🔹 Guardar producto */
-  guardarProducto(): void {
-    if (
-      !this.nuevoProducto.nombreProducto.trim() ||
-      !this.categoriaSeleccionada ||
-      this.categoriaSeleccionada === 0
-    ) {
-      mostrarToast('Debe ingresar un nombre y seleccionar una categoría.', 'danger');
+  /**
+   * Método para eliminar un producto.
+   * Se llama desde el botón en la tabla.
+   */
+  eliminarProducto(id: number | undefined): void {
+    // Verificamos que el ID exista (buena práctica)
+    if (!id) {
+      console.error('Intento de eliminar producto sin ID.');
       return;
     }
 
-    const productoEnviar: Producto = {
-      idProducto: this.nuevoProducto.idProducto,
-      codigo: this.nuevoProducto.codigo,
-      nombreProducto: this.nuevoProducto.nombreProducto,
-      descripcion: this.nuevoProducto.descripcion,
-      precioCosto: this.nuevoProducto.precioCosto,
-      precioVenta: this.nuevoProducto.precioVenta,
-      stockActual: this.nuevoProducto.stockActual,
-      stockMinimo: this.nuevoProducto.stockMinimo,
-      activo: this.nuevoProducto.activo, // 🧩 ya se maneja como boolean
-      imagen: this.nuevoProducto.imagen,
-      categoria: { idCategoria: this.categoriaSeleccionada },
-    };
+    // Confirmación (¡Siempre confirma antes de borrar!)
+    if (confirm(`¿Estás seguro de que deseas eliminar el producto con ID ${id}?`)) {
+      this.isLoading = true; // Mostramos spinner mientras borra
+      this.errorMessage = null;
 
-    const operacion = this.esEdicion
-      ? this.productoService.actualizarProducto(productoEnviar)
-      : this.productoService.crearProducto(productoEnviar);
-
-    operacion.subscribe({
-      next: () => {
-        this.listarProductos();
-        mostrarToast(
-          this.esEdicion
-            ? 'Producto actualizado correctamente'
-            : 'Producto creado correctamente'
-        );
-        this.mostrarModal = false;
-        this.resetFiltros();
-      },
-      error: (err) => {
-        console.error('Error al guardar producto:', err);
-        mostrarToast('Error al guardar producto', 'danger');
-      },
-    });
-  }
-
-  /** 🔹 Inactivar producto */
-  eliminar(id: number) {
-    if (confirm('¿Deseas inactivar este producto?')) {
-      this.productoService.inactivarProducto(id).subscribe({
+      this.productoService.eliminarProducto(id).subscribe({
         next: () => {
-          mostrarToast('Producto inactivado', 'warning');
-          this.listarProductos();
+          // Éxito: Mostramos mensaje y recargamos la lista
+          alert(`Producto con ID ${id} eliminado exitosamente.`);
+          this.cargarProductos(); // Recarga la página actual
         },
-        error: (err) => console.error('Error al inactivar producto:', err),
+        error: (err) => {
+          // Error: Mostramos mensaje
+          console.error('Error al eliminar producto:', err);
+          this.errorMessage = err.error?.message || 'Error al eliminar el producto. Intente más tarde.';
+          this.isLoading = false; // Ocultamos spinner en caso de error
+        }
       });
     }
   }
 
-  /** 🔹 Reactivar producto */
-  reactivar(id: number) {
-    this.productoService.reactivarProducto(id).subscribe({
-      next: () => {
-        mostrarToast('Producto reactivado', 'success');
-        this.listarProductos();
-      },
-      error: (err) => console.error('Error al reactivar producto:', err),
-    });
+  /**
+   * Se llama cuando se envía el formulario de filtros
+   */
+  aplicarFiltros(): void {
+    this.currentPage = 0; // Resetea a la primera página con nuevos filtros
+    this.cargarProductos();
   }
 
-  /** 🔹 Paginación */
-  get productosPaginados(): Producto[] {
-    const inicio = (this.paginaActual - 1) * 10;
-    return this.productos.slice(inicio, inicio + 10);
-  }
-
-  /** 🔹 Reset de filtros */
-  private resetFiltros(): void {
-    this.filtroNombre = '';
-    this.categoriaSeleccionada = 0;
-    this.activoSeleccionado = 'todos';
-    this.fechaDesde = '';
-    this.fechaHasta = '';
-  }
-
-  /** 🔹 Crear producto vacío */
-  private crearProductoVacio(): Producto {
-    return {
-      idProducto: undefined,
+  /**
+   * Resetea los filtros y recarga la lista
+   */
+  limpiarFiltros(): void {
+    this.filtroForm.reset({
+      nombre: '',
       codigo: '',
-      nombreProducto: '',
-      descripcion: '',
-      precioCosto: 0,
-      precioVenta: 0,
-      stockActual: 0,
-      stockMinimo: 0,
-      activo: true,
-      imagen: undefined,
-      categoria: { idCategoria: 0 },
-    };
+      categoriaId: null,
+      conStock: null
+    });
+    this.aplicarFiltros();
+  }
+
+  // --- Métodos de Paginación ---
+  
+  irAPagina(pageNumber: number): void {
+    if (pageNumber >= 0 && (!this.productosPage || pageNumber < this.productosPage.totalPages)) {
+      this.currentPage = pageNumber;
+      this.cargarProductos();
+    }
+  }
+
+  get totalPaginas(): number {
+    return this.productosPage ? this.productosPage.totalPages : 0;
   }
 }

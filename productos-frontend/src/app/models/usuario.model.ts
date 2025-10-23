@@ -1,12 +1,17 @@
-import { Rol } from './rol.model';
-
-export interface Usuario {
-  idUsuario?: number;
+export interface UsuarioDTO { // Un DTO para mostrar usuarios (no el de registro)
+  id?: number;
   nombre: string;
   apellido: string;
-  documento: string;
   email: string;
-  password?: string;
-  rol?: Rol;
-  estado?: boolean;
+  documento?: string;
+  telefono?: string;
+  estado?: string; // Podría ser 'ACTIVO', 'INACTIVO'
+  roles?: RolDTO[]; // Necesitarás RolDTO
+  // No incluyas passwordHash aquí
+}
+
+// Necesitarás también RolDTO, PermisoDTO, etc.
+export interface RolDTO {
+  id?: number;
+  nombreRol: string;
 }
