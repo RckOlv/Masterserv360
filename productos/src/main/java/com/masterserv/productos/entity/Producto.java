@@ -4,51 +4,51 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.math.BigDecimal; // Usamos BigDecimal para dinero
+import java.math.BigDecimal; 
 
 @Entity
 @Table(name = "productos")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Producto {
+public class Producto extends AuditableEntity{
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "productos_id_generator")
+    @SequenceGenerator(name = "productos_id_generator", sequenceName = "productos_id_seq", allocationSize = 1)
+    @Column(name = "id") 
+    private Long id; 
 
-    @Column(unique = true, length = 50) // El código de producto que agregaste
-    private String codigo;
+    @Column(name = "codigo", unique = true, length = 50) 
+    private String codigo; 
 
-    @Column(nullable = false, length = 255)
-    private String nombre;
+    @Column(name = "nombre", nullable = false, length = 255) 
+    private String nombre; 
 
-    @Lob // Indica que puede ser un texto largo
-    @Column(columnDefinition = "TEXT")
-    private String descripcion;
+    @Column(name = "descripcion") 
+    private String descripcion; 
 
-    // Usamos BigDecimal para precisión monetaria. Evita errores de redondeo de float/double
-    @Column(name = "precio_venta", nullable = false, precision = 10, scale = 2)
+    @Column(name = "precio_venta", nullable = false, precision = 10, scale = 2) 
     private BigDecimal precioVenta;
 
-    @Column(name = "precio_costo", nullable = false, precision = 10, scale = 2)
+    @Column(name = "precio_costo", nullable = false, precision = 10, scale = 2) 
     private BigDecimal precioCosto;
 
-    @Column(name = "imagen_url", length = 255) // Solo la URL de la imagen
+    @Column(name = "imagen_url", length = 255) 
     private String imagenUrl;
 
-    @Column(name = "stock_actual", nullable = false)
-    private int stockActual; // `int` primitivo (no puede ser NULL)
+    @Column(name = "stock_actual", nullable = false) 
+    private int stockActual; 
 
-    @Column(name = "stock_minimo", nullable = false)
-    private int stockMinimo; // `int` primitivo (no puede ser NULL)
+    @Column(name = "stock_minimo", nullable = false) 
+    private int stockMinimo; 
 
-    @Column(length = 50)
-    private String estado; // Podríamos hacer un Enum para esto más tarde si es necesario
+    @Column(name = "estado", length = 50) 
+    private String estado; 
 
-    // --- Relaciones ---
-
-    @ManyToOne(fetch = FetchType.LAZY) // Un producto pertenece a UNA Categoria
-    @JoinColumn(name = "categoria_id", nullable = false) // La FK no puede ser nula
+    // --- Relación ---
+    @ManyToOne(fetch = FetchType.LAZY) 
+    // @JoinColumn ya especifica el 'name', así que está bien
+    @JoinColumn(name = "categoria_id", nullable = false) 
     private Categoria categoria;
 }

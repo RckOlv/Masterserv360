@@ -5,4 +5,5 @@ export interface ProductoFiltroDTO {
   categoriaId?: number;
   precioMax?: number;
   conStock?: boolean;
+  estado?: string;
 }

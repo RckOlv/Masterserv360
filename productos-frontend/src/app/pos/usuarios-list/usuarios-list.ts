@@ -1,75 +1,149 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common'; // Reemplaza NgFor, NgIf
+import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { UsuarioService } from '../../service/usuario.service'; // Asegúrate que la ruta es correcta
-import { UsuarioDTO } from '../../models/usuario.model'; // <-- CAMBIO: Usa DTO
-// import { AuthService } from '../../service/auth.service'; // Comentado si no se usa para permisos
-// import RegistroAdminComponent from '../../layouts/admin-layout/registro/registro'; // <-- CAMBIO: Importación default
+import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms'; // Importar Forms
+import { UsuarioService } from '../../service/usuario.service';
+import { UsuarioDTO } from '../../models/usuario.model';
+import { UsuarioFiltroDTO } from '../../models/usuario-filtro.model';
+import { Page } from '../../models/page.model';
+import { RolService } from '../../service/rol.service'; // Para el dropdown
+import { RolDTO } from '../../models/rol.model';
+import { mostrarToast } from '../../utils/toast';
 
 @Component({
   selector: 'app-usuario-list',
   standalone: true,
-  // 1. Simplificar imports: CommonModule ya incluye NgFor/NgIf
-  // 2. Quitar RegistroAdminComponent si no se usa en el template
-  imports: [
-    CommonModule, 
-    RouterModule 
-    // RegistroAdminComponent // <-- Quitar si no usas <app-registro-admin> en el HTML
-  ], 
+  imports: [CommonModule, RouterModule, ReactiveFormsModule], // Añadir ReactiveFormsModule
   templateUrl: './usuarios-list.html',
   styleUrls: ['./usuarios-list.css']
 })
 export default class UsuarioListComponent implements OnInit {
   
-  // 3. Usar el tipo DTO
-  usuarios: UsuarioDTO[] = []; 
-  // mostrarFormulario = false; // Ya no parece usarse según el código
+  // Estado
+  usuariosPage: Page<UsuarioDTO> | null = null;
+  filtroForm: FormGroup;
+  roles: RolDTO[] = []; // Para el dropdown
+  currentPage = 0;
+  pageSize = 10;
+  errorMessage: string | null = null;
+  isLoading = false;
+  
+  // Lista de estados para el filtro
+  estadosUsuario = [
+    { valor: 'ACTIVO', texto: 'Activos' },
+    { valor: 'INACTIVO', texto: 'Inactivos' },
+    { valor: 'PENDIENTE', texto: 'Pendientes' },
+    { valor: 'BLOQUEADO', texto: 'Bloqueados' }
+  ];
 
-  // 4. Inyectar UsuarioService (AuthService comentado si no se usa)
-  private usuarioService = inject(UsuarioService); 
-  // public authService = inject(AuthService); // <-- Comentado
+  // Inyección
+  private usuarioService = inject(UsuarioService);
+  private rolService = inject(RolService);
+  private fb = inject(FormBuilder);
 
-  constructor() {} // El constructor puede estar vacío
+  constructor() {
+    // Inicializamos el formulario de filtros
+    this.filtroForm = this.fb.group({
+      nombreOEmail: [''],
+      documento: [''],
+      rolId: [null],
+      estado: ['ACTIVO'] // Por defecto filtramos activos
+    });
+  }
 
   ngOnInit() {
-    this.cargarUsuarios();
+    this.cargarRoles();
+    this.cargarUsuarios(); // Carga inicial (solo Activos)
+  }
+
+  cargarRoles(): void {
+    this.rolService.listarRoles().subscribe({
+      next: (data) => this.roles = data,
+      error: (err: any) => console.error('Error al cargar roles', err)
+    });
   }
 
   cargarUsuarios() {
-    // 5. Asumir que UsuarioService devuelve UsuarioDTO[]
-    this.usuarioService.listarUsuarios().subscribe({ 
-      next: (data) => this.usuarios = data,
-      error: (err: any) => { // Añadir tipo 'any' al error
+    this.isLoading = true;
+    this.errorMessage = null;
+    const filtro = this.filtroForm.value as UsuarioFiltroDTO;
+    
+    // Si el estado es "null" (Todos), lo enviamos como null
+    if (filtro.estado === null) {
+      filtro.estado = null;
+    }
+
+    this.usuarioService.filtrarUsuarios(filtro, this.currentPage, this.pageSize).subscribe({ 
+      next: (data: Page<UsuarioDTO>) => { 
+        this.usuariosPage = data;
+        this.isLoading = false;
+      },
+      error: (err: any) => { 
         console.error('Error al cargar usuarios:', err);
-        // Aquí podrías usar mostrarToast('Error al cargar usuarios', 'danger');
+        this.errorMessage = "Error al cargar usuarios.";
+        this.isLoading = false;
       }
     });
   }
 
-  eliminarUsuario(id: number | undefined) { // Añadir tipo 'undefined'
-    // 6. Verificar el ID antes de usarlo
-    if (!id) {
-      console.error('Intento de eliminar usuario sin ID.');
-      return; 
-    }
-    if (confirm('¿Seguro que deseas marcar este usuario como inactivo?')) { // Cambiar mensaje a soft delete
-      // 7. Asumir que UsuarioService tiene softDelete y devuelve algo
+  aplicarFiltros(): void {
+    this.currentPage = 0; // Resetea a la primera página
+    this.cargarUsuarios();
+  }
+
+  limpiarFiltros(): void {
+    this.filtroForm.reset({
+      nombreOEmail: '',
+      documento: '',
+      rolId: null,
+      estado: 'ACTIVO' // Vuelve al estado por defecto
+    });
+    this.aplicarFiltros();
+  }
+
+  eliminarUsuario(id: number | undefined) { 
+    if (!id) return;
+    if (confirm('¿Seguro que deseas marcar este usuario como INACTIVO?')) { 
       this.usuarioService.softDelete(id).subscribe({ 
         next: () => {
-          // Recargar la lista para reflejar el cambio
-          this.cargarUsuarios(); 
-          // mostrarToast('Usuario marcado como inactivo', 'warning');
+          mostrarToast('Usuario marcado como inactivo', 'warning');
+          this.cargarUsuarios(); // Recarga la lista
         },
-        error: (err: any) => { // Añadir tipo 'any'
+        error: (err: any) => { 
            console.error('Error al eliminar usuario:', err);
-           // mostrarToast(err.error?.message || 'Error al eliminar usuario', 'danger');
+           this.errorMessage = err.error?.message || 'Error al eliminar usuario.';
+           if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+        }
+      });
+    }
+  }
+  
+  reactivarUsuario(id: number | undefined) {
+    if (!id) return;
+    if (confirm('¿Seguro que deseas REACTIVAR este usuario?')) {
+      this.usuarioService.reactivar(id).subscribe({
+        next: () => {
+          mostrarToast('Usuario reactivado correctamente', 'success');
+          this.cargarUsuarios(); // Recarga la lista
+        },
+        error: (err: any) => {
+           console.error('Error al reactivar usuario:', err);
+           this.errorMessage = err.error?.message || 'Error al reactivar usuario.';
+           if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
         }
       });
     }
   }
 
-  // Ya no parece necesario si el formulario es un componente separado
-  // alternarFormulario() {
-  //  this.mostrarFormulario = !this.mostrarFormulario;
-  // }
+  // --- Métodos de Paginación ---
+  irAPagina(pageNumber: number): void {
+    if (pageNumber >= 0 && (!this.usuariosPage || pageNumber < this.usuariosPage.totalPages)) {
+      this.currentPage = pageNumber;
+      this.cargarUsuarios();
+    }
+  }
+
+  get totalPaginas(): number {
+    return this.usuariosPage ? this.usuariosPage.totalPages : 0;
+  }
 }

@@ -2,46 +2,65 @@
   <div class="card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h4>Gestión de Productos</h4>
-      <button class="btn btn-success btn-sm" [routerLink]="['/productos/nuevo']"> <i class="bi bi-plus-lg"></i> Nuevo Producto
+      <button class="btn btn-success btn-sm" [routerLink]="['/productos/nuevo']">
+        <i class="bi bi-plus-lg"></i> Nuevo Producto
       </button>
     </div>
     <div class="card-body">
-
+      
       <form [formGroup]="filtroForm" (ngSubmit)="aplicarFiltros()" class="mb-3 p-3 bg-light rounded border">
+        
         <div class="row g-2 align-items-end">
-          <div class="col-md-3">
+          <div class="col-md-5">
             <label for="filtroNombre" class="form-label form-label-sm">Nombre</label>
-            <input type="text" id="filtroNombre" class="form-control form-control-sm" formControlName="nombre">
-          </div>
-          <div class="col-md-2">
-            <label for="filtroCodigo" class="form-label form-label-sm">Código</label>
-            <input type="text" id="filtroCodigo" class="form-control form-control-sm" formControlName="codigo">
+            <input type="text" id="filtroNombre" class="form-control form-control-sm" formControlName="nombre" />
           </div>
           <div class="col-md-3">
-            <label for="filtroCategoria" class="form-label form-label-sm">Categoría</label>
-            <select id="filtroCategoria" class="form-select form-select-sm" formControlName="categoriaId">
-              <option [ngValue]="null">Todas</option>
-              <option value="1">Categoría 1 (Ejemplo)</option>
-              <option value="2">Categoría 2 (Ejemplo)</option>
-            </select>
+            <label for="filtroCodigo" class="form-label form-label-sm">Código</label>
+            <input type="text" id="filtroCodigo" class="form-control form-control-sm" formControlName="codigo" />
           </div>
-          <div class="col-md-2">
-            <label for="filtroStock" class="form-label form-label-sm">Stock</label>
-            <select id="filtroStock" class="form-select form-select-sm" formControlName="conStock">
-              <option [ngValue]="null">Todos</option>
-              <option [value]="true">Con Stock</option>
-              <option [value]="false">Sin Stock</option>
-            </select>
-          </div>
-          <div class="col-md-2 d-flex">
+          <div class="col-md-4 d-flex">
+            <button type="button" class="btn btn-outline-secondary btn-sm me-1" 
+                    data-bs-toggle="collapse" data-bs-target="#filtrosAvanzados" 
+                    aria-expanded="false" aria-controls="filtrosAvanzados" title="Filtros avanzados">
+              <i class="bi bi-sliders"></i>
+            </button>
             <button type="submit" class="btn btn-primary btn-sm flex-grow-1 me-1">Filtrar</button>
             <button type="button" class="btn btn-secondary btn-sm" (click)="limpiarFiltros()" title="Limpiar filtros">
               <i class="bi bi-x-lg"></i>
             </button>
           </div>
         </div>
-      </form>
 
+        <div class="collapse mt-3" id="filtrosAvanzados">
+          <div class="row g-2">
+            <div class="col-md-4">
+              <label for="filtroCategoria" class="form-label form-label-sm">Categoría</label>
+              <select id="filtroCategoria" class="form-select form-select-sm" formControlName="categoriaId">
+                <option [ngValue]="null">Todas</option>
+                <option value="1">Categoría 1 (Ejemplo)</option>
+                <option value="2">Categoría 2 (Ejemplo)</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="filtroStock" class="form-label form-label-sm">Stock</label>
+              <select id="filtroStock" class="form-select form-select-sm" formControlName="conStock">
+                <option [ngValue]="null">Todos</option>
+                <option [value]="true">Con Stock</option>
+                <option [value]="false">Sin Stock</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="filtroEstado" class="form-label form-label-sm">Estado</label>
+              <select id="filtroEstado" class="form-select form-select-sm" formControlName="estado">
+                <option [ngValue]="null">Activos (Defecto)</option>
+                <option value="INACTIVO">Inactivos</option>
+                <option value="TODOS">Todos</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </form>
       <div *ngIf="isLoading" class="text-center my-3">
         <div class="spinner-border text-primary" role="status">
           <span class="visually-hidden">Cargando...</span>
@@ -70,43 +89,68 @@
               <td>{{ prod.codigo }}</td>
               <td>{{ prod.nombre }}</td>
               <td>{{ prod.categoriaNombre }}</td>
-              <td class="text-end">{{ prod.precioVenta | currency:'ARS':'symbol':'1.2-2' }}</td>
+              <td class="text-end">
+                {{ prod.precioVenta | currency : 'ARS' : 'symbol' : '1.2-2' }}
+              </td>
               <td class="text-end">{{ prod.stockActual }}</td>
-              <td><span class="badge bg-secondary">{{ prod.estado || 'N/A' }}</span></td>
+              <td>
+                <span class="badge" [ngClass]="prod.estado === 'ACTIVO' ? 'bg-success' : 'bg-danger'">
+                  {{ prod.estado || 'N/A' }}
+                </span>
+              </td>
               <td class="text-center">
-                <button class="btn btn-outline-primary btn-sm me-1" [routerLink]="['/productos/editar', prod.id]" title="Editar">
+                <button
+                  class="btn btn-outline-primary btn-sm me-1"
+                  [routerLink]="['/productos/editar', prod.id]"
+                  title="Editar"
+                >
                   <i class="bi bi-pencil-square"></i>
                 </button>
-                <button class="btn btn-outline-danger btn-sm" (click)="eliminarProducto(prod.id)" title="Eliminar"> <i class="bi bi-trash"></i>
+                <button
+                  *ngIf="prod.estado === 'ACTIVO'"
+                  class="btn btn-outline-danger btn-sm"
+                  (click)="eliminarProducto(prod.id)"
+                  title="Eliminar (Marcar como Inactivo)"
+                >
+                  <i class="bi bi-trash"></i>
                 </button>
-              </td>
+                </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-       <div *ngIf="!isLoading && productosPage && productosPage.content.length === 0" class="alert alert-info text-center">
+      <div *ngIf="!isLoading && productosPage && productosPage.content.length === 0" class="alert alert-info text-center">
         No se encontraron productos con los filtros aplicados.
       </div>
 
       <nav *ngIf="!isLoading && productosPage && productosPage.totalPages > 1" aria-label="Paginación de productos">
         <ul class="pagination pagination-sm justify-content-center">
           <li class="page-item" [class.disabled]="productosPage.number === 0">
-            <a class="page-link" href="javascript:void(0)" (click)="irAPagina(productosPage.number - 1)" aria-label="Previous">
+            <a
+              class="page-link"
+              href="javascript:void(0)"
+              (click)="irAPagina(productosPage.number - 1)"
+              aria-label="Previous"
+            >
               <span aria-hidden="true">&laquo;</span>
             </a>
           </li>
           <li class="page-item disabled">
-             <span class="page-link">Pág {{ productosPage.number + 1 }} de {{ totalPaginas }}</span>
+            <span class="page-link">Pág {{ productosPage.number + 1 }} de {{ totalPaginas }}</span>
           </li>
           <li class="page-item" [class.disabled]="productosPage.number + 1 >= totalPaginas">
-            <a class="page-link" href="javascript:void(0)" (click)="irAPagina(productosPage.number + 1)" aria-label="Next">
+            <a
+              class="page-link"
+              href="javascript:void(0)"
+              (click)="irAPagina(productosPage.number + 1)"
+              aria-label="Next"
+            >
               <span aria-hidden="true">&raquo;</span>
             </a>
           </li>
         </ul>
       </nav>
-
     </div>
   </div>
 </div>

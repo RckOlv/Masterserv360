@@ -1,92 +1,159 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms'; // Import Reactive
-import { Router, RouterLink } from '@angular/router';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router'; // Importar ActivatedRoute
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
 
-// 1. Importar AuthService y el DTO correcto
-import { AuthService } from '../../../service/auth.service'; // Ajusta la ruta si es necesario
+import { UsuarioService } from '../../../service/usuario.service';
+import { RolService } from '../../../service/rol.service';
+import { TipoDocumentoService } from '../../../service/tipo-documento.service';
 import { RegisterRequestDTO } from '../../../models/register-request.model';
-// import { RolService } from '../../../service/rol.service'; // Ya no lo usamos aquí
-// import { RolDTO } from '../../../models/rol.model'; // Ya no lo usamos aquí
+import { RolDTO } from '../../../models/rol.model';
+import { TipoDocumentoDTO } from '../../../models/tipo-documento.model';
+import { UsuarioDTO } from '../../../models/usuario.model';
+import { mostrarToast } from '../../../utils/toast';
 
 @Component({
   standalone: true,
-  selector: 'app-registro-admin', // Tu selector
+  selector: 'app-registro-admin', 
   templateUrl: './registro.html',
   styleUrls: ['./registro.css'],
-  // 2. Usar ReactiveFormsModule y RouterLink
   imports: [
-    CommonModule,
-    ReactiveFormsModule, // <-- CAMBIO
-    HttpClientModule,
-    RouterLink // Para el botón de cancelar/volver
+    CommonModule, 
+    ReactiveFormsModule, 
+    RouterLink 
   ]
 })
-// 3. Renombra si quieres, o déjalo como RegistroAdminComponent
 export default class RegistroAdminComponent implements OnInit {
 
-  // 4. Inyectar FormBuilder y AuthService
   private fb = inject(FormBuilder);
-  private authService = inject(AuthService); // <-- CAMBIO
   private router = inject(Router);
+  private route = inject(ActivatedRoute); // Para modo edición
+  private usuarioService = inject(UsuarioService);
+  private rolService = inject(RolService);
+  private tipoDocumentoService = inject(TipoDocumentoService);
 
-  public registerForm: FormGroup;
+  public userForm: FormGroup; // Cambiado a nombre genérico
   public errorMessage: string | null = null;
-  // public roles: RolDTO[] = []; // Comentado por ahora
+  public roles: RolDTO[] = [];
+  public tiposDocumento: TipoDocumentoDTO[] = [];
+  
+  public esEdicion = false;
+  public usuarioId: number | null = null;
+  public pageTitle = 'Registrar Nuevo Usuario';
 
   constructor() {
-    // 5. Crear el Formulario Reactivo
-    this.registerForm = this.fb.group({
-      nombre: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
-      apellido: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
-      email: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
-      tipoDocumentoId: [null], // Mantener opcionales
-      documento: ['', [Validators.maxLength(30)]],
-      telefono: ['', [Validators.maxLength(20)]]
-      // rolId: [null, Validators.required] // Comentado por ahora
+    this.userForm = this.fb.group({
+      nombre: ['', Validators.required],
+      apellido: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.minLength(8)]], // Opcional en edición
+      tipoDocumentoId: [null, Validators.required],
+      documento: ['', Validators.required],
+      telefono: ['', Validators.required],
+      rolId: [null, Validators.required], // El ID del Rol (simple)
+      estado: ['ACTIVO', Validators.required]
     });
   }
 
   ngOnInit(): void {
-    // this.cargarRoles(); // Comentado por ahora
-  }
+    this.cargarDropdowns();
 
-  /* // Comentado por ahora
-  cargarRoles(): void {
-    this.rolService.listarRoles().subscribe({
-      next: (roles) => this.roles = roles,
-      error: () => alert('Error al cargar los roles') // Mejorar manejo de errores
-    });
-  }
-  */
-
-  onSubmit(): void {
-    this.registerForm.markAllAsTouched();
-
-    if (this.registerForm.invalid) {
-      return;
-    }
-
-    this.errorMessage = null;
-
-    // 6. Mapear al DTO (sin el rol por ahora)
-    const request = this.registerForm.value as RegisterRequestDTO;
-
-    // 7. Llamar a AuthService.register
-    this.authService.register(request).subscribe({
-      next: () => {
-        alert('Usuario creado con éxito'); // O usar un toast
-        this.router.navigate(['/usuarios']); // O a donde redirija el admin
-      },
-      error: (err) => {
-        console.error('Error al crear usuario:', err);
-        this.errorMessage = err.error?.message || 'Error al crear el usuario.';
+    // Comprobar si estamos en modo EDICIÓN
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('id');
+      if (id) {
+        this.esEdicion = true;
+        this.usuarioId = +id;
+        this.pageTitle = 'Editar Usuario';
+        // Si es edición, la contraseña no es obligatoria
+        this.userForm.get('password')?.clearValidators();
+        this.userForm.get('password')?.updateValueAndValidity();
+        this.cargarDatosUsuario(this.usuarioId);
+      } else {
+        // Si es CREACIÓN, la contraseña SÍ es obligatoria
+        this.userForm.get('password')?.setValidators([Validators.required, Validators.minLength(8)]);
+        this.userForm.get('password')?.updateValueAndValidity();
       }
     });
   }
 
-  // Helpers para el template
-  get f() { return this.registerForm.controls; }
+  cargarDropdowns(): void {
+    this.tipoDocumentoService.listarTiposDocumento().subscribe({
+        next: data => this.tiposDocumento = data,
+        error: err => console.error('Error cargando tipos de documento', err)
+    });
+    this.rolService.listarRoles().subscribe({
+        next: data => this.roles = data,
+        error: err => console.error('Error cargando roles', err)
+    });
+  }
+
+  cargarDatosUsuario(id: number): void {
+    this.usuarioService.getById(id).subscribe({
+      next: (usuario) => {
+        this.userForm.patchValue({
+          nombre: usuario.nombre,
+          apellido: usuario.apellido,
+          email: usuario.email,
+          password: '', // Dejar vacío
+          tipoDocumentoId: usuario.tipoDocumentoId,
+          documento: usuario.documento,
+          telefono: usuario.telefono,
+          // Mapeamos el *primer* rol del array (simplificación)
+          rolId: usuario.roles && usuario.roles.length > 0 ? usuario.roles[0].id : null, 
+          estado: usuario.estado
+        });
+      },
+      error: (err: any) => {
+         mostrarToast('Error al cargar datos del usuario', 'danger');
+         this.errorMessage = err.error?.message;
+      }
+    });
+  }
+
+  onSubmit(): void {
+    this.userForm.markAllAsTouched();
+    
+    if (this.userForm.invalid) {
+      mostrarToast("Por favor, complete todos los campos obligatorios.", "warning");
+      return;
+    }
+
+    this.errorMessage = null;
+    const formValue = this.userForm.value;
+
+    // 1. Crear el DTO que el backend espera (UsuarioDTO)
+    const usuarioDTO: UsuarioDTO = {
+        id: this.usuarioId ?? undefined, // Añadir ID si estamos editando
+        nombre: formValue.nombre,
+        apellido: formValue.apellido,
+        email: formValue.email,
+        passwordHash: formValue.password, // Se envía vacío si no se edita
+        documento: formValue.documento,
+        telefono: formValue.telefono,
+        tipoDocumentoId: formValue.tipoDocumentoId,
+        // 2. Mapeamos el rolId seleccionado
+        roles: [{ id: formValue.rolId, nombreRol: '' }],
+        estado: formValue.estado
+    };
+
+    // 3. Decidir si crear o actualizar
+    const obs = this.esEdicion
+      ? this.usuarioService.actualizarUsuarioAdmin(this.usuarioId!, usuarioDTO)
+      : this.usuarioService.crearUsuarioAdmin(usuarioDTO);
+
+    obs.subscribe({
+      next: () => {
+        mostrarToast(this.esEdicion ? 'Usuario actualizado' : 'Usuario creado', 'success'); 
+        this.router.navigate(['/usuarios']); // Vuelve a la lista
+      },
+      error: (err: any) => {
+        console.error('Error al guardar usuario:', err);
+        this.errorMessage = err.error?.message || 'Error al guardar el usuario.';
+        if(this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+      }
+    });
+  }
+
+  get f() { return this.userForm.controls; }
 }

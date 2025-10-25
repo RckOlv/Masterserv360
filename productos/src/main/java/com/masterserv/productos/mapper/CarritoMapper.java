@@ -19,7 +19,7 @@ public interface CarritoMapper {
         @Mapping(source = "producto.id", target = "productoId"),
         @Mapping(source = "producto.nombre", target = "productoNombre"),
         @Mapping(source = "producto.precioVenta", target = "precioUnitario"),
-        @Mapping(target = "subtotal", expression = "java(item.getProducto().getPrecioVenta().multiply(new BigDecimal(item.getCantidad())))")
+        //@Mapping(target = "subtotal", expression = "java(item.getProducto().getPrecioVenta().multiply(new BigDecimal(item.getCantidad())))")
     })
     ItemCarritoDTO toItemCarritoDTO(ItemCarrito item);
 

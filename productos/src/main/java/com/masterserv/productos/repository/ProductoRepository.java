@@ -17,8 +17,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     boolean existsByCodigo(String codigo);
 
     Optional<Producto> findByNombre(String nombre);
-    
-    // NOTA DE MENTOR:
+
     // Extendemos JpaSpecificationExecutor<Producto>. Esto es clave.
     // Nos permitirá construir consultas dinámicas complejas más adelante 
     // (filtrar por nombre, categoría, precio, etc.) 
