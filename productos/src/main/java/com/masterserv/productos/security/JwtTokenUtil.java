@@ -14,7 +14,6 @@ import java.util.Date;
 @Component
 public class JwtTokenUtil {
 
-    // 1. Inyectamos los valores desde application.properties
     @Value("${jwt.secret}")
     private String secretKey;
 
@@ -23,7 +22,6 @@ public class JwtTokenUtil {
 
     private Key key;
 
-    // 2. Creamos la llave de firma UNA SOLA VEZ al iniciar el componente
     @PostConstruct
     public void init() {
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
@@ -33,15 +31,25 @@ public class JwtTokenUtil {
         return this.key;
     }
 
-    public String generarToken(String username) {
+    /**
+     * Genera un token JWT con el username y los roles del usuario.
+     */
+    public String generarToken(UserDetails userDetails) {
         return Jwts.builder()
-                .setSubject(username)
+                .setSubject(userDetails.getUsername())
+                .claim("roles", userDetails.getAuthorities()
+                        .stream()
+                        .map(auth -> auth.getAuthority())
+                        .toList())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
+    /**
+     * Obtiene el username (email) desde el token JWT.
+     */
     public String obtenerUsernameDelToken(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
@@ -51,11 +59,17 @@ public class JwtTokenUtil {
                 .getSubject();
     }
 
+    /**
+     * Valida que el token pertenezca al usuario y no esté expirado.
+     */
     public boolean validarToken(String token, UserDetails userDetails) {
         final String username = obtenerUsernameDelToken(token);
         return (username.equals(userDetails.getUsername()) && !estaExpirado(token));
     }
 
+    /**
+     * Verifica si el token está expirado.
+     */
     public boolean estaExpirado(String token) {
         Date expiration = Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())

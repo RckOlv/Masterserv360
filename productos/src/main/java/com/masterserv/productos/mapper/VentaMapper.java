@@ -20,7 +20,7 @@ public interface VentaMapper {
     @Mappings({
         @Mapping(source = "producto.id", target = "productoId"),
         @Mapping(source = "producto.nombre", target = "productoNombre"),
-        @Mapping(target = "subtotal", expression = "java(detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad())))")
+        //@Mapping(target = "subtotal", expression = "java(detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad())))")
     })
     DetalleVentaDTO toDetalleVentaDTO(DetalleVenta detalle);
 

@@ -14,4 +14,5 @@ public class ProductoFiltroDTO {
     private Long categoriaId;
     private BigDecimal precioMax;
     private Boolean conStock; // true = con stock, false = sin stock
+    private String estado;
 }

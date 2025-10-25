@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,44 +45,45 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
 
     /**
-     * Autentica a un usuario y devuelve un token JWT.
+     * Autentica a un usuario y devuelve un token JWT con roles.
      */
     public AuthResponseDTO login(LoginRequestDTO request) {
-        // AuthenticationManager llama a nuestro CustomUserDetailsService
+        // 1️⃣ Autentica el usuario
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
-        
-        // Si la autenticación fue exitosa (no saltó excepción), generamos el token
-        String token = jwtTokenUtil.generarToken(request.getEmail());
-        
+
+        // 2️⃣ Obtiene los detalles del usuario autenticado
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+        // 3️⃣ Genera el token con username + roles
+        String token = jwtTokenUtil.generarToken(userDetails);
+
+        // 4️⃣ Retorna el token en el DTO
         return new AuthResponseDTO(token);
     }
 
     /**
-     * Registra un nuevo usuario en el sistema.
+     * Registra un nuevo usuario con rol CLIENTE.
      */
-    @Transactional // Esta operación debe ser transaccional
+    @Transactional
     public void register(RegisterRequestDTO request) {
-        
-        // 1. Validar que el email no exista
+        // 1️⃣ Validar email duplicado
         if (usuarioRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Error: El email ya está registrado.");
         }
 
-        // 2. Buscar el rol por defecto ("CLIENTE" o "USUARIO")
-        // IMPORTANTE: Debes tener este rol creado en tu base de datos
+        // 2️⃣ Buscar el rol por defecto "CLIENTE"
         Rol rolPorDefecto = rolRepository.findByNombreRol("CLIENTE")
                 .orElseThrow(() -> new RuntimeException("Error: Rol 'CLIENTE' no encontrado."));
 
-        // 3. Buscar el TipoDocumento (si se proveyó)
+        // 3️⃣ Buscar el tipo de documento si se proporcionó
         TipoDocumento tipoDoc = null;
         if (request.getTipoDocumentoId() != null) {
-            tipoDoc = tipoDocumentoRepository.findById(request.getTipoDocumentoId())
-                    .orElse(null); // O lanzar excepción si prefieres
+            tipoDoc = tipoDocumentoRepository.findById(request.getTipoDocumentoId()).orElse(null);
         }
-        
-        // 4. Crear la nueva entidad Usuario (Mapeo DTO -> Entidad)
+
+        // 4️⃣ Crear la entidad Usuario
         Usuario nuevoUsuario = new Usuario();
         nuevoUsuario.setNombre(request.getNombre());
         nuevoUsuario.setApellido(request.getApellido());
@@ -91,9 +93,9 @@ public class AuthService {
         nuevoUsuario.setTelefono(request.getTelefono());
         nuevoUsuario.setTipoDocumento(tipoDoc);
         nuevoUsuario.setRoles(Set.of(rolPorDefecto));
-        nuevoUsuario.setEstado(EstadoUsuario.ACTIVO); // O PENDIENTE si tuvieras verificación
+        nuevoUsuario.setEstado(EstadoUsuario.ACTIVO);
 
-        // 5. Guardar el nuevo usuario
+        // 5️⃣ Guardar el usuario
         usuarioRepository.save(nuevoUsuario);
     }
 }

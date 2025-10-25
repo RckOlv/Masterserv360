@@ -40,6 +40,7 @@ export default class ProductosComponent implements OnInit {
       nombre: [''],
       codigo: [''],
       categoriaId: [null],
+      estado:[null],
       // precioMax: [null], // Añadir si necesitas
       conStock: [null] // null = Todos, true = Con stock, false = Sin stock
     });

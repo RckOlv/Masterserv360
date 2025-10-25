@@ -1,15 +1,18 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { RolDTO } from '../models/rol.model';
+import { API_URL } from '../app.config';
+import { RolDTO } from '../models/rol.model'; 
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class RolService {
-  private apiUrl = 'http://localhost:8080/api/roles'; // Endpoint del backend
+  private http = inject(HttpClient);
+  private apiUrl = `${API_URL}/api/roles`; // Asumo esta ruta
 
-  constructor(private http: HttpClient) {}
-
-  listarRoles(): Observable<RolDTO[]> {
-    return this.http.get<RolDTO[]>(this.apiUrl);
+  listarRoles(): Observable<RolDTO[]> { // <-- Corregido
+    return this.http.get<RolDTO[]>(this.apiUrl); // <-- Corregido
   }
+  
 }

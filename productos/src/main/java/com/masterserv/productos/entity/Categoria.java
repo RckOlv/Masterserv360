@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Categoria {
+public class Categoria extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,6 +21,9 @@ public class Categoria {
 
     @Column(length = 255)
     private String descripcion;
+
+    @Column(length = 50)
+    private String estado; 
     
     // NOTA: No necesitamos el @OneToMany a Productos aquí.
     // Mantenemos la entidad "limpia". La relación la maneja Producto.

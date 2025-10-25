@@ -8,16 +8,27 @@
     </div>
     <div class="card-body">
 
-      <div class="row mb-3">
-        <div class="col-md-4">
+      <div class="row mb-3 g-2">
+        <div class="col-md-5">
+          <label for="filtroNombre" class="form-label form-label-sm">Buscar por Nombre</label>
           <input type="text" class="form-control form-control-sm"
-                 placeholder="Buscar por nombre..."
+                 id="filtroNombre"
                  [(ngModel)]="terminoBusqueda"
-                 (input)="buscarCategoria()">
+                 (input)="aplicarFiltros()">
         </div>
-        <div class="col-auto">
-          <button class="btn btn-secondary btn-sm" (click)="reiniciarFiltros()" title="Limpiar búsqueda">
-            <i class="bi bi-x-lg"></i>
+        <div class="col-md-3">
+          <label for="filtroEstado" class="form-label form-label-sm">Filtrar por Estado</label>
+          <select id="filtroEstado" class="form-select form-select-sm" 
+                  [(ngModel)]="filtroEstado" 
+                  (change)="aplicarFiltros()">
+            <option value="ACTIVO">Activos</option>
+            <option value="INACTIVO">Inactivos</option>
+            <option value="TODOS">Todos</option>
+          </select>
+        </div>
+        <div class="col-md-2 align-self-end">
+          <button class="btn btn-secondary btn-sm w-100" (click)="reiniciarFiltros()" title="Limpiar búsqueda">
+            Reiniciar
           </button>
         </div>
       </div>
@@ -39,6 +50,7 @@
               <th>ID</th>
               <th>Nombre</th>
               <th>Descripción</th>
+              <th>Estado</th>
               <th class="text-center">Acciones</th>
             </tr>
           </thead>
@@ -47,14 +59,28 @@
               <td>{{ cat.id }}</td>
               <td>{{ cat.nombre }}</td>
               <td>{{ cat.descripcion || '-' }}</td>
+              <td>
+                <span class="badge" [ngClass]="cat.estado === 'ACTIVO' ? 'bg-success' : 'bg-danger'">
+                  {{ cat.estado || 'N/A' }}
+                </span>
+              </td>
               <td class="text-center">
                 <button class="btn btn-outline-primary btn-sm me-1" (click)="abrirModalEditar(cat)" title="Editar">
                   <i class="bi bi-pencil-square"></i>
                 </button>
-                <button class="btn btn-outline-danger btn-sm" (click)="eliminarCategoria(cat.id)" title="Marcar como Inactiva">
+                <button *ngIf="cat.estado === 'ACTIVO'"
+                  class="btn btn-outline-danger btn-sm"
+                  (click)="eliminarCategoria(cat.id)"
+                  title="Marcar como Inactiva">
                   <i class="bi bi-trash"></i>
                 </button>
-                 </td>
+                 <button *ngIf="cat.estado === 'INACTIVO'"
+                   class="btn btn-outline-success btn-sm ms-1" 
+                   (click)="reactivarCategoria(cat.id)" 
+                   title="Reactivar">
+                   <i class="bi bi-check-circle"></i>
+                 </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -69,34 +95,39 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="categoriaModalLabel">{{ esEdicion ? 'Editar' : 'Nueva' }} Categoría</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" (click)="cerrarModal()" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form [formGroup]="categoriaForm" id="ngCategoriaForm" (ngSubmit)="guardarCategoria()">
           <input type="hidden" formControlName="id">
 
           <div class="mb-3">
-            <label for="categoriaNombre" class="form-label">Nombre</label>
+            <label for="categoriaNombre" class="form-label">Nombre <span class="text-danger">*</span></label>
             <input type="text" id="categoriaNombre" class="form-control" formControlName="nombre"
                    [ngClass]="{ 'is-invalid': f['nombre'].invalid && (f['nombre'].dirty || f['nombre'].touched) }">
             <div *ngIf="f['nombre'].invalid && (f['nombre'].dirty || f['nombre'].touched)" class="invalid-feedback">
               <div *ngIf="f['nombre'].errors?.['required']">El nombre es obligatorio.</div>
-              <div *ngIf="f['nombre'].errors?.['maxlength']">Máximo 100 caracteres.</div>
             </div>
           </div>
 
           <div class="mb-3">
             <label for="categoriaDescripcion" class="form-label">Descripción</label>
-            <textarea id="categoriaDescripcion" class="form-control" formControlName="descripcion" rows="3"
-                      [ngClass]="{ 'is-invalid': f['descripcion'].invalid && (f['descripcion'].dirty || f['descripcion'].touched) }"></textarea>
-             <div *ngIf="f['descripcion'].invalid && (f['descripcion'].dirty || f['descripcion'].touched)" class="invalid-feedback">
-               <div *ngIf="f['descripcion'].errors?.['maxlength']">Máximo 255 caracteres.</div>
-             </div>
+            <textarea id="categoriaDescripcion" class="form-control" formControlName="descripcion" rows="3"></textarea>
           </div>
+          
+          <div class="mb-3" *ngIf="esEdicion">
+            <label for="categoriaEstado" class="form-label">Estado <span class="text-danger">*</span></label>
+            <select id="categoriaEstado" class="form-select" formControlName="estado"
+                    [ngClass]="{ 'is-invalid': f['estado'].invalid && (f['estado'].dirty || f['estado'].touched) }">
+              <option value="ACTIVO">Activo</option>
+              <option value="INACTIVO">Inactivo</option>
+            </select>
+          </div>
+
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cancelar</button>
         <button type="submit" form="ngCategoriaForm" class="btn btn-primary" [disabled]="categoriaForm.invalid || isLoading">
           <span *ngIf="!isLoading">{{ esEdicion ? 'Actualizar' : 'Crear' }}</span>
           <span *ngIf="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>

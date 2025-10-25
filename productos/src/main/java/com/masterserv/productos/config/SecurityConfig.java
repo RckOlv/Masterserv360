@@ -5,6 +5,8 @@ import com.masterserv.productos.service.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+// Necesitamos importar HttpMethod
+import org.springframework.http.HttpMethod; 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -41,27 +43,27 @@ public class SecurityConfig {
         http
             // 1. Deshabilitamos CSRF (no necesario para APIs REST stateless)
             .csrf(csrf -> csrf.disable())
-            
+
             // 2. Configuramos CORS (usando el Bean de abajo)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            
+
             // 3. Definimos las reglas de autorización
             .authorizeHttpRequests(authz -> authz
-                // Nuestros endpoints públicos (Login y Registro)
-                .requestMatchers("/api/auth/**").permitAll() 
-                .requestMatchers("/api/chatbot/**").permitAll() // Permite el webhook de Twilio
-                // Todos los demás endpoints requieren autenticación
-                .anyRequest().authenticated() 
+                // Endpoints públicos
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/chatbot/**").permitAll() // Webhook de Twilio
+                .requestMatchers(HttpMethod.POST, "/api/productos/filtrar").permitAll() 
+                .requestMatchers(HttpMethod.GET, "/api/categorias").permitAll() 
+                .requestMatchers(HttpMethod.GET, "/api/tipos-documento").permitAll()
+                .anyRequest().authenticated()
             )
-            
-            // 4. Establecemos la política de sesión como STATELESS (sin estado)
-            // Spring Security no creará ni usará sesiones HTTP.
-            .sessionManagement(session -> 
+
+            // 4. Establecemos la política de sesión como STATELESS
+            .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-            
-            // 5. Agregamos nuestro filtro JWT ANTES del filtro de login estándar
-            // Esto asegura que validamos el token en cada petición.
+
+            // 5. Agregamos nuestro filtro JWT ANTES del filtro estándar
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -77,7 +79,6 @@ public class SecurityConfig {
 
     /**
      * Bean para el AuthenticationManager.
-     * Spring lo usará para orquestar el login, llamando a nuestro CustomUserDetailsService.
      */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
@@ -86,24 +87,18 @@ public class SecurityConfig {
 
     /**
      * Configuración Global de CORS.
-     * Reemplaza todos los @CrossOrigin(origins = "http://localhost:4200")
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Permitimos el origen de nuestro frontend de Angular
         configuration.setAllowedOrigins(List.of("http://localhost:4200"));
-        // Permitimos los métodos HTTP estándar
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        // Permitimos todas las cabeceras (incluyendo "Authorization")
         configuration.setAllowedHeaders(List.of("*"));
-        // Permitimos que el frontend reciba credenciales (como el token)
         configuration.setAllowCredentials(true);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // Aplicamos esta configuración a TODAS las rutas de nuestra API
         source.registerCorsConfiguration("/**", configuration);
-        
+
         return source;
     }
 }

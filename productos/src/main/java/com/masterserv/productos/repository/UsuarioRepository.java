@@ -1,31 +1,24 @@
 package com.masterserv.productos.repository;
 
-import com.masterserv.productos.entity.Producto;
 import com.masterserv.productos.entity.Usuario;
-
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor; // Importado
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+// 1. AÑADIDO JpaSpecificationExecutor
+public interface UsuarioRepository extends JpaRepository<Usuario, Long>, JpaSpecificationExecutor<Usuario> {
 
     /**
      * Busca un usuario por su email.
-     * Este método es fundamental para el proceso de Login (UserDetailsService).
-     * Usamos @EntityGraph para cargar los roles EAGERLY en esta consulta específica.
+     * ¡@EntityGraph es fundamental para que el Login cargue los roles!
      */
-    @Override
-    @EntityGraph(attributePaths = "roles") // Carga los roles junto con el usuario
-    Optional<Usuario> findById(Long id);
-
-    /**
-     * Busca un usuario por su email.
-     * Este método es fundamental para el proceso de Login (UserDetailsService).
-     * Usamos Optional para manejar de forma segura si el usuario no existe.
-     * Spring Data JPA implementa esto automáticamente.
-     */
+    @EntityGraph(attributePaths = "roles") 
     Optional<Usuario> findByEmail(String email);
 
     // Método para verificar si un email ya existe (útil para el registro)
@@ -33,7 +26,15 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     // Método para verificar si un documento ya existe
     boolean existsByDocumentoAndTipoDocumento_Id(String documento, Long tipoDocumentoId);
-
-	Optional<Usuario> findByTelefono(String telefono);
     
+    // Método para el Chatbot
+    Optional<Usuario> findByTelefono(String telefono);
+    
+    /**
+     * Sobreescribimos findAll (de JpaSpecificationExecutor) para forzar
+     * la carga EAGER de los roles y tipoDocumento (Soluciona N+1).
+     */
+    @Override
+    @EntityGraph(attributePaths = {"roles", "tipoDocumento"})
+    Page<Usuario> findAll(Specification<Usuario> spec, Pageable pageable);
 }

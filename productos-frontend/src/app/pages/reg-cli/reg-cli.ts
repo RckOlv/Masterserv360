@@ -1,47 +1,53 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
 
-// 1. Importamos el DTO y el Servicio correctos
 import { AuthService } from '../../service/auth.service';
+import { TipoDocumentoService } from '../../service/tipo-documento.service';
 import { RegisterRequestDTO } from '../../models/register-request.model';
+import { TipoDocumentoDTO } from '../../models/tipo-documento.model';
+import { mostrarToast } from '../../utils/toast';
 
 @Component({
-  selector: 'app-registro-cliente', // Tu selector
+  selector: 'app-reg-cli',
   standalone: true,
-  // 2. Importamos ReactiveFormsModule
-  imports: [
-    CommonModule,
-    RouterLink,
-    ReactiveFormsModule, // <-- CAMBIO
-    HttpClientModule
-  ],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './reg-cli.html',
   styleUrls: ['./reg-cli.css']
 })
-export default class RegistroClienteComponent {
+export default class RegCliComponent implements OnInit {
 
-  // 3. Inyectamos AuthService y FormBuilder
   private fb = inject(FormBuilder);
-  private authService = inject(AuthService); // <-- CAMBIO
+  private authService = inject(AuthService);
+  private tipoDocumentoService = inject(TipoDocumentoService);
   private router = inject(Router);
 
   public registerForm: FormGroup;
   public errorMessage: string | null = null;
-  
+  public tiposDocumento: TipoDocumentoDTO[] = [];
+
   constructor() {
-    // 4. Creamos el Formulario Reactivo
+    // Definición del formulario con TODOS los campos como OBLIGATORIOS
     this.registerForm = this.fb.group({
-      nombre: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
-      apellido: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
-      email: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
+      nombre: ['', Validators.required],
+      apellido: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
-      // Los campos opcionales del DTO
-      tipoDocumentoId: [null],
-      documento: ['', [Validators.maxLength(30)]],
-      telefono: ['', [Validators.maxLength(20)]]
+      tipoDocumentoId: [null, Validators.required], // OBLIGATORIO
+      documento: ['', Validators.required],           // OBLIGATORIO
+      telefono: ['', Validators.required]
+    });
+  }
+
+  ngOnInit(): void {
+    // Cargar los tipos de documento para el dropdown
+    this.tipoDocumentoService.listarTiposDocumento().subscribe({
+      next: (data) => this.tiposDocumento = data,
+      error: (err: any) => {
+        console.error('Error cargando tipos de documento', err);
+        this.errorMessage = "Error al cargar tipos de documento. Recargue la página.";
+      }
     });
   }
 
@@ -49,28 +55,26 @@ export default class RegistroClienteComponent {
     this.registerForm.markAllAsTouched();
     
     if (this.registerForm.invalid) {
+      mostrarToast("Por favor, complete todos los campos obligatorios.", "warning");
       return;
     }
 
     this.errorMessage = null;
-
-    // 5. Mapeamos el formulario al DTO
     const request = this.registerForm.value as RegisterRequestDTO;
 
-    // 6. Llamamos al servicio correcto
     this.authService.register(request).subscribe({
       next: () => {
-        alert('Registro exitoso. Por favor, inicie sesión.'); // Usamos 'alert' como tenías
+        mostrarToast('¡Registro exitoso! Por favor, inicie sesión.', 'success'); 
         this.router.navigate(['/login']);
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error en el registro:', err);
-        // El GlobalExceptionHandler del backend nos da el mensaje
         this.errorMessage = err.error?.message || 'Error al registrar el usuario.';
+        if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
       }
     });
   }
 
-  // --- Helpers para mostrar errores en el template ---
+  // Helper para validación en template
   get f() { return this.registerForm.controls; }
 }

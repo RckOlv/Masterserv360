@@ -1,11 +1,10 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CategoriaService } from '../../service/categoria.service';
 import { CategoriaDTO } from '../../models/categoria.model';
 import { mostrarToast } from '../../utils/toast';
 
-// Declarar Bootstrap globalmente
 declare var bootstrap: any;
 
 @Component({
@@ -13,7 +12,7 @@ declare var bootstrap: any;
   standalone: true,
   templateUrl: './categorias.html',
   styleUrls: ['./categorias.css'],
-  imports: [CommonModule, ReactiveFormsModule,FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule], 
 })
 export default class CategoriasComponent implements OnInit {
 
@@ -21,9 +20,11 @@ export default class CategoriasComponent implements OnInit {
   private categoriaService = inject(CategoriaService);
 
   // Estado
-  categorias: CategoriaDTO[] = []; // Lista completa del backend
-  categoriasFiltradas: CategoriaDTO[] = []; // Lista para mostrar en la tabla
+  categorias: CategoriaDTO[] = []; // Lista completa del backend (filtrada por estado)
+  categoriasFiltradas: CategoriaDTO[] = []; // Lista para la tabla (filtrada por nombre)
   terminoBusqueda: string = '';
+  filtroEstado: string = 'ACTIVO'; // Estado por defecto
+  
   categoriaForm: FormGroup;
   esEdicion = false;
   categoriaSeleccionadaId: number | null = null;
@@ -34,77 +35,90 @@ export default class CategoriasComponent implements OnInit {
     this.categoriaForm = this.fb.group({
       id: [null],
       nombre: ['', [Validators.required, Validators.maxLength(100)]],
-      descripcion: ['', [Validators.maxLength(255)]]
-      // estado: ['ACTIVO'] // Podríamos añadirlo si el backend lo maneja
+      descripcion: ['', [Validators.maxLength(255)]],
+      estado: ['ACTIVO'] 
     });
   }
 
   ngOnInit() {
-    this.listarCategorias();
+    this.listarCategorias(); // Carga inicial (solo Activos)
   }
 
+  /** 🔹 Obtener categorías del backend (filtradas por estado) */
   listarCategorias() {
     this.isLoading = true;
     this.errorMessage = null;
-    this.categoriaService.listarCategorias().subscribe({
-      next: (data) => {
-        this.categorias = data;
-        // Inicialmente mostramos todas (o solo activas si el backend filtra)
-        this.filtrarCategorias();
+    
+    // 1. Llama al backend CON el filtro de estado
+    this.categoriaService.listarCategorias(this.filtroEstado).subscribe({
+      next: (data: CategoriaDTO[]) => {
+        this.categorias = data; // Guarda la lista filtrada por estado
+        // 2. Ahora aplica el filtro de nombre localmente
+        this.filtrarLocalmentePorNombre(); 
         this.isLoading = false;
       },
       error: (err: any) => {
         console.error('Error al listar categorías:', err);
         this.errorMessage = 'Error al cargar categorías. Intente más tarde.';
-        mostrarToast('Error al cargar categorías', 'danger');
+        if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
         this.isLoading = false;
       },
     });
   }
 
-  buscarCategoria() {
-    this.filtrarCategorias();
+  /** 🔹 Se llama CADA VEZ que un filtro cambia */
+  aplicarFiltros(): void {
+    // Si el cambio fue en el input de nombre, solo filtramos localmente
+    if (this.filtroEstado === 'ACTIVO' && this.categorias.length > 0) {
+       // Optimización: si solo busca por nombre, no recargar todo
+       // (Podemos refinar esto, pero por ahora recargamos siempre)
+    }
+    
+    // La forma más simple: CUALQUIER cambio de filtro, recarga del backend
+    this.listarCategorias();
   }
 
-  filtrarCategorias() {
+  /** 🔹 Filtra la lista 'categorias' (ya filtrada por estado) por el término de búsqueda */
+  filtrarLocalmentePorNombre() {
     const termino = this.terminoBusqueda.toLowerCase().trim();
-    this.categoriasFiltradas = this.categorias.filter((cat) => {
-      // Aquí podrías añadir filtro por estado si el backend lo devuelve
-      // const estaActiva = cat.estado === 'ACTIVO';
-      const coincideNombre = cat.nombre.toLowerCase().includes(termino);
-      // return estaActiva && coincideNombre;
-      return coincideNombre; // Filtro simple por nombre por ahora
-    });
+    if (!termino) {
+      this.categoriasFiltradas = [...this.categorias]; // Sin filtro, copia la lista
+    } else {
+      this.categoriasFiltradas = this.categorias.filter((cat) => 
+        cat.nombre.toLowerCase().includes(termino)
+      );
+    }
   }
 
+  /** 🔹 Reiniciar filtros */
   reiniciarFiltros() {
     this.terminoBusqueda = '';
-    this.filtrarCategorias();
+    this.filtroEstado = 'ACTIVO'; // Vuelve al estado por defecto
+    this.listarCategorias(); // Recarga
     mostrarToast('Filtros reiniciados');
   }
+
+  // ... (El resto de tus métodos: abrirModalNuevo, abrirModalEditar, guardarCategoria, etc. están bien)
+  // Asegúrate de que los métodos de guardar, eliminar y reactivar sigan llamando a this.listarCategorias()
+  // al finalizar con éxito, para refrescar la tabla.
 
   abrirModalNuevo() {
     this.esEdicion = false;
     this.categoriaSeleccionadaId = null;
-    this.categoriaForm.reset({
-      id: null,
-      nombre: '',
-      descripcion: ''
-      // estado: 'ACTIVO'
-    });
+    this.categoriaForm.reset({ id: null, nombre: '', descripcion: '', estado: 'ACTIVO' });
     const modal = new bootstrap.Modal(document.getElementById('categoriaModal'));
     modal.show();
   }
 
   abrirModalEditar(categoria: CategoriaDTO) {
-    if (!categoria.id) return; // Seguridad
+    if (!categoria.id) return;
     this.esEdicion = true;
     this.categoriaSeleccionadaId = categoria.id;
     this.categoriaForm.patchValue({
       id: categoria.id,
       nombre: categoria.nombre,
-      descripcion: categoria.descripcion
-      // estado: categoria.estado
+      descripcion: categoria.descripcion,
+      estado: categoria.estado || 'ACTIVO'
     });
     const modal = new bootstrap.Modal(document.getElementById('categoriaModal'));
     modal.show();
@@ -112,33 +126,31 @@ export default class CategoriasComponent implements OnInit {
 
   guardarCategoria() {
     this.categoriaForm.markAllAsTouched();
-    if (this.categoriaForm.invalid) {
-      return;
-    }
+    if (this.categoriaForm.invalid) return;
 
-    this.isLoading = true; // Mostrar spinner
+    this.isLoading = true;
     this.errorMessage = null;
     const categoriaData = this.categoriaForm.value as CategoriaDTO;
+    
+    if (this.esEdicion && this.categoriaSeleccionadaId) {
+      categoriaData.id = this.categoriaSeleccionadaId;
+    }
 
-    // Lógica para decidir si crear o actualizar
     const obs = this.esEdicion
-      ? this.categoriaService.actualizar(categoriaData) // El DTO ya tiene el ID
+      ? this.categoriaService.actualizar(categoriaData)
       : this.categoriaService.crear(categoriaData);
 
     obs.subscribe({
-      next: (categoriaGuardada) => {
-        // Recargamos la lista completa para reflejar el cambio
-        this.listarCategorias();
+      next: (categoriaGuardada: CategoriaDTO) => {
+        this.listarCategorias(); 
         mostrarToast(this.esEdicion ? 'Categoría actualizada' : 'Categoría creada', 'success');
         this.cerrarModal();
-        this.isLoading = false;
+        // isLoading se resetea en listarCategorias()
       },
       error: (err: any) => {
         console.error('Error al guardar categoría:', err);
         this.errorMessage = err.error?.message || 'Error al guardar la categoría.';
-        if (this.errorMessage) { 
-        mostrarToast(this.errorMessage, 'danger'); 
-    }
+        if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
         this.isLoading = false;
       },
     });
@@ -148,30 +160,24 @@ export default class CategoriasComponent implements OnInit {
     const modalElement = document.getElementById('categoriaModal');
     if (modalElement) {
       const modal = bootstrap.Modal.getInstance(modalElement);
-      if (modal) {
-        modal.hide();
-      }
+      if (modal) modal.hide();
     }
   }
 
   eliminarCategoria(id?: number) {
     if (!id) return;
-    if (confirm('¿Estás seguro de marcar esta categoría como inactiva?')) {
+    if (confirm('¿Estás seguro de marcar esta categoría como INACTIVA?')) {
       this.isLoading = true;
       this.errorMessage = null;
       this.categoriaService.softDelete(id).subscribe({
         next: () => {
-          // Recargamos la lista para que desaparezca (si el backend filtra)
-          this.listarCategorias();
+          this.listarCategorias(); 
           mostrarToast('Categoría marcada como inactiva', 'warning');
-          // No necesitamos ocultar isLoading aquí si listarCategorias lo hace
         },
         error: (err: any) => {
           console.error('Error al eliminar categoría:', err);
           this.errorMessage = err.error?.message || 'Error al eliminar categoría.';
-          if (this.errorMessage) { 
-        mostrarToast(this.errorMessage, 'danger'); 
-    }
+          if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
           this.isLoading = false;
         },
       });
@@ -180,26 +186,23 @@ export default class CategoriasComponent implements OnInit {
 
   reactivarCategoria(id?: number) {
      if (!id) return;
-     this.isLoading = true;
-     this.errorMessage = null;
-     this.categoriaService.reactivar(id).subscribe({
-       next: () => {
-         // Recargamos la lista para que reaparezca o cambie estado
-         this.listarCategorias();
-         mostrarToast('Categoría reactivada correctamente', 'success');
-         // No necesitamos ocultar isLoading aquí si listarCategorias lo hace
-       },
-       error: (err: any) => {
-         console.error('Error al reactivar categoría:', err);
-         this.errorMessage = err.error?.message || 'Error al reactivar categoría.';
-         if (this.errorMessage) { 
-        mostrarToast(this.errorMessage, 'danger'); 
-    }
-         this.isLoading = false;
-       },
-     });
+     if (confirm('¿Estás seguro de REACTIVAR esta categoría?')) {
+       this.isLoading = true;
+       this.errorMessage = null;
+       this.categoriaService.reactivar(id).subscribe({
+         next: () => {
+           this.listarCategorias(); 
+           mostrarToast('Categoría reactivada correctamente', 'success');
+         },
+         error: (err: any) => {
+           console.error('Error al reactivar categoría:', err);
+           this.errorMessage = err.error?.message || 'Error al reactivar categoría.';
+           if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+           this.isLoading = false;
+         },
+       });
+     }
   }
 
-  // Helper para validación en template
   get f() { return this.categoriaForm.controls; }
 }
