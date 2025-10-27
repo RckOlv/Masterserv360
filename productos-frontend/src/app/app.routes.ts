@@ -42,6 +42,26 @@ export const routes: Routes = [
       { 
         path: 'usuarios/editar/:id', // <- La ruta para editar
         loadComponent: () => import('./layouts/admin-layout/registro/registro') 
+      },
+
+      { 
+        path: 'permisos', // La ruta para el ABM de Permisos
+        loadComponent: () => import('./pos/permisos/permisos') // Apuntando al componente
+      },
+
+      {
+        path: 'roles', // La ruta para el ABM de Roles
+        loadComponent: () => import('./pos/roles/roles') // Apuntando al componente
+      },
+      {
+        path: 'proveedores', // La ruta para el ABM de Proveedores
+        loadComponent: () => import('./pos/proveedores/proveedores') // Apuntando al componente
+      },
+      { path: 'pedidos', 
+        loadComponent: () => import('./pos/pedidos-list/pedidos-list') 
+      },
+      { path: 'pedidos/nuevo', 
+        loadComponent: () => import('./pos/pedido-form/pedido-form') 
       }
     ]
   },

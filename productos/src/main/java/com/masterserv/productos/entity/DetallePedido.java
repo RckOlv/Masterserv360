@@ -20,17 +20,27 @@ public class DetallePedido {
     @Column(nullable = false)
     private int cantidad;
 
-    // Precio "congelado" al momento de la compra
+    // Precio unitario congelado en el momento del pedido
     @Column(name = "precio_unitario", nullable = false, precision = 10, scale = 2)
-    private BigDecimal precioUnitario; 
+    private BigDecimal precioUnitario;
 
     // --- Relaciones ---
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pedido_id", nullable = false) // FK a la cabecera del pedido
-    private Pedido pedido;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "pedido_id", nullable = false)
+    private Pedido pedido; // FK a la cabecera del pedido
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "producto_id", nullable = false) // FK al producto comprado
-    private Producto producto;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "producto_id", nullable = false)
+    private Producto producto; // FK al producto vendido
+
+    // --- Métodos de conveniencia ---
+
+    @Transient
+    public BigDecimal getSubtotal() {
+        if (precioUnitario != null) {
+            return precioUnitario.multiply(BigDecimal.valueOf(cantidad));
+        }
+        return BigDecimal.ZERO;
+    }
 }
