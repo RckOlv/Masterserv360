@@ -11,8 +11,8 @@ import { PermisoDTO } from '../../models/permiso.model';
   selector: 'app-permiso',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, HttpClientModule, RouterModule],
-  templateUrl: './permiso.html',
-  styleUrls: ['./permiso.css']
+  templateUrl: './permisos.html',
+  styleUrls: ['./permisos.css']
 })
 export default class PermisoComponent implements OnInit { // <-- Añadido 'default'
   permisos: PermisoDTO[] = [];

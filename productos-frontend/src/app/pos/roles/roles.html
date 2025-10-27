@@ -1,0 +1,92 @@
+<div class="container-fluid mt-4">
+  <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h4>Gestión de Roles</h4>
+      <button class="btn btn-success btn-sm" (click)="abrirModalNuevo()">
+        <i class="bi bi-plus-lg"></i> Nuevo Rol
+      </button>
+    </div>
+    <div class="card-body">
+
+      <div *ngIf="isLoading" class="text-center my-3">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage && !isLoading" class="alert alert-danger">
+        {{ errorMessage }}
+      </div>
+
+      <div *ngIf="!isLoading && roles.length > 0" class="table-responsive">
+        <table class="table table-striped table-hover table-sm align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>ID</th>
+              <th>Nombre (Rol)</th>
+              <th>Descripción</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of roles">
+              <td>{{ r.id }}</td>
+              <td><span class="badge bg-info text-dark">{{ r.nombreRol }}</span></td>
+              <td>{{ r.descripcion || '-' }}</td>
+              <td class="text-center">
+                <button class="btn btn-outline-primary btn-sm me-2" (click)="editarRol(r)" title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button *ngIf="r.nombreRol !== 'ROLE_ADMIN'" 
+                        class="btn btn-outline-danger btn-sm" 
+                        (click)="eliminarRol(r.id)" 
+                        title="Eliminar">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+       <div *ngIf="!isLoading && roles.length === 0" class="alert alert-info text-center">
+        No se encontraron roles.
+      </div>
+
+    </div> </div> </div> <div class="modal fade" id="rolModal" tabindex="-1" aria-labelledby="rolModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="rolModalLabel">{{ editMode ? 'Editar' : 'Nuevo' }} Rol</h5>
+        <button type="button" class="btn-close" (click)="cerrarModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="rolForm" id="ngRolForm" (ngSubmit)="guardarRol()">
+          
+          <div class="mb-3">
+            <label for="nombreRol" class="form-label">Nombre del Rol <span class="text-danger">*</span></label>
+            <input type="text" id="nombreRol" class="form-control" formControlName="nombreRol"
+                   placeholder="Ej: ROLE_AUDITOR"
+                   [ngClass]="{ 'is-invalid': f['nombreRol'].invalid && f['nombreRol'].touched }">
+            <div *ngIf="f['nombreRol'].invalid && f['nombreRol'].touched" class="invalid-feedback">
+              El nombre del rol es obligatorio (ej. ROLE_NUEVO).
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="descripcion" class="form-label">Descripción</label>
+            <textarea id="descripcion" class="form-control" formControlName="descripcion" rows="3"></textarea>
+          </div>
+          
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cancelar</button>
+        <button type="submit" form="ngRolForm" class="btn btn-primary" [disabled]="rolForm.invalid || isLoading">
+          <span *ngIf="!isLoading">{{ editMode ? 'Actualizar' : 'Crear' }}</span>
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

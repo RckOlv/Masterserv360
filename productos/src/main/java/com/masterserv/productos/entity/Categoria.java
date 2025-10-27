@@ -1,15 +1,17 @@
 package com.masterserv.productos.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "categorias")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "proveedores") // 👈 evita recursión en logs
 public class Categoria extends AuditableEntity {
 
     @Id
@@ -23,8 +25,22 @@ public class Categoria extends AuditableEntity {
     private String descripcion;
 
     @Column(length = 50)
-    private String estado; 
-    
-    // NOTA: No necesitamos el @OneToMany a Productos aquí.
-    // Mantenemos la entidad "limpia". La relación la maneja Producto.
+    private String estado;
+
+    @ManyToMany(mappedBy = "categorias", fetch = FetchType.LAZY)
+    private Set<Proveedor> proveedores = new HashSet<>();
+
+    // ✅ equals() y hashCode() basados solo en id
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Categoria)) return false;
+        Categoria that = (Categoria) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
