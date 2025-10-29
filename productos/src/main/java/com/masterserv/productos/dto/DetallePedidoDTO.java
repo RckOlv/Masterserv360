@@ -9,21 +9,24 @@ import java.math.BigDecimal;
 @Data
 public class DetallePedidoDTO {
 
-    private Long id; // Solo lectura
+    private Long id; // Solo lectura (útil para respuestas GET)
 
     @NotNull(message = "El ID del producto es obligatorio")
-    private Long productoId;
+    private Long productoId; // Entrada (POST)
 
-    // Solo lectura (nombre y código vienen desde la entidad Producto)
+    // Solo lectura (útiles para respuestas GET)
     private String productoNombre;
     private String productoCodigo;
 
     @NotNull(message = "La cantidad es obligatoria")
     @Min(value = 1, message = "La cantidad debe ser al menos 1")
-    private int cantidad;
+    private int cantidad; // Entrada (POST)
 
-    @NotNull(message = "El precio unitario (costo) es obligatorio")
-    private BigDecimal precioUnitario; // Precio congelado al momento del pedido
+    // --- ¡CORREGIDO! ---
+    // Quitamos @NotNull. Este campo ya NO es obligatorio en el POST.
+    // El backend lo calculará.
+    // Se usará para mostrar el valor en las respuestas GET.
+    private BigDecimal precioUnitario; // Solo lectura (calculado por el backend)
 
-    private BigDecimal subtotal; // Solo lectura (precioUnitario * cantidad)
+    private BigDecimal subtotal; // Solo lectura (calculado por el backend)
 }

@@ -9,6 +9,7 @@ import { ProductoDTO } from '../models/producto.model';
 import { ProductoFiltroDTO } from '../models/producto-filtro.model';
 
 // Interfaz para la respuesta paginada de Spring Boot
+// (La tenías en tu archivo, la mantengo aquí)
 export interface Page<T> {
   content: T[];
   totalPages: number;
@@ -23,7 +24,8 @@ export interface Page<T> {
 export class ProductoService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/productos`; // Ajusta API_URL según tu constante
+  // Asegúrate de que API_URL esté configurada, si no, reemplaza por 'http://localhost:8080'
+  private apiUrl = `${API_URL}/api/productos`; 
 
   constructor() { }
 
@@ -71,8 +73,35 @@ export class ProductoService {
     return this.http.delete<any>(`${this.apiUrl}/${id}`);
   }
 
-  // --- Helpers Adicionales (Ejemplos) ---
+  /**
+   * Este método (getProductosByProveedor) ya no lo usaremos para el formulario,
+   * lo reemplazamos por 'searchProductosByProveedor'.
+   * Lo dejamos aquí por si otra parte de tu app lo usa.
+   */
+  getProductosByProveedor(proveedorId: number): Observable<ProductoDTO[]> {
+    // Hacemos la llamada GET a la URL que creamos en el ProductoController
+    return this.http.get<ProductoDTO[]>(`${this.apiUrl}/por-proveedor/${proveedorId}`);
+  }
 
-  // Podríamos necesitar un servicio de Categorías para obtener la lista
-  // getAllCategorias(): Observable<CategoriaDTO[]> { ... }
+  /**
+   * --- ¡NUEVO MÉTODO DE BÚSQUEDA! ---
+   * Llama al endpoint de búsqueda paginado del backend.
+   */
+  searchProductosByProveedor(
+    proveedorId: number, 
+    term: string, 
+    page: number = 0, 
+    size: number = 20
+  ): Observable<Page<ProductoDTO>> {
+    
+    // Usamos HttpParams para construir la URL de forma segura
+    let params = new HttpParams()
+      .set('proveedorId', proveedorId.toString())
+      .set('search', term)
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    // Llamamos al nuevo endpoint que creamos en Spring Boot
+    return this.http.get<Page<ProductoDTO>>(`${this.apiUrl}/search-by-proveedor`, { params });
+  }
 }

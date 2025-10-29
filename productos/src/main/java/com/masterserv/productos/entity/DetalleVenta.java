@@ -1,16 +1,24 @@
 package com.masterserv.productos.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+// --- Imports de Lombok Corregidos ---
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+// ------------------------------------
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "detalles_venta")
-@Data
+// --- ¡CAMBIO CRÍTICO! Reemplazamos @Data ---
+// @Data // ¡ELIMINADO!
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+// --------------------------------------------
 public class DetalleVenta {
 
     @Id
@@ -28,9 +36,15 @@ public class DetalleVenta {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venta_id", nullable = false) // FK a la cabecera de la Venta
+    @ToString.Exclude // ¡Clave para evitar StackOverflowError!
     private Venta venta;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "producto_id", nullable = false) // FK al producto vendido
+    @ToString.Exclude // Para evitar bucles
     private Producto producto;
+
+    // Nota: El método @Transient getSubtotal() se puede añadir aquí si lo necesitas,
+    //       igual que lo tenías en DetallePedido.java. Por ahora lo omito
+    //       para mantenerlo simple, pero es buena idea tenerlo.
 }

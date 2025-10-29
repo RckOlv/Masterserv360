@@ -1,0 +1,115 @@
+<div class="container-fluid my-4">
+  <h4><i class="bi bi-cart3"></i> Carrito de Venta</h4>
+
+  <div *ngIf="isLoading && !carrito" class="text-center my-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Cargando carrito...</span>
+    </div>
+  </div>
+  <div *ngIf="errorMessage && !isLoading" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="!isLoading && carrito">
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body" [formGroup]="clienteForm">
+        <label for="clienteSelect" class="form-label fw-bold">Cliente <span class="text-danger">*</span></label>
+        <ng-select
+            id="clienteSelect"
+            formControlName="clienteId"
+
+            [items]="(clientes$ | async) ?? []"
+
+            [typeahead]="clienteSearch$"
+            bindLabel="nombre"  bindValue="id"
+            placeholder="Buscar cliente por nombre, apellido o email..."
+            [loading]="isLoadingClientes"
+            [ngClass]="{ 'is-invalid': clienteForm.get('clienteId')?.invalid && clienteForm.get('clienteId')?.touched }">
+
+            <ng-template ng-option-tmp let-item="item">
+              <div>{{item.nombre}} {{item.apellido}}</div> <small class="text-muted">{{item.email}} - Doc: {{item.documento}}</small> </ng-template>
+            <ng-template ng-notfound-tmp let-searchTerm="searchTerm">
+               <div class="ng-option-disabled">No se encontraron clientes para "{{searchTerm}}"</div>
+             </ng-template>
+        </ng-select>
+        <div *ngIf="clienteForm.get('clienteId')?.invalid && clienteForm.get('clienteId')?.touched"
+             class="invalid-feedback d-block">
+          Debe seleccionar un cliente.
+        </div>
+      </div>
+    </div>
+
+
+    <div class="card shadow-sm">
+      <div class="card-body p-0">
+        <div *ngIf="!carrito.items || carrito.items.length === 0" class="alert alert-info m-3 text-center">
+          El carrito está vacío. Agregue productos desde la sección de Productos.
+        </div>
+
+        <div class="table-responsive" *ngIf="carrito.items && carrito.items.length > 0">
+          <table class="table table-hover table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Producto</th>
+                <th class="text-center">Código</th>
+                <th class="text-end">Precio Unit.</th>
+                <th class="text-center" style="width: 120px;">Cantidad</th>
+                <th class="text-end">Subtotal</th>
+                <th class="text-center">Stock Disp.</th>
+                <th class="text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of carrito.items">
+                <td>{{ item.productoNombre }}</td>
+                <td class="text-center"><span class="badge bg-secondary">{{ item.productoCodigo }}</span></td>
+                <td class="text-end">{{ item.precioUnitarioVenta | currency:'ARS':'symbol':'1.2-2' }}</td>
+                <td class="text-center">
+                  <input type="number"
+                         class="form-control form-control-sm text-center"
+                         [value]="item.cantidad"
+                         min="0"
+                         (change)="actualizarCantidad(item, $event)"
+                         [disabled]="isLoading || isFinalizando"
+                         style="width: 80px; display: inline-block;">
+                </td>
+                <td class="text-end fw-bold">{{ item.subtotal | currency:'ARS':'symbol':'1.2-2' }}</td>
+                <td class="text-center">
+                  <span class="badge" [ngClass]="item.cantidad > item.stockDisponible ? 'bg-danger' : 'bg-success'">
+                     {{ item.stockDisponible }}
+                   </span>
+                </td>
+                <td class="text-center">
+                  <button class="btn btn-outline-danger btn-sm"
+                          (click)="quitarItem(item)"
+                          [disabled]="isLoading || isFinalizando"
+                          title="Quitar del carrito">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="table-light">
+                <td colspan="4" class="text-end fw-bold fs-5">TOTAL:</td>
+                <td class="text-end fw-bold fs-5">
+                  {{ carrito.totalCarrito | currency:'ARS':'symbol':'1.2-2' }}
+                </td>
+                <td colspan="2"></td> </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div class="card-footer d-flex justify-content-between align-items-center" *ngIf="carrito.items && carrito.items.length > 0">
+        <button class="btn btn-outline-secondary" (click)="vaciarCarrito()" [disabled]="isLoading || isFinalizando">
+          <i class="bi bi-cart-x"></i> Vaciar Carrito
+        </button>
+        <button class="btn btn-primary btn-lg" (click)="finalizarVenta()" [disabled]="isLoading || isFinalizando || clienteForm.invalid">
+          <span *ngIf="!isFinalizando"><i class="bi bi-check-lg"></i> Finalizar Venta</span>
+          <span *ngIf="isFinalizando" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span *ngIf="isFinalizando"> Procesando...</span>
+        </button>
+      </div>
+    </div>
+
+  </div> </div>

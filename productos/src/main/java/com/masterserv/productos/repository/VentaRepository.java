@@ -1,28 +1,53 @@
 package com.masterserv.productos.repository;
 
-import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.entity.Venta;
-import com.masterserv.productos.enums.EstadoVenta;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
-import java.time.LocalDateTime;
-import java.util.List;
+import java.time.LocalDateTime; // Importar si añades métodos con fecha
 
 @Repository
 public interface VentaRepository extends JpaRepository<Venta, Long> {
 
-    // --- Métodos para Reportes ---
+    /**
+     * Sobrescribe el findAll de JpaRepository para optimizarlo.
+     * Carga el cliente y el vendedor asociados a cada venta en la
+     * misma consulta para evitar N+1 en el listado.
+     * NO cargamos los 'detalles' aquí, sería ineficiente para un listado.
+     */
+    @Override
+    @EntityGraph(attributePaths = {"cliente", "vendedor"})
+    Page<Venta> findAll(Pageable pageable);
 
-    // Buscar ventas registradas por un vendedor
-    List<Venta> findByVendedor(Usuario vendedor);
+    // --- Métodos de Búsqueda Adicionales (Ejemplos para el futuro) ---
 
-    // Buscar todas las compras de un cliente
-    List<Venta> findByCliente(Usuario cliente);
+    /**
+     * Busca ventas para un cliente específico, paginado.
+     * Carga cliente y vendedor eficientemente.
+     */
+    @EntityGraph(attributePaths = {"cliente", "vendedor"})
+    Page<Venta> findByClienteId(Long clienteId, Pageable pageable);
 
-    // Buscar ventas por estado
-    List<Venta> findByEstado(EstadoVenta estado);
+    /**
+     * Busca ventas realizadas por un vendedor específico, paginado.
+     * Carga cliente y vendedor eficientemente.
+     */
+    @EntityGraph(attributePaths = {"cliente", "vendedor"})
+    Page<Venta> findByVendedorId(Long vendedorId, Pageable pageable);
 
-    // Buscar ventas en un rango de fechas
-    List<Venta> findByFechaVentaBetween(LocalDateTime fechaInicio, LocalDateTime fechaFin);
+    /**
+     * Busca ventas dentro de un rango de fechas, paginado.
+     * Carga cliente y vendedor eficientemente.
+     */
+    @EntityGraph(attributePaths = {"cliente", "vendedor"})
+    Page<Venta> findByFechaVentaBetween(LocalDateTime inicio, LocalDateTime fin, Pageable pageable);
+
+    // Podrías necesitar un método para cargar una Venta CON sus detalles,
+    // similar al 'findByIdWithDetails' de PedidoRepository.
+    // @Query("SELECT v FROM Venta v LEFT JOIN FETCH v.detalles d LEFT JOIN FETCH d.producto WHERE v.id = :id")
+    // @EntityGraph(attributePaths = {"cliente", "vendedor", "detalles", "detalles.producto"})
+    // Optional<Venta> findByIdWithDetails(@Param("id") Long id);
+
 }

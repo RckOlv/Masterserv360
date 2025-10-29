@@ -2,19 +2,27 @@ package com.masterserv.productos.entity;
 
 import com.masterserv.productos.enums.EstadoVenta;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+// --- Imports de Lombok Corregidos ---
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+// ------------------------------------
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
 @Table(name = "ventas")
-@Data
+// --- ¡CAMBIO CRÍTICO! Reemplazamos @Data ---
+// @Data // ¡ELIMINADO!
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Venta extends AuditableEntity{
+// --------------------------------------------
+public class Venta extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,18 +38,21 @@ public class Venta extends AuditableEntity{
     @Column(name = "total_venta", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalVenta;
 
-    // --- Relaciones (Las FKs de Rol que discutimos) ---
+    // --- Relaciones ---
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vendedor_usuario_id", nullable = false) // FK al Vendedor (Usuario)
+    @ToString.Exclude // Para evitar bucles
     private Usuario vendedor;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cliente_usuario_id", nullable = false) // FK al Cliente (Usuario)
+    @ToString.Exclude // Para evitar bucles
     private Usuario cliente;
 
     // --- Relación Inversa ---
     
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ToString.Exclude // ¡Clave para evitar StackOverflowError!
     private Set<DetalleVenta> detalles;
 }

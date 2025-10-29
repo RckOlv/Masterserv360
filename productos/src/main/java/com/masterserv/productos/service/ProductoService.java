@@ -8,6 +8,10 @@ import com.masterserv.productos.mapper.ProductoMapper;
 import com.masterserv.productos.repository.CategoriaRepository;
 import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.specification.ProductoSpecification;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -135,6 +139,21 @@ public class ProductoService {
         Page<Producto> productoPage = productoRepository.findAll(spec, pageable);
         
         // Mapeamos y devolvemos
+        return productoPage.map(productoMapper::toProductoDTO);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductoDTO> findByProveedorId(Long proveedorId) {
+        List<Producto> productos = productoRepository.findActivosByProveedorId(proveedorId);
+        // Asumiendo que tienes un mapper de Producto
+        return productos.stream()
+                .map(productoMapper::toProductoDTO) 
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductoDTO> searchByProveedor(Long proveedorId, String search, Pageable pageable) {
+        Page<Producto> productoPage = productoRepository.searchByProveedor(proveedorId, search, pageable);
         return productoPage.map(productoMapper::toProductoDTO);
     }
 }
