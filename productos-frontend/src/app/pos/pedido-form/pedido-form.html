@@ -1,1 +1,139 @@
-<p>pedido-form works!</p>
+<div class="container-fluid mt-4 mb-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-10 col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h4>{{ pageTitle }}</h4>
+        </div>
+        <div class="card-body p-4">
+
+          <div *ngIf="isLoading" class="text-center my-3">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Cargando proveedores...</span>
+            </div>
+          </div>
+          <div *ngIf="errorMessage && !isLoading" class="alert alert-danger">
+            {{ errorMessage }}
+          </div>
+
+          <form [formGroup]="pedidoForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading">
+            
+            <div class="row border-bottom pb-3 mb-3">
+              <div class="col-md-6">
+                <label for="proveedorId" class="form-label">Proveedor <span class="text-danger">*</span></label>
+                <select id="proveedorId" class="form-select" 
+                        formControlName="proveedorId"
+                        (change)="onProveedorSeleccionado($event)"
+                        [ngClass]="{ 'is-invalid': f['proveedorId'].invalid && f['proveedorId'].touched }">
+                  <option [ngValue]="null" disabled>Seleccione un proveedor...</option>
+                  <option *ngFor="let p of proveedores" [value]="p.id">{{ p.razonSocial }} ({{ p.cuit }})</option>
+                </select>
+                <div *ngIf="f['proveedorId'].invalid && f['proveedorId'].touched" class="invalid-feedback">
+                  Debe seleccionar un proveedor.
+                </div>
+              </div>
+              <div class="col-md-6 d-flex align-items-end justify-content-end">
+                <button type="button" class="btn btn-success" 
+                        (click)="agregarDetalle()"
+                        [disabled]="!f['proveedorId'].value">
+                  <i class="bi bi-plus-lg"></i> Agregar Producto
+                </button>
+              </div>
+            </div>
+
+            <div formArrayName="detalles">
+              <h5 *ngIf="detalles.length > 0">Detalles del Pedido</h5>
+
+              <div *ngFor="let detalleGroup of detalles.controls; let i = index" 
+                   [formGroupName]="i" 
+                   class="row g-2 mb-2 align-items-center p-2 border rounded">
+
+                <div class="col-md-4">
+                  <label [for]="'producto-' + i" class="form-label form-label-sm">Producto <span class="text-danger">*</span></label>
+                  
+                  <ng-select
+                      [id]="'producto-' + i"
+                      formControlName="productoDTO"
+                      
+                      [items]="(productos$ | async) ?? []" 
+                      
+                      [typeahead]="productoSearch$"
+                      bindLabel="nombre"
+                      (change)="onProductoSeleccionado($event, i)"
+                      placeholder="Escriba nombre o código..."
+                      [loading]="isLoadingProductos"
+                      [ngClass]="{ 'is-invalid': detalleGroup.get('productoDTO')?.invalid && detalleGroup.get('productoDTO')?.touched }">
+                      
+                      <ng-template ng-option-tmp let-item="item" let-search="searchTerm">
+                        <div class="ng-option-label">
+                          <div>{{item.nombre}}</div>
+                          <small class="text-muted">Código: {{item.codigo}} | Costo: ${{item.precioCosto}}</small>
+                        </div>
+                      </ng-template>
+                      <ng-template ng-notfound-tmp let-searchTerm="searchTerm">
+                        <div class="ng-option-disabled">
+                          No se encontraron productos para "{{searchTerm}}"
+                        </div>
+                      </ng-template>
+
+                  </ng-select>
+                  
+                  <div *ngIf="detalleGroup.get('productoDTO')?.invalid && detalleGroup.get('productoDTO')?.touched" 
+                       class="invalid-feedback d-block">
+                    Debe seleccionar un producto.
+                  </div>
+                </div>
+
+                <div class="col-md-2">
+                  <label [for]="'cantidad-' + i" class="form-label form-label-sm">Cantidad <span class="text-danger">*</span></label>
+                  <input type="number" [id]="'cantidad-' + i" 
+                         class="form-control form-control-sm" 
+                         formControlName="cantidad"
+                         (input)="onCantidadCambiada(i)"
+                         [ngClass]="{ 'is-invalid': detalleGroup.get('cantidad')?.invalid && detalleGroup.get('cantidad')?.touched }">
+                </div>
+
+                <div class="col-md-2">
+                  <label [for]="'precioUnitario-' + i" class="form-label form-label-sm">Costo Unit.</label>
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text">$</span>
+                    <input type="number" [id]="'precioUnitario-' + i" 
+                           class="form-control form-control-sm" 
+                           formControlName="precioUnitario"
+                           [readonly]="true">
+                  </div>
+                </div>
+
+                <div class="col-md-3">
+                  <label [for]="'subtotal-' + i" class="form-label form-label-sm">Subtotal</label>
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text">$</span>
+                    <input type="number" [id]="'subtotal-' + i"
+                           class="form-control form-control-sm"
+                           formControlName="subtotal"
+                           [readonly]="true">
+                  </div>
+                </div>
+
+                <div class="col-md-1 d-flex align-items-end">
+                  <button type="button" class="btn btn-danger btn-sm w-100" (click)="quitarDetalle(i)" title="Quitar este producto">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+
+              </div> </div> <hr class="mt-4">
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+              <button type="button" class="btn btn-secondary me-md-2" [routerLink]="['/pedidos']">Cancelar</button>
+              <button type="submit" class="btn btn-primary" [disabled]="pedidoForm.invalid || detalles.length === 0">
+                <span *ngIf="!isLoading">Guardar Pedido</span>
+                <span *ngIf="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              </button>
+            </div>
+
+          </form> 
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

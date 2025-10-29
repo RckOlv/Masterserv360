@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class RolService {
@@ -74,5 +75,11 @@ public class RolService {
             throw new RuntimeException("Rol no encontrado con ID: " + id);
         }
         rolRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true) // Es una consulta de solo lectura
+    public Optional<Rol> findByNombreRol(String nombreRol) {
+        return rolRepository.findByNombreRol(nombreRol);
+        // No mapeamos a DTO aquí porque el controlador necesita la entidad para el Optional
     }
 }

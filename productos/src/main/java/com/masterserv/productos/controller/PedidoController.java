@@ -9,8 +9,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+// --- Imports Añadidos ---
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+// --- Fin Imports Añadidos ---
+
 import java.security.Principal; // Para saber qué usuario está logueado
-import java.util.Map;
+// import java.util.Map; // Este import no se usaba, se puede quitar
 
 @RestController
 @RequestMapping("/api/pedidos")
@@ -32,6 +37,20 @@ public class PedidoController {
         return new ResponseEntity<>(nuevoPedido, HttpStatus.CREATED);
     }
 
+    // --- ¡NUEVO ENDPOINT AÑADIDO! ---
+    /**
+     * GET /api/pedidos?page=0&size=10&sort=fechaPedido,desc
+     * Obtiene una lista paginada de todos los pedidos.
+     * Spring inyecta 'pageable' automáticamente desde los parámetros de la URL.
+     * Este método soluciona el error 405 (Method Not Supported).
+     */
+    @GetMapping
+    public ResponseEntity<Page<PedidoDTO>> getAllPedidos(Pageable pageable) {
+        Page<PedidoDTO> pedidos = pedidoService.findAll(pageable);
+        return ResponseEntity.ok(pedidos);
+    }
+    // --- Fin del nuevo endpoint ---
+
     /**
      * Obtiene el detalle de un Pedido.
      */
@@ -40,22 +59,26 @@ public class PedidoController {
         return ResponseEntity.ok(pedidoService.findById(id));
     }
     
-    // (Aquí faltaría el GET /filtrar paginado, lo añadimos después)
-
     /**
      * Marca un pedido como COMPLETADO y actualiza el stock.
+     * --- MÉTODO MODIFICADO ---
+     * Ahora usa 'Principal' para identificar al usuario que confirma.
      */
     @PatchMapping("/{id}/completar")
     public ResponseEntity<Void> completarPedido(@PathVariable Long id, Principal principal) {
-        // Obtenemos el usuario logueado (el que confirma)
-        // Esto requiere que el 'principal.getName()' sea el email y buscarlo
-        // Simplificación por ahora: asumimos que el service lo maneja con un ID fijo
-        // Long usuarioId = ... (buscar usuario por email principal.getName())
+        // 1. Validamos que el Principal (usuario logueado) exista
+        if (principal == null || principal.getName() == null) {
+             // Esto no debería pasar si Spring Security está bien configurado
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
         
-        // TODO: Obtener el ID del usuario desde el 'principal'
-        Long usuarioIdQueConfirma = 1L; // ¡HARDCODEADO! Arreglar esto
+        // 2. Obtenemos el 'username' (que es el email) del Principal
+        String userEmail = principal.getName();
         
-        pedidoService.marcarPedidoCompletado(id, usuarioIdQueConfirma);
+        // 3. Pasamos el email al servicio. 
+        //    ¡No más IDs hardcodeados!
+        pedidoService.marcarPedidoCompletado(id, userEmail);
+        
         return ResponseEntity.noContent().build(); // 204 Éxito
     }
 

@@ -1,166 +1,287 @@
 package com.masterserv.productos.service;
 
-import com.masterserv.productos.dto.AddItemCarritoDTO;
+import com.masterserv.productos.dto.AddItemCarritoDTO; // Necesitaremos este DTO simple
 import com.masterserv.productos.dto.CarritoDTO;
-import com.masterserv.productos.dto.ItemCarritoDTO;
-import com.masterserv.productos.entity.Carrito;
-import com.masterserv.productos.entity.ItemCarrito;
-import com.masterserv.productos.entity.Producto;
-import com.masterserv.productos.entity.Usuario;
-import com.masterserv.productos.mapper.CarritoMapper;
+import com.masterserv.productos.dto.ItemCarritoDTO; // Para mapear la respuesta
+import com.masterserv.productos.entity.*; // Importar Carrito, ItemCarrito, Producto, Usuario
+import com.masterserv.productos.mapper.CarritoMapper; // ¡NECESITAS CREAR ESTE MAPPER!
 import com.masterserv.productos.repository.CarritoRepository;
 import com.masterserv.productos.repository.ItemCarritoRepository;
 import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.repository.UsuarioRepository;
-
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.Optional;
+import java.math.BigDecimal; // Para cálculos de total
+import java.util.HashSet;
+import java.util.Optional; // Para manejar búsquedas opcionales
+import java.util.stream.Collectors; // Para mapear la lista de items
+
+// Excepción definida previamente
+// class StockInsuficienteException extends RuntimeException { ... }
+
+// Nuevo DTO simple para recibir la petición de agregar item
+// Puedes crearlo en el paquete dto
+// import lombok.Data;
+// @Data
+// public class AddItemCarritoDTO {
+//     @NotNull private Long productoId;
+//     @NotNull @Min(1) private Integer cantidad;
+// }
+
 
 @Service
 public class CarritoService {
 
     @Autowired
     private CarritoRepository carritoRepository;
-
     @Autowired
     private ItemCarritoRepository itemCarritoRepository;
-
     @Autowired
     private ProductoRepository productoRepository;
-
     @Autowired
     private UsuarioRepository usuarioRepository;
-
     @Autowired
-    private CarritoMapper carritoMapper;
+    private CarritoMapper carritoMapper; // ¡Asegúrate de crear esta interfaz!
 
     /**
-     * Obtiene el carrito del vendedor. Si no existe, lo crea.
-     * Esta es la lógica 1:1 de "carrito de trabajo".
+     * Obtiene el carrito activo para un vendedor. Si no existe, lo crea.
+     * Es transaccional para asegurar la creación atómica si es necesario.
+     *
+     * @param vendedorEmail Email del vendedor.
+     * @return El CarritoDTO del vendedor.
      */
     @Transactional
-    public Carrito getOrCreateCarritoVendedor(Long vendedorId) {
-        Optional<Carrito> optCarrito = carritoRepository.findByVendedor_Id(vendedorId);
-        
-        if (optCarrito.isPresent()) {
-            return optCarrito.get();
-        } else {
-            Usuario vendedor = usuarioRepository.findById(vendedorId)
-                    .orElseThrow(() -> new RuntimeException("Vendedor no encontrado: " + vendedorId));
-            
-            Carrito nuevoCarrito = new Carrito();
-            nuevoCarrito.setVendedor(vendedor);
-            nuevoCarrito.setFechaCreacion(LocalDateTime.now());
-            return carritoRepository.save(nuevoCarrito);
-        }
+    public CarritoDTO getCarritoByVendedorEmail(String vendedorEmail) {
+        Usuario vendedor = usuarioRepository.findByEmail(vendedorEmail)
+                .orElseThrow(() -> new RuntimeException("Vendedor no encontrado: " + vendedorEmail));
+
+        // Busca el carrito o crea uno nuevo si no existe
+        Carrito carrito = carritoRepository.findByVendedor(vendedor)
+                .orElseGet(() -> {
+                    Carrito nuevoCarrito = new Carrito();
+                    nuevoCarrito.setVendedor(vendedor);
+                    return carritoRepository.save(nuevoCarrito);
+                });
+
+        // Mapear y calcular totales antes de devolver
+        return mapAndCalculateTotals(carrito);
     }
 
     /**
-     * Agrega un producto al carrito del vendedor.
-     * Si el producto ya existe, actualiza la cantidad (CU-07).
+     * Agrega un item (producto y cantidad) al carrito del vendedor.
+     * Valida stock ANTES de agregar/actualizar.
+     * Si el producto ya existe en el carrito, actualiza la cantidad.
+     *
+     * @param vendedorEmail Email del vendedor.
+     * @param itemDTO       DTO con productoId y cantidad.
+     * @return El CarritoDTO actualizado.
      */
     @Transactional
-    public CarritoDTO agregarProducto(AddItemCarritoDTO addItemDTO) {
-        Carrito carrito = getOrCreateCarritoVendedor(addItemDTO.getVendedorId());
-        
-        Producto producto = productoRepository.findById(addItemDTO.getProductoId())
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + addItemDTO.getProductoId()));
+    public CarritoDTO agregarItem(String vendedorEmail, AddItemCarritoDTO itemDTO) {
+        Carrito carrito = findCarritoByVendedorEmailOrFail(vendedorEmail); // Helper para buscar o fallar
 
-        // Validamos stock antes de agregar
-        if (producto.getStockActual() < addItemDTO.getCantidad()) {
-            throw new RuntimeException("Stock insuficiente. Stock actual: " + producto.getStockActual());
+        Producto producto = productoRepository.findById(itemDTO.getProductoId())
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado: ID " + itemDTO.getProductoId()));
+
+        // --- VALIDACIÓN DE STOCK INICIAL ---
+        if (producto.getStockActual() < itemDTO.getCantidad()) {
+            throw new StockInsuficienteException(
+                String.format("Stock insuficiente para agregar '%s'. Disponible: %d, Solicitado: %d",
+                              producto.getNombre(), producto.getStockActual(), itemDTO.getCantidad())
+            );
         }
 
-        // Lógica de CU-07: ¿Ya existe este producto en el carrito?
-        Optional<ItemCarrito> optItem = itemCarritoRepository.findByCarritoAndProducto(carrito, producto);
+        // Buscar si el item ya existe en el carrito
+        Optional<ItemCarrito> itemExistenteOpt = itemCarritoRepository.findByCarritoAndProducto(carrito, producto);
 
-        if (optItem.isPresent()) {
-            // --- Caso 1: El producto ya está, actualizamos la cantidad ---
-            ItemCarrito itemExistente = optItem.get();
-            int nuevaCantidad = itemExistente.getCantidad() + addItemDTO.getCantidad();
+        if (itemExistenteOpt.isPresent()) {
+            // --- ACTUALIZAR CANTIDAD ---
+            ItemCarrito itemExistente = itemExistenteOpt.get();
+            int nuevaCantidad = itemExistente.getCantidad() + itemDTO.getCantidad();
 
-            // Re-validamos stock con la nueva cantidad total
+            // --- RE-VALIDACIÓN DE STOCK (para la nueva cantidad total) ---
             if (producto.getStockActual() < nuevaCantidad) {
-                throw new RuntimeException("Stock insuficiente. Ud. ya tiene " + itemExistente.getCantidad() + " en el carrito.");
+                throw new StockInsuficienteException(
+                    String.format("Stock insuficiente para actualizar '%s'. Disponible: %d, Solicitado total: %d",
+                                  producto.getNombre(), producto.getStockActual(), nuevaCantidad)
+                );
             }
             itemExistente.setCantidad(nuevaCantidad);
-            itemCarritoRepository.save(itemExistente);
+            itemCarritoRepository.save(itemExistente); // Guardar el item actualizado
 
         } else {
-            // --- Caso 2: Producto nuevo, creamos el ItemCarrito ---
+            // --- CREAR NUEVO ITEM ---
             ItemCarrito nuevoItem = new ItemCarrito();
             nuevoItem.setCarrito(carrito);
             nuevoItem.setProducto(producto);
-            nuevoItem.setCantidad(addItemDTO.getCantidad());
-            itemCarritoRepository.save(nuevoItem);
+            nuevoItem.setCantidad(itemDTO.getCantidad());
+            itemCarritoRepository.save(nuevoItem); // Guardar el nuevo item
+            // No es necesario añadirlo explícitamente a carrito.getItems() si la relación es bidireccional
+            // y está bien configurada, pero hacerlo asegura consistencia en el objeto actual.
+             if (carrito.getItems() == null) carrito.setItems(new HashSet<>()); // Asegurar inicialización
+             carrito.getItems().add(nuevoItem);
         }
 
-        return getCarritoDTO(carrito.getId());
+        // Recargar el carrito para obtener el estado actualizado de la BD
+        // Ojo: Esto puede ser ineficiente. Alternativa: actualizar manualmente el objeto 'carrito'.
+        Carrito carritoActualizado = findCarritoByVendedorEmailOrFail(vendedorEmail);
+        return mapAndCalculateTotals(carritoActualizado); // Mapear y calcular totales
     }
 
     /**
-     * Quita un item (una línea de producto) del carrito.
+     * Quita un item específico del carrito del vendedor.
+     *
+     * @param vendedorEmail Email del vendedor.
+     * @param itemCarritoId ID del ItemCarrito a eliminar.
+     * @return El CarritoDTO actualizado.
      */
     @Transactional
-    public CarritoDTO quitarProducto(Long itemCarritoId) {
-        ItemCarrito item = itemCarritoRepository.findById(itemCarritoId)
-                .orElseThrow(() -> new RuntimeException("Item de carrito no encontrado: " + itemCarritoId));
-        
-        Long carritoId = item.getCarrito().getId();
-        itemCarritoRepository.delete(item);
-        
-        return getCarritoDTO(carritoId);
+    public CarritoDTO quitarItem(String vendedorEmail, Long itemCarritoId) {
+        Carrito carrito = findCarritoByVendedorEmailOrFail(vendedorEmail);
+
+        ItemCarrito itemParaQuitar = itemCarritoRepository.findById(itemCarritoId)
+                .orElseThrow(() -> new RuntimeException("Item de carrito no encontrado: ID " + itemCarritoId));
+
+        // Validar que el item pertenezca al carrito del vendedor (seguridad/consistencia)
+        if (!itemParaQuitar.getCarrito().getId().equals(carrito.getId())) {
+            throw new SecurityException("Intento de eliminar un item de un carrito ajeno.");
+        }
+
+        itemCarritoRepository.delete(itemParaQuitar);
+        // Opcional: remover del Set en la entidad Carrito si es necesario
+        // carrito.getItems().remove(itemParaQuitar);
+
+        // Recargar o recalcular
+        Carrito carritoActualizado = findCarritoByVendedorEmailOrFail(vendedorEmail);
+        return mapAndCalculateTotals(carritoActualizado);
     }
-    
+
     /**
-     * Obtiene el Carrito (con DTOs) y calcula el total.
-     */
-    @Transactional(readOnly = true)
-    public CarritoDTO getCarritoDTO(Long carritoId) {
-        Carrito carrito = carritoRepository.findById(carritoId)
-                .orElseThrow(() -> new RuntimeException("Carrito no encontrado: " + carritoId));
-
-        // Refrescamos la entidad para cargar los items (si son LAZY)
-        // Opcional si la carga de 'items' no es EAGER
-        // carrito = carritoRepository.findById(carritoId).get(); 
-
-        CarritoDTO carritoDTO = carritoMapper.toCarritoDTO(carrito);
-        
-        // Mapeamos los items
-        List<ItemCarritoDTO> itemDTOs = carrito.getItems().stream()
-                .map(carritoMapper::toItemCarritoDTO)
-                .toList();
-        carritoDTO.setItems(itemDTOs);
-
-        // Calculamos el total
-        BigDecimal total = itemDTOs.stream()
-                .map(ItemCarritoDTO::getSubtotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        carritoDTO.setTotal(total);
-
-        return carritoDTO;
-    }
-    
-    /**
-     * Vacía el carrito de un vendedor (borra todos sus ItemCarrito).
-     * Se usa después de concretar una Venta.
+     * Actualiza la cantidad de un item específico en el carrito.
+     * Valida stock para la nueva cantidad.
+     *
+     * @param vendedorEmail Email del vendedor.
+     * @param itemCarritoId ID del ItemCarrito a actualizar.
+     * @param nuevaCantidad La nueva cantidad deseada.
+     * @return El CarritoDTO actualizado.
      */
     @Transactional
-    public void vaciarCarrito(Long carritoId) {
-        Carrito carrito = carritoRepository.findById(carritoId)
-                .orElseThrow(() -> new RuntimeException("Carrito no encontrado: " + carritoId));
-        
-        // Borramos todos los items asociados
-        itemCarritoRepository.deleteAll(carrito.getItems());
-        
-        // Actualizamos el set en la entidad Carrito
-        carrito.getItems().clear();
-        carritoRepository.save(carrito);
+    public CarritoDTO actualizarCantidadItem(String vendedorEmail, Long itemCarritoId, int nuevaCantidad) {
+        if (nuevaCantidad <= 0) {
+            // Si la nueva cantidad es 0 o menos, simplemente quitamos el item
+            return quitarItem(vendedorEmail, itemCarritoId);
+        }
+
+        Carrito carrito = findCarritoByVendedorEmailOrFail(vendedorEmail);
+
+        ItemCarrito itemParaActualizar = itemCarritoRepository.findById(itemCarritoId)
+                .orElseThrow(() -> new RuntimeException("Item de carrito no encontrado: ID " + itemCarritoId));
+
+        // Validar pertenencia al carrito
+        if (!itemParaActualizar.getCarrito().getId().equals(carrito.getId())) {
+            throw new SecurityException("Intento de actualizar un item de un carrito ajeno.");
+        }
+
+        Producto producto = itemParaActualizar.getProducto(); // Producto ya está cargado (o se carga LAZY)
+
+        // --- VALIDACIÓN DE STOCK ---
+        if (producto.getStockActual() < nuevaCantidad) {
+             throw new StockInsuficienteException(
+                String.format("Stock insuficiente para actualizar '%s'. Disponible: %d, Solicitado: %d",
+                              producto.getNombre(), producto.getStockActual(), nuevaCantidad)
+            );
+        }
+
+        itemParaActualizar.setCantidad(nuevaCantidad);
+        itemCarritoRepository.save(itemParaActualizar);
+
+        // Recargar o recalcular
+        Carrito carritoActualizado = findCarritoByVendedorEmailOrFail(vendedorEmail);
+        return mapAndCalculateTotals(carritoActualizado);
     }
+
+     /**
+     * Vacía completamente el carrito de un vendedor.
+     * Se usa típicamente después de finalizar una venta.
+     *
+     * @param vendedorEmail Email del vendedor.
+     * @return El CarritoDTO vacío.
+     */
+    @Transactional
+    public CarritoDTO vaciarCarrito(String vendedorEmail) {
+        Carrito carrito = findCarritoByVendedorEmailOrFail(vendedorEmail);
+
+        // Eliminar todos los items asociados a este carrito
+        // Opción 1: Iterar y eliminar (puede ser menos eficiente si hay muchos items)
+        // Set<ItemCarrito> itemsAEliminar = new HashSet<>(carrito.getItems()); // Copiar para evitar ConcurrentModificationException
+        // itemsAEliminar.forEach(item -> itemCarritoRepository.delete(item));
+
+        // Opción 2: Consulta de eliminación masiva (más eficiente)
+        itemCarritoRepository.deleteAllByCarritoId(carrito.getId()); // ¡Necesitas añadir este método al repo!
+
+        // Limpiar la colección en la entidad para consistencia del objeto actual
+        if (carrito.getItems() != null) {
+             carrito.getItems().clear();
+        }
+
+        return mapAndCalculateTotals(carrito); // Devolverá un carrito vacío
+    }
+
+
+    // --- Métodos Helper ---
+
+    /**
+     * Busca el carrito de un vendedor o lanza una excepción si no se encuentra.
+     * (Usado internamente para evitar repetir código).
+     */
+    private Carrito findCarritoByVendedorEmailOrFail(String vendedorEmail) {
+         Usuario vendedor = usuarioRepository.findByEmail(vendedorEmail)
+                .orElseThrow(() -> new RuntimeException("Vendedor no encontrado: " + vendedorEmail));
+         // Usamos el método que asume que el carrito ya DEBERÍA existir para estas operaciones
+         return carritoRepository.findByVendedor(vendedor)
+                 .orElseThrow(() -> new RuntimeException("Carrito no encontrado para el vendedor: " + vendedorEmail + ". Debería haberse creado."));
+    }
+
+    /**
+     * Mapea la entidad Carrito a CarritoDTO y calcula los totales.
+     * Centraliza la lógica de mapeo y cálculo.
+     */
+    private CarritoDTO mapAndCalculateTotals(Carrito carrito) {
+        // Usa el mapper para la estructura básica
+        CarritoDTO dto = carritoMapper.toCarritoDTO(carrito);
+
+        // Calcular totales manualmente (o podrías hacerlo en el mapper si prefieres)
+        BigDecimal total = BigDecimal.ZERO;
+        int cantidadTotalItems = 0;
+
+        if (dto.getItems() != null) {
+            for (ItemCarritoDTO item : dto.getItems()) {
+                // Asegurarse de que el subtotal se calcule correctamente en el ItemCarritoMapper
+                // Si no, calcularlo aquí:
+                // BigDecimal sub = item.getPrecioUnitarioVenta().multiply(BigDecimal.valueOf(item.getCantidad()));
+                // item.setSubtotal(sub);
+                if (item.getSubtotal() != null) { // Añadir chequeo de nulidad
+                   total = total.add(item.getSubtotal());
+                }
+                cantidadTotalItems += item.getCantidad();
+            }
+        }
+
+        dto.setTotalCarrito(total);
+        dto.setCantidadItems(cantidadTotalItems);
+        return dto;
+    }
+
+     // --- ¡Método Necesario para el deleteAllByCarritoId! ---
+     // Añade esto a tu ItemCarritoRepository.java:
+     //
+     // import org.springframework.data.jpa.repository.Modifying;
+     // import org.springframework.data.jpa.repository.Query;
+     // ...
+     // @Modifying // Indica que es una consulta de modificación (DELETE/UPDATE)
+     // @Query("DELETE FROM ItemCarrito ic WHERE ic.carrito.id = :carritoId")
+     // void deleteAllByCarritoId(@Param("carritoId") Long carritoId);
+
 }

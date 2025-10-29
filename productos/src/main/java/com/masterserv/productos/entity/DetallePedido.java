@@ -1,16 +1,24 @@
 package com.masterserv.productos.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+// Imports de Lombok cambiados
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "detalles_pedido")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+// --- ¡CAMBIO CRÍTICO! ---
+// @Data (ELIMINADO)
+@Getter // Añadido
+@Setter // Añadido
+@NoArgsConstructor // Añadido
+@AllArgsConstructor // Añadido
+// -------------------------
 public class DetallePedido {
 
     @Id
@@ -28,10 +36,12 @@ public class DetallePedido {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "pedido_id", nullable = false)
+    @ToString.Exclude // ¡MUY IMPORTANTE! Evita bucles en logs y hashCode
     private Pedido pedido; // FK a la cabecera del pedido
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "producto_id", nullable = false)
+    @ToString.Exclude // Para evitar bucles en logs
     private Producto producto; // FK al producto vendido
 
     // --- Métodos de conveniencia ---

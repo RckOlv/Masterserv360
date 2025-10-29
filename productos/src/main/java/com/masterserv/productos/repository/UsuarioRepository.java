@@ -37,4 +37,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long>, JpaSpec
     @Override
     @EntityGraph(attributePaths = {"roles", "tipoDocumento"})
     Page<Usuario> findAll(Specification<Usuario> spec, Pageable pageable);
+
+
+    
 }

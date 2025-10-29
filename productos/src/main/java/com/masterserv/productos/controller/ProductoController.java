@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -63,5 +64,22 @@ public class ProductoController {
         // Llamamos al nuevo método
         productoService.softDelete(id); 
         return ResponseEntity.ok(Map.of("message", "Producto marcado como inactivo exitosamente"));
+    }
+
+    @GetMapping("/por-proveedor/{proveedorId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<List<ProductoDTO>> getProductosByProveedor(@PathVariable Long proveedorId) {
+        return ResponseEntity.ok(productoService.findByProveedorId(proveedorId));
+    }
+
+    @GetMapping("/search-by-proveedor")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<Page<ProductoDTO>> searchByProveedor(
+            @RequestParam Long proveedorId,
+            @RequestParam(defaultValue = "") String search, // El término de búsqueda
+            Pageable pageable // Spring arma el page, size, sort
+    ) {
+        Page<ProductoDTO> pagina = productoService.searchByProveedor(proveedorId, search, pageable);
+        return ResponseEntity.ok(pagina);
     }
 }

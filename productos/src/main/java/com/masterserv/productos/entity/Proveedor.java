@@ -11,28 +11,26 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = "categorias") // 👈 evita recursión al imprimir
+// --- CORRECCIÓN: Quitamos "productos" del exclude ---
+@ToString(exclude = "categorias") // 👈 Solo excluimos categorias
 public class Proveedor extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // ... (razonSocial, cuit, email, telefono, etc.) ...
     @Column(nullable = false, unique = true, length = 255)
     private String razonSocial;
-
+    // ... (resto de tus campos) ...
     @Column(nullable = false, unique = true, length = 20)
     private String cuit;
-
     @Column(length = 100)
     private String email;
-
     @Column(length = 20)
     private String telefono;
-
     @Column(length = 255)
     private String direccion;
-
     @Column(length = 50)
     private String estado;
 
@@ -44,7 +42,10 @@ public class Proveedor extends AuditableEntity {
     )
     private Set<Categoria> categorias = new HashSet<>();
 
-    // ✅ equals() y hashCode() basados solo en id
+    // --- ¡ELIMINADO! ---
+    // El Set<Producto> que te pedí añadir era incorrecto. Lo quitamos.
+
+    // ... (Tu equals y hashCode están perfectos) ...
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

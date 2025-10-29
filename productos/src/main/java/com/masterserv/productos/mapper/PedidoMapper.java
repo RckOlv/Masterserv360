@@ -11,7 +11,7 @@ import org.mapstruct.*;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Set;
+// import java.util.Set; // No se usa Set aquí
 
 @Mapper(
     componentModel = "spring",
@@ -19,17 +19,20 @@ import java.util.Set;
 )
 public interface PedidoMapper {
 
-    // --- Mapeo DetallePedido ---
+    // --- Mapeo DetallePedido (Entidad -> DTO) ---
+    // (Para respuestas GET)
     @Mappings({
         @Mapping(source = "producto.id", target = "productoId"),
         @Mapping(source = "producto.nombre", target = "productoNombre"),
         @Mapping(source = "producto.codigo", target = "productoCodigo"),
         // Calcula el subtotal (precio * cantidad)
-        @Mapping(target = "subtotal", expression = "java(detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad())))")
+        // Añadimos un chequeo de nulidad por si acaso
+        @Mapping(target = "subtotal", expression = "java(detalle.getPrecioUnitario() != null ? detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad())) : BigDecimal.ZERO)")
     })
     DetallePedidoDTO toDetallePedidoDTO(DetallePedido detalle);
 
     // --- Mapeo Pedido (Entidad -> DTO) ---
+    // (Para respuestas GET)
     @Mappings({
         @Mapping(source = "proveedor.id", target = "proveedorId"),
         @Mapping(source = "proveedor.razonSocial", target = "proveedorRazonSocial"),
@@ -42,6 +45,7 @@ public interface PedidoMapper {
     List<PedidoDTO> toPedidoDTOList(List<Pedido> pedidos);
 
     // --- Mapeo Pedido (DTO -> Entidad) ---
+    // (Para creación POST)
     @Mappings({
         @Mapping(target = "id", ignore = true),
         @Mapping(target = "fechaPedido", ignore = true),
@@ -56,15 +60,23 @@ public interface PedidoMapper {
     Pedido toPedido(PedidoDTO pedidoDTO);
 
     // --- Mapeo DetallePedido (DTO -> Entidad) ---
+    // (Para creación POST)
     @Mappings({
         @Mapping(target = "id", ignore = true),
         @Mapping(target = "pedido", ignore = true), // El Service lo asignará
         @Mapping(target = "subtotal", ignore = true),
-        @Mapping(source = "productoId", target = "producto") // Usa helper
+        @Mapping(source = "productoId", target = "producto"), // Usa helper
+        
+        // --- ¡CORREGIDO Y AÑADIDO! ---
+        // Ignoramos explícitamente el precio unitario que viene del DTO.
+        // Esto fuerza a que el PedidoService sea el único que
+        // pueda establecer este valor, tomándolo de producto.getPrecioCosto().
+        @Mapping(target = "precioUnitario", ignore = true) 
     })
     DetallePedido toDetallePedido(DetallePedidoDTO detalleDTO);
 
     // --- Helpers para Mapear IDs a Entidades ---
+    // (Tu lógica de helpers es correcta para MapStruct)
     default Proveedor mapProveedor(Long id) {
         if (id == null) return null;
         Proveedor p = new Proveedor();
