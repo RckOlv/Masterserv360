@@ -1,0 +1,146 @@
+<div class="container-fluid my-4">
+  <div class="row">
+
+    <div class="col-lg-3">
+      <div class="filters-sidebar shadow-sm p-3 rounded" style="top: 20px;">
+        
+        <form [formGroup]="filtroForm" (ngSubmit)="onFiltrar(0)">
+          
+          <div class="mb-3">
+            <h5 class="mb-3">Categorías</h5>
+            <div class="list-group category-list">
+              <a (click)="filtrarPorCategoria(null)" 
+                 class="list-group-item list-group-item-action"
+                 [class.active]="selectedCategoriaId === null"
+                 style="cursor: pointer;">
+                Ver Todas
+              </a>
+              <a *ngFor="let cat of categorias" 
+                 (click)="filtrarPorCategoria(cat.id)"
+                 class="list-group-item list-group-item-action"
+                 [class.active]="selectedCategoriaId === cat.id"
+                 style="cursor: pointer;">
+                {{ cat.nombre }}
+              </a>
+            </div>
+          </div>
+          
+          <hr>
+
+          <div class="mb-3">
+            <h5 class="mb-3">Precio (ARS)</h5>
+            <div class="d-flex align-items-center">
+              <input type="number" class="form-control" placeholder="Mín" 
+                     formControlName="precioMin" min="0">
+              <span class="mx-2">-</span>
+              <input type="number" class="form-control" placeholder="Máx" 
+                     formControlName="precioMax" min="0">
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="soloConStock" 
+                   formControlName="soloConStock">
+            <label class="form-check-label" for="soloConStock">
+              Mostrar solo productos con stock
+            </label>
+          </div>
+
+          <hr>
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-search me-2"></i>Aplicar Filtros
+            </button>
+            <button type="button" class="btn btn-outline-secondary" (click)="limpiarFiltros()">
+              Limpiar Filtros
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <div class="col-lg-9">
+      
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="text-muted" *ngIf="page && page.totalElements > 0">
+          Mostrando {{ page.content.length }} de {{ page.totalElements }} productos
+        </span>
+        <span *ngIf="!page || page.totalElements === 0">
+          No se encontraron productos.
+        </span>
+        <mat-paginator *ngIf="page && page.totalElements > 0"
+                       [length]="page.totalElements"
+                       [pageSize]="page.size"
+                       [pageSizeOptions]="[12, 24, 48]"
+                       [pageIndex]="page.number"
+                       (page)="handlePageEvent($event)"
+                       aria-label="Seleccionar página">
+        </mat-paginator>
+      </div>
+
+      <div *ngIf="isLoading" class="text-center my-5 py-5">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+          <span class="visually-hidden">Cargando productos...</span>
+        </div>
+      </div>
+
+      <div *ngIf="!isLoading && page && page.totalElements > 0" 
+           class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        
+        <div class="col" *ngFor="let producto of page.content">
+          <div class="card h-100 shadow-sm border-0 product-card">
+            
+            <img [src]="producto.imagenUrl || 'https://via.placeholder.com/300x200'" 
+                 class="card-img-top" 
+                 alt="{{ producto.nombre }}">
+
+            <div class="card-body card-content-standard">
+              <h5 class="card-title text-truncate">{{ producto.nombre }}</h5>
+              <span class="badge bg-primary-subtle text-primary-emphasis mb-2">
+                {{ producto.nombreCategoria }}
+              </span>
+              <h4 class="card-text text-success mb-0">
+                {{ producto.precioVenta | currency:'ARS':'symbol':'1.2-2' }}
+              </h4>
+            </div>
+
+            <div class="card-body card-content-hover">
+              <h5 class="card-title text-truncate">{{ producto.nombre }}</h5>
+              <p class="card-text text-muted small flex-grow-1">
+                {{ producto.descripcion | slice:0:100 }}...
+              </p>
+              
+              <div *ngIf="producto.stockActual > 0; else sinStock">
+                <p class="text-muted small mb-2">Disponibles: {{ producto.stockActual }}</p>
+                <button class="btn btn-danger w-100">
+                  <i class="bi bi-heart me-2"></i>Añadir a Favoritos
+                </button>
+              </div>
+              <ng-template #sinStock>
+                <p class="text-danger small mb-2">Agotado</p>
+                <button class="btn btn-secondary w-100" disabled>
+                  Sin Stock
+                </button>
+              </ng-template>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-center mt-4" *ngIf="page && page.totalElements > 0 && page.totalPages > 1">
+        <mat-paginator [length]="page.totalElements"
+                       [pageSize]="page.size"
+                       [pageSizeOptions]="[12, 24, 48]"
+                       [pageIndex]="page.number"
+                       (page)="handlePageEvent($event)"
+                       aria-label="Seleccionar página">
+        </mat-paginator>
+      </div>
+
+    </div>
+  </div>
+</div>

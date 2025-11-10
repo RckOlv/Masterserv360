@@ -1,7 +1,19 @@
-.public-container {
+:host {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background: linear-gradient(120deg, #007bff, #6610f2);
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex-grow: 1; /* Empuja el footer (si tuvieras uno) hacia abajo */
+  padding-bottom: 3rem;
+}
+
+/* --- ¡ESTILO DE MARCA AÑADIDO! --- */
+/* * Hace que el enlace activo en la navbar (ej. "Catálogo")
+ * se ponga del color primario (Rojo Masterserv).
+ */
+.navbar-nav .nav-link.active {
+  color: var(--bs-primary) !important;
+  font-weight: 500;
 }

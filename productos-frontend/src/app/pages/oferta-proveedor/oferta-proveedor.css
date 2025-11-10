@@ -1,0 +1,86 @@
+/*
+ * Forzamos un fondo oscuro y texto claro para este componente,
+ * ya que el AuthLayout no carga el tema global.
+*/
+:host {
+  display: block;
+  width: 100%;
+  /* Usamos los mismos colores de tu styles.scss */
+  --bs-body-bg: #121212; 
+  --bs-body-color: #E0E0E0;
+  --bs-card-bg: #1E1E1E;
+  --bs-card-border-color: #9E9E9E;
+  --bs-input-bg: #1E1E1E;
+  --bs-input-border-color: #9E9E9E;
+  --bs-input-color: #FFFFFF;
+  --bs-primary: #E41E26;
+  --bs-metal: #9E9E9E;
+
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  padding: 20px 0; /* Añade algo de espacio */
+}
+
+/* * Sobrescribimos los estilos de Bootstrap
+ * para que usen nuestras variables de tema oscuro.
+*/
+.card {
+  background-color: var(--bs-card-bg);
+  border-color: var(--bs-card-border-color);
+  color: var(--bs-body-color);
+}
+
+.card-header {
+  background-color: #2a2a2a; /* Un poco más oscuro */
+  border-bottom-color: var(--bs-card-border-color);
+}
+
+.table {
+  /* Hacemos la tabla "oscura" */
+  color: var(--bs-body-color);
+  border-color: var(--bs-metal);
+}
+
+.table thead th {
+  background-color: #2a2a2a;
+  color: var(--bs-primary);
+  border-color: var(--bs-metal);
+}
+
+.table tbody tr {
+  border-color: var(--bs-metal);
+}
+
+/* Inputs del Formulario */
+.form-control, .form-control:focus {
+  background-color: var(--bs-input-bg);
+  border-color: var(--bs-input-border-color);
+  color: var(--bs-input-color);
+}
+
+.form-control:disabled {
+  background-color: #333;
+}
+
+.form-control:focus {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 0.2rem rgba(228, 30, 38, 0.25);
+}
+
+.input-group-text {
+  background-color: #333;
+  border-color: var(--bs-input-border-color);
+  color: var(--bs-body-color);
+}
+
+/* Títulos y Labels */
+h2, .form-label {
+  color: #FFFFFF;
+}
+
+/* El logo no se ve porque es oscuro sobre fondo oscuro */
+img[alt="Masterserv Logo"] {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 5px;
+}

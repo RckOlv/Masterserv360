@@ -1,3 +1,84 @@
-<div class="public-container">
+<ng-container *ngIf="isLoggedIn$ | async as isLoggedIn">
+  
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+    <div class="container-fluid">
+      
+      <a class="navbar-brand fw-bold" 
+         [routerLink]="(userRole$ | async) === 'CLIENTE' ? '/portal/catalogo' : '/pos/dashboard'">
+        <i class="bi bi-tools me-2"></i>
+        Masterserv360
+      </a>
+      
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" 
+              data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" 
+              aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNavDropdown">
+        
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          
+          <ng-container *ngIf="(userRole$ | async) === 'CLIENTE'">
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/portal/catalogo" routerLinkActive="active">Catálogo</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/portal/mis-compras" routerLinkActive="active">Mis Compras</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/portal/mis-puntos" routerLinkActive="active">Mis Puntos</a>
+            </li>
+          </ng-container>
+
+          <ng-container *ngIf="(userRole$ | async) === 'ADMIN' || (userRole$ | async) === 'VENDEDOR'">
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/pos/dashboard" routerLinkActive="active">Dashboard</a>
+            </li>
+          </ng-container>
+        </ul>
+
+        <form class="d-flex mx-auto" *ngIf="(userRole$ | async) === 'CLIENTE'" (ngSubmit)="onBuscar(searchInput.value)">
+          <input #searchInput class="form-control me-2" type="search" 
+                 placeholder="Buscar repuesto por nombre..." 
+                 aria-label="Buscar" style="width: 300px;">
+          <button class="btn btn-outline-primary" type="submit">Buscar</button>
+        </form>
+        <ul class="navbar-nav ms-auto">
+          <li *ngIf="!isLoggedIn" class="nav-item">
+            <a class="btn btn-primary" routerLink="/login">Iniciar Sesión</a>
+          </li>
+
+          <li *ngIf="isLoggedIn" class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" 
+               role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-person-circle me-2"></i>
+              {{ userEmail$ | async }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+              <ng-container *ngIf="(userRole$ | async) === 'CLIENTE'">
+                <li class="dropdown-header text-primary">
+                  <i class="bi bi-star-fill me-2"></i>
+                  {{ saldoPuntos$ | async | number }} Puntos
+                </li>
+                <li><a class="dropdown-item" routerLink="/portal/mi-perfil">Mi Perfil</a></li>
+                <li><hr class="dropdown-divider"></li>
+              </ng-container>
+              <li>
+                <a class="dropdown-item text-danger" (click)="logout()" style="cursor: pointer;">
+                  <i class="bi bi-box-arrow-right me-2"></i>
+                  Cerrar Sesión
+                </a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+        
+      </div>
+    </div>
+  </nav>
+</ng-container>
+
+<main class="container-fluid mt-4">
   <router-outlet></router-outlet>
-</div>
+</main>

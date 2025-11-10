@@ -3,23 +3,25 @@ package com.masterserv.productos.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
-@Data
-@MappedSuperclass // 1. Indica que es una plantilla, no una tabla
-@EntityListeners(AuditingEntityListener.class) // 2. Activa la auditoría
+@Getter
+@Setter
+@MappedSuperclass 
+@EntityListeners(AuditingEntityListener.class) 
 public abstract class AuditableEntity {
 
-    @CreatedDate // 3. Spring Boot pondrá la fecha de creación aquí
-    @Column(name = "fecha_creacion", updatable = false)
+    @CreatedDate 
+    @Column(name = "fecha_creacion", nullable = false, updatable = false) // Añadí nullable = false
     protected LocalDateTime fechaCreacion;
 
-    @LastModifiedDate // 4. Spring Boot actualizará esta fecha en cada update
-    @Column(name = "fecha_modificacion")
+    @LastModifiedDate 
+    @Column(name = "fecha_modificacion", nullable = false) // Añadí nullable = false
     protected LocalDateTime fechaModificacion;
 }

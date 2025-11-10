@@ -1,0 +1,91 @@
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+
+      <h2 class="mb-4">Mi Perfil</h2>
+      <p class="text-muted">
+        Aquí puedes ver y actualizar tu información personal. Tu dirección de
+        correo electrónico no puede ser modificada.
+      </p>
+      <hr class="mb-4" />
+
+      <div *ngIf="isLoading" class="text-center my-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Cargando perfil...</span>
+        </div>
+      </div>
+
+      <form [formGroup]="perfilForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading">
+        
+        <fieldset [disabled]="isSubmitting">
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="nombre" class="form-label">Nombre</label>
+              <input type="text" id="nombre" class="form-control" 
+                     formControlName="nombre"
+                     [ngClass]="{ 'is-invalid': perfilForm.get('nombre')?.invalid && perfilForm.get('nombre')?.touched }">
+              <div *ngIf="perfilForm.get('nombre')?.invalid && perfilForm.get('nombre')?.touched" class="invalid-feedback">
+                El nombre es obligatorio.
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label for="apellido" class="form-label">Apellido</label>
+              <input type="text" id="apellido" class="form-control" 
+                     formControlName="apellido"
+                     [ngClass]="{ 'is-invalid': perfilForm.get('apellido')?.invalid && perfilForm.get('apellido')?.touched }">
+              <div *ngIf="perfilForm.get('apellido')?.invalid && perfilForm.get('apellido')?.touched" class="invalid-feedback">
+                El apellido es obligatorio.
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-5">
+              <label for="tipoDocumentoId" class="form-label">Tipo de Documento</label>
+              <select id="tipoDocumentoId" class="form-select" 
+                      formControlName="tipoDocumentoId"
+                      [ngClass]="{ 'is-invalid': perfilForm.get('tipoDocumentoId')?.invalid && perfilForm.get('tipoDocumentoId')?.touched }">
+                <option [ngValue]="null" disabled>Seleccione...</option>
+                <option *ngFor="let tipo of tiposDocumento" [ngValue]="tipo.id">
+                  {{ tipo.nombreCorto }}
+                </option>
+              </select>
+              <div *ngIf="perfilForm.get('tipoDocumentoId')?.invalid && perfilForm.get('tipoDocumentoId')?.touched" class="invalid-feedback">
+                Debe seleccionar un tipo.
+              </div>
+            </div>
+            <div class="col-md-7">
+              <label for="documento" class="form-label">N° de Documento</label>
+              <input type="text" id="documento" class="form-control" 
+                     formControlName="documento"
+                     [ngClass]="{ 'is-invalid': perfilForm.get('documento')?.invalid && perfilForm.get('documento')?.touched }">
+              <div *ngIf="perfilForm.get('documento')?.invalid && perfilForm.get('documento')?.touched" class="invalid-feedback">
+                El número de documento es obligatorio.
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-4">
+             <div class="col-md-6">
+              <label for="telefono" class="form-label">Teléfono (Opcional)</label>
+              <input type="tel" id="telefono" class="form-control" 
+                     formControlName="telefono">
+            </div>
+          </div>
+
+          <hr />
+          <div class="text-end">
+            <button type="submit" class="btn btn-primary btn-lg" [disabled]="perfilForm.invalid || isSubmitting">
+              <span *ngIf="!isSubmitting">Guardar Cambios</span>
+              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              <span *ngIf="isSubmitting"> Guardando...</span>
+            </button>
+          </div>
+
+        </fieldset>
+      </form>
+
+    </div>
+  </div>
+</div>

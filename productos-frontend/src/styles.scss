@@ -1,0 +1,322 @@
+/* ================================
+   PALETA DE COLORES MASTERSERV
+   ================================ */
+
+// Colores principales de la marca
+$masterserv-primary: #E41E26;
+$masterserv-white: #FFFFFF;
+$masterserv-black: #121212;
+$masterserv-gray-dark: #1E1E1E;
+$masterserv-text: #E0E0E0;
+$masterserv-metal: #9E9E9E;
+$masterserv-accent: #FFC107;
+
+// Variables de Bootstrap personalizadas
+:root {
+  --bs-primary: #{$masterserv-primary};
+  --bs-secondary: #{$masterserv-metal};
+  --bs-success: #28a745;
+  --bs-info: #17a2b8;
+  --bs-warning: #{$masterserv-accent};
+  --bs-danger: #dc3545;
+  --bs-light: #{$masterserv-text};
+  --bs-dark: #{$masterserv-black};
+  --bs-body-bg: #{$masterserv-black};
+  --bs-body-color: #{$masterserv-text};
+  --bs-card-bg: #{$masterserv-gray-dark};
+  --bs-card-border-color: #{$masterserv-metal};
+  --bs-input-bg: #{$masterserv-gray-dark};
+  --bs-input-border-color: #{$masterserv-metal};
+  --bs-input-color: #{$masterserv-white};
+  --bs-heading-color: #{$masterserv-white};
+}
+
+/* ================================
+   ESTILOS GLOBALES MASTERSERV
+   ================================ */
+
+body {
+  background-color: $masterserv-black;
+  color: $masterserv-text;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Navbar personalizada */
+.navbar-masterserv {
+  background-color: $masterserv-black !important;
+  border-bottom: 2px solid $masterserv-primary;
+  
+  .navbar-brand {
+    color: $masterserv-primary !important;
+    font-weight: bold;
+    font-size: 1.5rem;
+  }
+  
+  .nav-link {
+    color: $masterserv-text !important;
+    
+    &:hover {
+      color: $masterserv-primary !important;
+    }
+  }
+}
+
+/* Botones personalizados */
+.btn-masterserv {
+  background: linear-gradient(135deg, $masterserv-primary, darken($masterserv-primary, 10%));
+  border: none;
+  color: $masterserv-white;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: linear-gradient(135deg, lighten($masterserv-primary, 5%), $masterserv-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba($masterserv-primary, 0.4);
+    color: $masterserv-white;
+  }
+}
+
+.btn-masterserv-accent {
+  background: linear-gradient(135deg, $masterserv-accent, darken($masterserv-accent, 10%));
+  border: none;
+  color: $masterserv-black;
+  font-weight: 600;
+  
+  &:hover {
+    background: linear-gradient(135deg, lighten($masterserv-accent, 5%), $masterserv-accent);
+    color: $masterserv-black;
+  }
+}
+
+/* Cards personalizadas */
+.card-masterserv {
+  background-color: $masterserv-gray-dark;
+  border: 1px solid $masterserv-metal;
+  border-radius: 8px;
+  
+  .card-header {
+    background-color: rgba($masterserv-primary, 0.1);
+    border-bottom: 1px solid $masterserv-metal;
+    color: $masterserv-primary;
+    font-weight: 600;
+  }
+  
+  .card-title {
+    color: $masterserv-white;
+  }
+}
+
+/* Sidebar con nueva paleta */
+/* Estas reglas se aplican a <app-sidebar> */
+app-sidebar .sidebar {
+  background: linear-gradient(180deg, $masterserv-black 0%, lighten($masterserv-black, 5%) 100%);
+  border-right: 1px solid $masterserv-metal;
+  
+  .sidebar-header {
+    background-color: $masterserv-black;
+    border-bottom: 1px solid $masterserv-primary;
+    
+    .brand {
+      color: $masterserv-primary;
+    }
+    
+    .brand-accent {
+      color: $masterserv-accent;
+    }
+  }
+  
+  .menu a {
+    color: $masterserv-text;
+    border-left: 4px solid transparent;
+    
+    &:hover,
+    &.active {
+      background-color: rgba($masterserv-primary, 0.1);
+      color: $masterserv-primary;
+      border-left-color: $masterserv-primary;
+    }
+  }
+  
+  .menu-header span {
+    color: $masterserv-accent;
+  }
+  
+  .sidebar-footer {
+    background-color: $masterserv-gray-dark;
+    border-top: 1px solid $masterserv-metal;
+    
+    a {
+      color: $masterserv-text !important;
+      
+      &:hover {
+        background-color: rgba($masterserv-primary, 0.2);
+        color: $masterserv-primary !important;
+      }
+    }
+  }
+}
+
+/* Login con nueva paleta */
+.login-container {
+  background: $masterserv-black;
+  
+  .background-overlay {
+    background: rgba($masterserv-black, 0.8);
+  }
+  
+  .glass-card {
+    background: rgba($masterserv-gray-dark, 0.95);
+    border: 1px solid $masterserv-metal;
+    
+    .title-text {
+      color: $masterserv-white;
+    }
+    
+    .tagline {
+      color: $masterserv-accent;
+    }
+  }
+  
+  .form-control-custom {
+    background: rgba($masterserv-gray-dark, 0.8);
+    border: 1px solid $masterserv-metal;
+    color: $masterserv-text;
+    
+    &:focus {
+      border-color: $masterserv-primary;
+      box-shadow: 0 0 0 0.2rem rgba($masterserv-primary, 0.25);
+    }
+  }
+  
+  .btn-custom {
+    background: linear-gradient(135deg, $masterserv-primary, darken($masterserv-primary, 10%));
+    
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, lighten($masterserv-primary, 5%), $masterserv-primary);
+    }
+  }
+}
+
+/* Tablas personalizadas */
+.table-masterserv {
+  background-color: $masterserv-gray-dark;
+  color: $masterserv-text;
+  
+  thead {
+    background-color: rgba($masterserv-primary, 0.1);
+    
+    th {
+      color: $masterserv-primary;
+      border-bottom: 2px solid $masterserv-metal;
+    }
+  }
+  
+  tbody tr:hover {
+    background-color: rgba($masterserv-primary, 0.05);
+  }
+}
+
+/* Utilidades de color */
+.text-masterserv { color: $masterserv-primary !important; }
+.text-metal { color: $masterserv-metal !important; }
+.text-accent { color: $masterserv-accent !important; }
+
+.bg-masterserv { background-color: $masterserv-primary !important; }
+.bg-dark-custom { background-color: $masterserv-gray-dark !important; }
+
+.border-masterserv { border-color: $masterserv-primary !important; }
+.border-metal { border-color: $masterserv-metal !important; }
+
+/* Override de Bootstrap con la nueva paleta */
+.card {
+  background-color: $masterserv-gray-dark;
+  border: 1px solid $masterserv-metal;
+}
+
+.form-control {
+  background-color: $masterserv-gray-dark;
+  border: 1px solid $masterserv-metal;
+  color: $masterserv-text;
+  
+  &:focus {
+    background-color: $masterserv-gray-dark;
+    border-color: $masterserv-primary;
+    color: $masterserv-text;
+    box-shadow: 0 0 0 0.2rem rgba($masterserv-primary, 0.25);
+  }
+}
+
+.form-label {
+  color: $masterserv-text;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    background: $masterserv-black;
+  }
+}
+
+/* Efectos y animaciones */
+@keyframes masterserv-glow {
+  0%, 100% { box-shadow: 0 0 5px rgba($masterserv-primary, 0.5); }
+  50% { box-shadow: 0 0 20px rgba($masterserv-primary, 0.8); }
+}
+
+.glow-effect {
+  animation: masterserv-glow 2s ease-in-out infinite;
+}
+
+
+/* --- ¡INICIO DE LA CORRECCIÓN DE LAYOUT GLOBAL! --- */
+/*
+ * Estas reglas se aplican GLOBALMENTE y le dicen al
+ * layout del admin (admin-layout.html) cómo organizarse.
+*/
+
+/* 1. Reglas para el tag <app-sidebar> (el "hijo") */
+/* Esto le da el tamaño y posición */
+.admin-container app-sidebar {
+  width: 250px;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  transition: all 0.3s ease-in-out;
+}
+
+/* 2. Regla para el <main class="content"> (el "hermano") */
+/* Esto lo "empuja" 250px a la derecha */
+.admin-container .content {
+  margin-left: 250px;
+  width: calc(100% - 250px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+  transition: all 0.3s ease-in-out;
+}
+
+/* 3. Regla responsive */
+@media (max-width: 992px) {
+  /* El contenido ocupa el 100% */
+  .admin-container .content { 
+    margin-left: 0;
+    width: 100%;
+    padding: 15px;
+  }
+  
+  /* El sidebar se oculta */
+  .admin-container app-sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .admin-container app-sidebar.open { /* (Si implementas un botón de toggle) */
+    transform: translateX(0);
+  }
+}
+/* --- FIN DE LA CORRECCIÓN DE LAYOUT --- */

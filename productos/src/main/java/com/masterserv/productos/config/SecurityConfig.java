@@ -1,11 +1,10 @@
 package com.masterserv.productos.config;
 
 import com.masterserv.productos.security.JwtAuthenticationFilter;
-import com.masterserv.productos.service.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod; 
+import org.springframework.http.HttpMethod; // Importante
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -24,44 +23,37 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true) 
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService; 
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            
-            // 3. Definimos las reglas de autorización
+            .csrf(csrf -> csrf.disable()) 
+            .cors(cors -> cors.configurationSource(corsConfigurationSource())) 
+
             .authorizeHttpRequests(authz -> authz
-                // --- Rutas Públicas ---
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/chatbot/**").permitAll() 
-                .requestMatchers(HttpMethod.POST, "/api/productos/filtrar").permitAll() 
+                // 1. Rutas de Autenticación y Chatbot (Públicas)
+                .requestMatchers("/api/auth/**", "/api/chatbot/**", "/error").permitAll()
+                
+                // 2. Rutas de Consulta Pública (Catálogo, etc.)
+                .requestMatchers(HttpMethod.GET, "/api/catalogo/productos/**").permitAll() 
+                .requestMatchers(HttpMethod.POST, "/api/catalogo/productos/filtrar").permitAll() 
                 .requestMatchers(HttpMethod.GET, "/api/categorias").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/tipos-documento").permitAll()
-                .requestMatchers("/error").permitAll()
-                
-                // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
-                // Definimos explícitamente que todo en /api/proveedores (GET, POST, PUT, DELETE)
-                // requiere el rol 'ADMIN'.
-                .requestMatchers("/api/proveedores/**").hasRole("ADMIN")
-                
-                // (Ya no necesitamos esto en UsuarioController, pero es bueno tenerlo)
-                .requestMatchers("/api/usuarios/**").hasRole("ADMIN") 
-                .requestMatchers("/api/roles/**").hasRole("ADMIN")
 
-                // El resto de rutas (ej. /api/dashboard) solo necesitan estar autenticadas
+                // --- ¡NUEVA LÍNEA AÑADIDA! ---
+                // Permite GET, POST, etc. a cualquier ruta bajo /api/public/
+                .requestMatchers("/api/public/**").permitAll() 
+                // ---------------------------------
+
+                // 3. ¡El resto de rutas!
                 .anyRequest().authenticated() 
             )
-            
+
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
@@ -83,14 +75,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+        // AÑADIMOS EL PORTAL DEL CLIENTE (ej. localhost:4300) AL DEL VENDEDOR (localhost:4200)
+        configuration.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:4300")); 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        
+        source.registerCorsConfiguration("/**", configuration); 
+
         return source;
     }
 }

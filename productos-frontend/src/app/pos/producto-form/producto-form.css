@@ -1,0 +1,102 @@
+/* ================================
+   ESTILOS MASTERSERV360 - FORMULARIO PRODUCTOS
+   Coincidiendo con la paleta del sidebar
+   ================================ */
+
+.productos-form-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #121212;
+  padding: 1rem;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.container {
+  height: 100%;
+  display: flex;
+  align-items: flex-start; /* Cambiado de center a flex-start */
+  justify-content: flex-start; /* Cambiado de center a flex-start */
+  background: #121212;
+  padding: 1rem;
+  min-height: 0;
+  width: 100%;
+  max-width: none; /* Eliminar máximo ancho */
+}
+
+.row.justify-content-center {
+  justify-content: flex-start !important; /* Alinear a la izquierda */
+  width: 100%;
+}
+
+.col-lg-8.col-md-10 {
+  max-width: none; /* Eliminar máximo ancho */
+  flex: 0 0 100%; /* Ocupar 100% del ancho */
+}
+
+.card {
+  background: linear-gradient(180deg, #121212 0%, #1a1a1a 100%);
+  border: 1px solid #9E9E9E;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #E41E26, #c4181f);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+  border-radius: 8px 8px 0 0;
+}
+
+.card-header {
+  background: #121212;
+  color: #E41E26;
+  border-bottom: 1px solid #E41E26;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.card-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(228, 30, 38, 0.1), transparent);
+  animation: headerShine 3s ease-in-out infinite;
+}
+
+.card-header h4 {
+  color: #E41E26;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  position: relative;
+  z-index: 1;
+  font-size: 1.5rem;
+}
+
+.card-body {
+  background: #1a1a1a;
+  color: #E0E0E0;
+  padding: 2rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* El resto del CSS permanece igual... */

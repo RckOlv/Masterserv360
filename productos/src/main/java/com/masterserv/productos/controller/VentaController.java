@@ -1,13 +1,12 @@
 package com.masterserv.productos.controller;
 
-// --- Imports Corregidos ---
-// Ya no necesitamos FinalizarVentaDTO
 import com.masterserv.productos.dto.VentaDTO;
+import com.masterserv.productos.dto.VentaFiltroDTO; // <-- Importar DTO Filtro
 import com.masterserv.productos.service.VentaService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;         // Para findAll (si lo añades)
-import org.springframework.data.domain.Pageable;    // Para findAll (si lo añades)
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,60 +23,66 @@ public class VentaController {
 
     /**
      * Endpoint principal para crear (finalizar) una nueva venta.
-     * Recibe los datos de la venta (cliente, detalles) en el cuerpo.
-     * El vendedor se obtiene del usuario autenticado.
      */
-    @PostMapping // Cambiado de /finalizar a la raíz /api/ventas para seguir el estándar REST
+    @PostMapping // Correcto: POST a /api/ventas
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
-    // --- Firma del Método Corregida ---
-    // 1. Usamos VentaDTO en lugar de FinalizarVentaDTO
-    // 2. Inyectamos Principal para obtener el vendedor
     public ResponseEntity<VentaDTO> crearVenta(@Valid @RequestBody VentaDTO ventaDTO, Principal principal) {
-
-        // Validamos que el usuario esté autenticado
         if (principal == null || principal.getName() == null) {
-            // Considera lanzar una excepción o devolver un 401 Unauthorized
              return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
-        String vendedorEmail = principal.getName(); // Obtenemos el email del vendedor logueado
-
-        // --- Llamada al Servicio Corregida ---
-        // Llamamos al método 'create' que sí existe en VentaService
+        String vendedorEmail = principal.getName();
         VentaDTO ventaCreada = ventaService.create(ventaDTO, vendedorEmail);
-
         return new ResponseEntity<>(ventaCreada, HttpStatus.CREATED);
     }
 
-    // --- Otros Endpoints (Ejemplos para añadir después) ---
-
     /**
-     * Obtiene una venta por su ID.
+     * Obtiene una venta por su ID (con detalles).
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
     public ResponseEntity<VentaDTO> getVentaById(@PathVariable Long id) {
-        VentaDTO venta = ventaService.findById(id);
+        VentaDTO venta = ventaService.findById(id); // Usa findByIdWithDetails internamente
         return ResponseEntity.ok(venta);
     }
 
     /**
-     * Obtiene todas las ventas de forma paginada.
+     * Obtiene todas las ventas de forma paginada (SIN filtros).
      */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
     public ResponseEntity<Page<VentaDTO>> getAllVentas(Pageable pageable) {
-        Page<VentaDTO> ventas = ventaService.findAll(pageable);
+        Page<VentaDTO> ventas = ventaService.findAll(pageable); // Llama al método sin filtros
         return ResponseEntity.ok(ventas);
     }
+
+    // --- ¡NUEVO ENDPOINT PARA FILTRAR! ---
+    /**
+     * Obtiene las ventas filtradas según criterios y paginación.
+     * Recibe los filtros en el cuerpo de la petición (POST).
+     *
+     * @param filtro DTO con los criterios de búsqueda (clienteId, vendedorId, fechaDesde, fechaHasta, estado).
+     * @param pageable Objeto Pageable inyectado por Spring (desde query params ?page=..&size=..&sort=..)
+     * @return ResponseEntity con la página de VentaDTO filtrada.
+     */
+    @PostMapping("/filtrar") // Usamos POST para enviar el cuerpo del filtro
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<Page<VentaDTO>> findVentasByCriteria(
+            @RequestBody VentaFiltroDTO filtro, Pageable pageable) {
+        // Llama al nuevo método del servicio que usa Specifications
+        Page<VentaDTO> ventasFiltradas = ventaService.findByCriteria(filtro, pageable);
+        return ResponseEntity.ok(ventasFiltradas);
+    }
+    // ------------------------------------
+
 
     /**
      * Cancela una venta (y repone el stock).
      */
     @PatchMapping("/{id}/cancelar")
-    @PreAuthorize("hasRole('ADMIN')") // Solo Admin puede cancelar? Ajusta roles si es necesario
+    @PreAuthorize("hasRole('ADMIN')") // Ajusta roles si es necesario
     public ResponseEntity<Void> cancelarVenta(@PathVariable Long id, Principal principal) {
          if (principal == null || principal.getName() == null) {
-             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+              return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
          }
          String usuarioEmailCancela = principal.getName();
          ventaService.cancelarVenta(id, usuarioEmailCancela);

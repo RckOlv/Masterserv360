@@ -2,47 +2,62 @@ package com.masterserv.productos.entity;
 
 import com.masterserv.productos.enums.TipoMovimientoPuntos;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.ToString;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "movimientos_puntos")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class MovimientoPuntos {
+@ToString // ✅ Se eliminó el parámetro 'exclude'
+public class MovimientoPuntos extends AuditableEntity { // Hereda fechaCreacion/fechaModificacion
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * Puntos que ingresan (positivo) o salen (negativo).
+     */
+    @Column(nullable = false)
+    private Integer puntos;
+
+    /**
+     * Tipo de transacción: GANADO, CANJEADO, EXPIRADO, AJUSTE.
+     */
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private TipoMovimientoPuntos tipo;
+    @Column(name = "tipo_movimiento", nullable = false, length = 50)
+    private TipoMovimientoPuntos tipoMovimiento;
 
-    @Column(nullable = false)
-    private int puntos; // Positivo para acumular, negativo para canjear
+    /**
+     * Fecha en que caducarán estos puntos específicos (si la regla lo define).
+     */
+    @Column(name = "fecha_caducidad_puntos")
+    private LocalDateTime fechaCaducidadPuntos;
 
-    @Column(nullable = false)
-    private LocalDateTime fecha;
+    /**
+     * Descripción o referencia del movimiento.
+     */
+    @Column(length = 255)
+    private String descripcion;
 
-    // --- Relaciones (El "Hub") ---
+    // --- Relaciones ---
 
+    // FK a la Cuenta de Puntos (relación bidireccional)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cuenta_puntos_id", nullable = false) // A qué cuenta pertenece
+    @JoinColumn(name = "cuenta_puntos_id", nullable = false)
+    @ToString.Exclude // ✅ Correcto uso del nuevo estilo
     private CuentaPuntos cuentaPuntos;
 
+    // FK a la Venta que generó los puntos
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "venta_id") // Qué venta generó los puntos (anulable)
+    @JoinColumn(name = "venta_id") // No es nullable, ya que no todos los movimientos son por venta (ej. ajuste)
+    @ToString.Exclude // ✅ Correcto uso del nuevo estilo
     private Venta venta;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cupon_id") // Qué cupón generó el canje (anulable)
-    private Cupon cupon;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "regla_punto_id") // Qué regla se usó (anulable)
-    private ReglaPuntos reglaPuntos;
 }

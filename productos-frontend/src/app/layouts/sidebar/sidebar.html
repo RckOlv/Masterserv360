@@ -1,52 +1,89 @@
 <aside class="sidebar">
   <div class="sidebar-header">
-    <h2 class="brand">Masterserv360</h2>
+    <div class="brand-logo">
+      <img src="/images/Masterserv.png" alt="Masterserv Logo" class="logo-img">
+    </div>
+    <h2 class="brand">Masterserv<span class="brand-accent">360</span></h2>
   </div>
 
   <nav class="menu">
     <ul>
+      <li class="menu-header"><span>General</span></li>
       <li>
         <a routerLink="/pos/dashboard" routerLinkActive="active">
-          <i class="bi bi-speedometer2"></i>
-          Dashboard
+          <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
         </a>
       </li>
       <li>
+        <a routerLink="/pos/punto-venta" routerLinkActive="active">
+          <i class="bi bi-display"></i> <span>Punto de Venta</span>
+        </a>
+      </li>
+      <li>
+        <a routerLink="/pos/ventas-historial" routerLinkActive="active">
+          <i class="bi bi-receipt"></i> <span>Historial de Ventas</span>
+        </a>
+      </li>
+
+      <li class="menu-header"><span>Inventario</span></li>
+      <li>
         <a routerLink="/pos/productos" routerLinkActive="active">
-          <i class="bi bi-box-seam"></i>
-          Productos
+          <i class="bi bi-box-seam"></i> <span>Productos</span>
         </a>
       </li>
       <li>
         <a routerLink="/pos/categorias" routerLinkActive="active">
-          <i class="bi bi-tags"></i>
-          Categorías
-        </a>
-      </li>
-      <li>
-        <a routerLink="/pos/usuarios" routerLinkActive="active">
-          <i class="bi bi-people"></i>
-          Usuarios
-        </a>
-      </li>
-      <li>
-        <a routerLink="/pos/ventas" routerLinkActive="active">
-          <i class="bi bi-cart"></i>
-          Ventas
+          <i class="bi bi-tags"></i> <span>Categorías</span>
         </a>
       </li>
       <li>
         <a routerLink="/pos/proveedores" routerLinkActive="active">
-          <i class="bi bi-truck"></i>
-          Proveedores
+          <i class="bi bi-truck"></i> <span>Proveedores</span>
         </a>
       </li>
       <li>
-        <a routerLink="/pos/configuracion" routerLinkActive="active">
-          <i class="bi bi-gear"></i>
-          Configuración
+        <a routerLink="/pos/pedidos" routerLinkActive="active">
+          <i class="bi bi-clipboard-data"></i> <span>Pedidos</span>
         </a>
       </li>
-    </ul>
+
+      <ng-container *ngIf="isAdmin">
+        <li class="menu-header"><span>Administración</span></li>
+        
+        <li> 
+          <a routerLink="/pos/cotizaciones" routerLinkActive="active">
+            <i class="bi bi-inbox-fill"></i> <span>Cotizaciones Recibidas</span>
+          </a>
+        </li>
+        
+        <li>
+          <a routerLink="/pos/usuarios" routerLinkActive="active">
+            <i class="bi bi-people"></i> <span>Usuarios</span>
+          </a>
+        </li>
+        <li>
+          <a routerLink="/pos/roles" routerLinkActive="active">
+            <i class="bi bi-shield-check"></i> <span>Roles</span>
+          </a>
+        </li>
+        <li>
+          <a routerLink="/pos/permisos" routerLinkActive="active">
+            <i class="bi bi-key"></i> <span>Permisos</span>
+          </a>
+        </li>
+        <li>
+          <a routerLink="/pos/reglas-puntos" routerLinkActive="active">
+            <i class="bi bi-star-fill"></i> <span>Reglas de Puntos</span>
+          </a>
+        </li>
+      </ng-container>
+      </ul>
   </nav>
+
+  <div class="sidebar-footer">
+    <a (click)="logout()" style="cursor: pointer;">
+      <i class="bi bi-box-arrow-right"></i>
+      <span>Cerrar Sesión</span>
+    </a>
+  </div>
 </aside>

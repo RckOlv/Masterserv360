@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor; // Importado
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
@@ -38,6 +39,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long>, JpaSpec
     @EntityGraph(attributePaths = {"roles", "tipoDocumento"})
     Page<Usuario> findAll(Specification<Usuario> spec, Pageable pageable);
 
+    //(Cuenta clientes que están ACTIVOS)
+    @Query("SELECT COUNT(u) FROM Usuario u JOIN u.roles r WHERE r.nombreRol = 'ROLE_CLIENTE' AND u.estado = 'ACTIVO'")
+    long countClientesActivos();
 
+    Optional<Usuario> findByDocumento(String documento);
     
 }

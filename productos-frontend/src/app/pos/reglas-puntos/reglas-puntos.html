@@ -1,0 +1,164 @@
+<div class="container-fluid my-4">
+  <h4><i class="bi bi-star-half"></i> Configuración de Puntos de Fidelización</h4>
+  <p class="text-muted">Define la regla para la acumulación de puntos. Al guardar una nueva regla, la anterior se desactiva automáticamente.</p>
+  <hr>
+
+  <div *ngIf="isLoading" class="text-center my-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Cargando configuración...</span>
+    </div>
+  </div>
+  <div *ngIf="errorMessage && !isLoading" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div class="row" *ngIf="!isLoading">
+
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">Establecer Nueva Regla Activa</h5>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="reglaForm" (ngSubmit)="onSubmit()">
+            
+            <div class="row g-3">
+              <p class="form-text col-12">
+                Defina cuántos puntos (P) se ganan por cada (X) monto gastado (ARS), y cuál es el valor de canje de 1 Punto.
+              </p>
+
+              <div class="col-12">
+                <label for="descripcion" class="form-label">Descripción de la Regla:</label>
+                <input type="text" id="descripcion" class="form-control"
+                       placeholder="Ej: Promoción Día del Padre 2025"
+                       formControlName="descripcion"
+                       [ngClass]="{ 'is-invalid': reglaForm.get('descripcion')?.invalid && reglaForm.get('descripcion')?.touched }">
+                <div *ngIf="reglaForm.get('descripcion')?.invalid && reglaForm.get('descripcion')?.touched" class="invalid-feedback d-block">
+                  La descripción es obligatoria.
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <label for="montoGasto" class="form-label">Por cada (ARS):</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" id="montoGasto" class="form-control"
+                         formControlName="montoGasto" min="1" step="50"
+                         [ngClass]="{ 'is-invalid': reglaForm.get('montoGasto')?.invalid && reglaForm.get('montoGasto')?.touched }">
+                </div>
+                 <div *ngIf="reglaForm.get('montoGasto')?.invalid && reglaForm.get('montoGasto')?.touched" class="invalid-feedback d-block">
+                   El monto debe ser positivo.
+                 </div>
+              </div>
+
+              <div class="col-sm-6">
+                <label for="puntosGanados" class="form-label">Se ganan (Puntos):</label>
+                 <div class="input-group">
+                   <input type="number" id="puntosGanados" class="form-control"
+                          formControlName="puntosGanados" min="1"
+                          [ngClass]="{ 'is-invalid': reglaForm.get('puntosGanados')?.invalid && reglaForm.get('puntosGanados')?.touched }">
+                   <span class="input-group-text"><i class="bi bi-star-fill"></i></span>
+                 </div>
+                 <div *ngIf="reglaForm.get('puntosGanados')?.invalid && reglaForm.get('puntosGanados')?.touched" class="invalid-feedback d-block">
+                   Los puntos deben ser al menos 1.
+                 </div>
+              </div>
+
+              <div class="col-sm-6">
+                <label for="equivalenciaPuntos" class="form-label">1 Punto equivale a (ARS):</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" id="equivalenciaPuntos" class="form-control"
+                         formControlName="equivalenciaPuntos" min="0.01" step="0.1"
+                         [ngClass]="{ 'is-invalid': reglaForm.get('equivalenciaPuntos')?.invalid && reglaForm.get('equivalenciaPuntos')?.touched }">
+                </div>
+                <div *ngIf="reglaForm.get('equivalenciaPuntos')?.invalid && reglaForm.get('equivalenciaPuntos')?.touched" class="invalid-feedback d-block">
+                   La equivalencia debe ser positiva.
+                </div>
+              </div>
+              
+              <div class="col-sm-6">
+                  <label for="caducidadPuntosMeses" class="form-label">Caducidad (Meses):</label>
+                  <div class="input-group">
+                     <input type="number" id="caducidadPuntosMeses" class="form-control"
+                            formControlName="caducidadPuntosMeses" min="1"
+                            [ngClass]="{ 'is-invalid': reglaForm.get('caducidadPuntosMeses')?.invalid && reglaForm.get('caducidadPuntosMeses')?.touched }">
+                     <span class="input-group-text"><i class="bi bi-calendar-x"></i></span>
+                  </div>
+                  <div *ngIf="reglaForm.get('caducidadPuntosMeses')?.invalid && reglaForm.get('caducidadPuntosMeses')?.touched" class="invalid-feedback d-block">
+                     La caducidad debe ser al menos 1 mes.
+                  </div>
+              </div>
+            </div>
+
+            <hr class="my-4">
+            <button type="submit" class="btn btn-primary w-100" [disabled]="isSubmitting || reglaForm.invalid">
+              <span *ngIf="!isSubmitting">Guardar y Activar Nueva Regla</span>
+              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              <span *ngIf="isSubmitting"> Guardando...</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div> 
+    
+    <div class="col-lg-6">
+      <div class="card shadow-sm mb-3">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">Regla Activa Actualmente</h5>
+        </div>
+        <div class="card-body">
+          <div *ngIf="!reglaActiva" class="alert alert-warning text-center">
+            No hay ninguna regla activa configurada.
+          </div>
+          <div *ngIf="reglaActiva">
+            <h5 class="text-center text-dark mb-3">
+              {{ reglaActiva.descripcion }}
+            </h5>
+            <h3 class="text-center text-success mb-3">
+              {{ reglaActiva.puntosGanados }} Puntos
+              <i class="bi bi-arrow-right-short"></i>
+              {{ reglaActiva.montoGasto | currency:'ARS':'symbol':'1.0-0' }}
+            </h3>
+            
+            <p class="text-center h5 mb-3 text-muted">
+              (1 Punto = {{ reglaActiva.equivalenciaPuntos | currency:'ARS':'symbol':'1.2-2' }})
+            </p>
+            <p>
+              <strong>Vigente desde:</strong> {{ reglaActiva.fechaInicioVigencia | date:'dd/MM/yyyy HH:mm' }}
+              <br>
+              <strong>Caducidad de puntos:</strong> {{ reglaActiva.caducidadPuntosMeses }} meses.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h5 class="mb-0">Historial de Reglas (Caducadas)</h5>
+        </div>
+        <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+           <div *ngIf="!historialReglas || historialReglas.length === 0" class="text-center text-muted">
+             No hay reglas anteriores.
+           </div>
+           <ul class="list-group list-group-flush" *ngIf="historialReglas.length > 0">
+             <li *ngFor="let regla of historialReglas" class="list-group-item">
+               <div class="d-flex justify-content-between align-items-center">
+                 <div>
+                   <strong class="d-block">{{ regla.descripcion }}</strong>
+                   <span>{{ regla.puntosGanados }} pts = {{ regla.montoGasto | currency:'ARS':'symbol':'1.0-0' }}</span>
+                   <span class="badge bg-secondary ms-2">{{ regla.estadoRegla }}</span>
+                 </div>
+                 <small class="text-muted">
+                   {{ regla.fechaInicioVigencia | date:'dd/MM/yy' }}
+                 </small>
+               </div>
+               
+               <small class="text-info d-block">
+                 (1 Pt = {{ regla.equivalenciaPuntos | currency:'ARS':'symbol':'1.2-2' }})
+               </small>
+             </li>
+           </ul>
+        </div>
+      </div>
+
+    </div> 
+  </div> 
+</div>
