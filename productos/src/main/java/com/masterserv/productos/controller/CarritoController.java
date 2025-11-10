@@ -13,15 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal; // Para obtener el usuario logueado
 
-// DTO simple para recibir la nueva cantidad en el PUT
-// Puedes crearlo en el paquete dto
-// import lombok.Data;
-// import jakarta.validation.constraints.Min;
-// import jakarta.validation.constraints.NotNull;
-// @Data
-// public class UpdateCantidadCarritoDTO {
-//     @NotNull @Min(0) private Integer nuevaCantidad; // Permitimos 0 para eliminar
-// }
 
 @RestController
 @RequestMapping("/api/carrito")

@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AdminLayout } from './admin-layout';
+import { VentaDetalle } from './venta-detalle';
 
-describe('AdminLayout', () => {
-  let component: AdminLayout;
-  let fixture: ComponentFixture<AdminLayout>;
+describe('VentaDetalle', () => {
+  let component: VentaDetalle;
+  let fixture: ComponentFixture<VentaDetalle>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AdminLayout]
+      imports: [VentaDetalle]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(AdminLayout);
+    fixture = TestBed.createComponent(VentaDetalle);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

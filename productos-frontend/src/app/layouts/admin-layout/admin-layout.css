@@ -1,20 +1,43 @@
+/*
+ * Este CSS (del Padre) controla el layout
+ * y le dice al .content cómo posicionarse.
+*/
 .admin-container {
   display: flex;
-  min-height: 100vh;
-  background: #f5f6fa;
+  height: 100vh;
+  width: 100%;
+  background-color: #121212; /* Fondo oscuro base */
+  overflow: hidden;
 }
 
+/*
+ * Regla clave:
+ * Le dice al contenido principal (class="content" en tu HTML) 
+ * que deje un 'hueco' de 250px para el sidebar.
+*/
 .content {
-  flex: 1;
-  margin-left: 250px; /* 🔹 Espacio para el sidebar */
-  padding: 2rem;
-  transition: margin-left 0.3s ease;
-  background: #f9f9f9;
+  margin-left: 250px;
+  width: calc(100% - 250px);
+  
+  /* Para que el contenido interno (como tu tabla) pueda hacer scroll */
+  overflow-y: auto;
+  overflow-x: hidden;
+  
+  height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+  transition: all 0.3s ease-in-out;
 }
 
-/* 🔸 Para pantallas chicas: el sidebar se oculta y el contenido ocupa todo */
+/*
+ * Regla responsive:
+ * Cuando la pantalla es pequeña (menos de 992px)
+ * el contenido ocupa el 100% (porque el sidebar se ocultará).
+*/
 @media (max-width: 992px) {
-  .content {
+  .content { 
     margin-left: 0;
+    width: 100%;
+    padding: 15px;
   }
 }

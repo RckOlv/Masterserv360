@@ -48,4 +48,11 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
         @Param("search") String search, 
         Pageable pageable
     );
+
+    //(Cuenta productos donde el stock es <= stock_minimo)
+    @Query("SELECT COUNT(p) FROM Producto p WHERE p.stockActual <= p.stockMinimo AND p.estado = 'ACTIVO'")
+    long countProductosBajoStock();
+
+    @Query("SELECT p FROM Producto p WHERE p.stockActual <= p.stockMinimo AND p.estado = 'ACTIVO'")
+    List<Producto> findProductosConStockBajo();
 }

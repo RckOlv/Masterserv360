@@ -1,25 +1,38 @@
 package com.masterserv.productos.service;
 
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.masterserv.productos.dto.DashboardStatsDTO;
+import com.masterserv.productos.repository.ProductoRepository;
+import com.masterserv.productos.repository.UsuarioRepository;
+import com.masterserv.productos.repository.VentaRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // ¡Añadir!
 
-import java.util.Map;
+import java.math.BigDecimal;
 
 @Service
-public class DashboardService {
+public class DashboardService { // (Tu archivo ya existe)
 
-    /**
-     * Este servicio simulará la obtención de estadísticas.
-     * Está protegido por @PreAuthorize.
-     */
-    @PreAuthorize("hasRole('ROLE_ADMIN')") // Solo el ADMIN puede obtener estadísticas
-    public Map<String, Object> getEstadisticas() {
-        // En un proyecto real, esto haría llamadas a VentaRepository, ProductoRepository, etc.
-        return Map.of(
-            "totalVentasMes", 1500000.00,
-            "productosBajoStock", 12,
-            "clientesActivos", 85,
-            "mensaje", "Datos del Dashboard cargados exitosamente (ROLE_ADMIN verificado)"
-        );
+    @Autowired
+    private ProductoRepository productoRepository;
+    @Autowired
+    private VentaRepository ventaRepository;
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Transactional(readOnly = true) // ¡Añadir!
+    public DashboardStatsDTO getEstadisticas() {
+        
+        long productosBajoStock = productoRepository.countProductosBajoStock();
+        BigDecimal totalVentasMes = ventaRepository.sumTotalVentasMesActual();
+        long clientesActivos = usuarioRepository.countClientesActivos();
+        
+        DashboardStatsDTO dto = new DashboardStatsDTO();
+        dto.setProductosBajoStock(productosBajoStock);
+        // Si no hay ventas, sum() devuelve null. Lo convertimos a CERO.
+        dto.setTotalVentasMes(totalVentasMes != null ? totalVentasMes : BigDecimal.ZERO);
+        dto.setClientesActivos(clientesActivos);
+        
+        return dto;
     }
 }

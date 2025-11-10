@@ -4,7 +4,7 @@ import com.masterserv.productos.dto.CarritoDTO;
 import com.masterserv.productos.dto.ItemCarritoDTO;
 import com.masterserv.productos.entity.Carrito;
 import com.masterserv.productos.entity.ItemCarrito;
-import com.masterserv.productos.entity.Producto; // Importar Producto
+// import com.masterserv.productos.entity.Producto; // Importar Producto
 // import com.masterserv.productos.entity.Usuario; // Importar Usuario (No se usa directamente aquí)
 import org.mapstruct.*;
 

@@ -1,128 +1,140 @@
-<div class="container mt-4 mb-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-8 col-md-10">
-      <div class="card shadow-sm">
-        <div class="card-header">
-          <h4>{{ pageTitle }}</h4>
-        </div>
-        <div class="card-body p-4">
-
-          <div *ngIf="isLoading && esEdicion" class="text-center my-3">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Cargando datos del producto...</span>
-            </div>
+<div class="productos-form-container">
+  <div class="container">
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h4><i class="bi bi-box-seam me-2"></i>{{ pageTitle }}</h4>
           </div>
+          <div class="card-body">
 
-          <div *ngIf="errorMessage && !isLoading" class="alert alert-danger">
-            {{ errorMessage }}
-          </div>
-
-          <form *ngIf="!isLoading || !esEdicion" [formGroup]="productoForm" (ngSubmit)="onSubmit()">
-
-            <div class="row mb-3">
-              <div class="col-md-4">
-                <label for="codigo" class="form-label">Código <span class="text-danger">*</span></label>
-                <input type="text" id="codigo" class="form-control" formControlName="codigo"
-                       [ngClass]="{ 'is-invalid': f['codigo'].invalid && (f['codigo'].dirty || f['codigo'].touched) }">
-                <div *ngIf="f['codigo'].invalid && (f['codigo'].dirty || f['codigo'].touched)" class="invalid-feedback">
-                  <div *ngIf="f['codigo'].errors?.['required']">El código es obligatorio.</div>
-                  <div *ngIf="f['codigo'].errors?.['maxlength']">Máximo 50 caracteres.</div>
-                </div>
-              </div>
-              <div class="col-md-8">
-                <label for="nombre" class="form-label">Nombre <span class="text-danger">*</span></label>
-                <input type="text" id="nombre" class="form-control" formControlName="nombre"
-                       [ngClass]="{ 'is-invalid': f['nombre'].invalid && (f['nombre'].dirty || f['nombre'].touched) }">
-                <div *ngIf="f['nombre'].invalid && (f['nombre'].dirty || f['nombre'].touched)" class="invalid-feedback">
-                  <div *ngIf="f['nombre'].errors?.['required']">El nombre es obligatorio.</div>
-                  <div *ngIf="f['nombre'].errors?.['maxlength']">Máximo 255 caracteres.</div>
-                </div>
+            <div *ngIf="isLoading && esEdicion" class="text-center my-3">
+              <div class="spinner-border masterserv-spinner" role="status">
+                <span class="visually-hidden">Cargando datos del producto...</span>
               </div>
             </div>
 
-            <div class="mb-3">
-              <label for="descripcion" class="form-label">Descripción</label>
-              <textarea id="descripcion" class="form-control" formControlName="descripcion" rows="3"></textarea>
+            <div *ngIf="errorMessage && !isLoading" class="alert masterserv-alert-danger">
+              <i class="bi bi-exclamation-triangle me-2"></i>{{ errorMessage }}
             </div>
 
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label for="precioVenta" class="form-label">Precio Venta <span class="text-danger">*</span></label>
-                <div class="input-group">
-                  <span class="input-group-text">$</span>
-                  <input type="number" id="precioVenta" class="form-control" formControlName="precioVenta" min="0" step="0.01"
-                         [ngClass]="{ 'is-invalid': f['precioVenta'].invalid && (f['precioVenta'].dirty || f['precioVenta'].touched) }">
-                </div>
-                 <div *ngIf="f['precioVenta'].invalid && (f['precioVenta'].dirty || f['precioVenta'].touched)" class="invalid-feedback d-block">
-                  <div *ngIf="f['precioVenta'].errors?.['required']">Obligatorio.</div>
-                  <div *ngIf="f['precioVenta'].errors?.['min']">No puede ser negativo.</div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <label for="precioCosto" class="form-label">Precio Costo <span class="text-danger">*</span></label>
-                 <div class="input-group">
-                   <span class="input-group-text">$</span>
-                   <input type="number" id="precioCosto" class="form-control" formControlName="precioCosto" min="0" step="0.01"
-                          [ngClass]="{ 'is-invalid': f['precioCosto'].invalid && (f['precioCosto'].dirty || f['precioCosto'].touched) }">
-                </div>
-                 <div *ngIf="f['precioCosto'].invalid && (f['precioCosto'].dirty || f['precioCosto'].touched)" class="invalid-feedback d-block">
-                   <div *ngIf="f['precioCosto'].errors?.['required']">Obligatorio.</div>
-                   <div *ngIf="f['precioCosto'].errors?.['min']">No puede ser negativo.</div>
-                 </div>
-              </div>
-            </div>
+            <form *ngIf="!isLoading || !esEdicion" [formGroup]="productoForm" (ngSubmit)="onSubmit()">
 
-            <div class="row mb-3">
-               <div class="col-md-6">
-                 <label for="stockMinimo" class="form-label">Stock Mínimo <span class="text-danger">*</span></label>
-                 <input type="number" id="stockMinimo" class="form-control" formControlName="stockMinimo" min="0" step="1"
-                        [ngClass]="{ 'is-invalid': f['stockMinimo'].invalid && (f['stockMinimo'].dirty || f['stockMinimo'].touched) }">
-                 <div *ngIf="f['stockMinimo'].invalid && (f['stockMinimo'].dirty || f['stockMinimo'].touched)" class="invalid-feedback">
-                   <div *ngIf="f['stockMinimo'].errors?.['required']">Obligatorio.</div>
-                   <div *ngIf="f['stockMinimo'].errors?.['min']">No puede ser negativo.</div>
-                 </div>
-               </div>
-               <div class="col-md-6">
-                 <label for="categoriaId" class="form-label">Categoría <span class="text-danger">*</span></label>
-                 <select id="categoriaId" class="form-select" formControlName="categoriaId"
-                         [ngClass]="{ 'is-invalid': f['categoriaId'].invalid && (f['categoriaId'].dirty || f['categoriaId'].touched) }">
-                   <option [ngValue]="null" disabled>Seleccione una categoría...</option>
-                   <option *ngFor="let cat of categorias" [value]="cat.id">{{ cat.nombre }}</option>
-                 </select>
-                 <div *ngIf="f['categoriaId'].invalid && (f['categoriaId'].dirty || f['categoriaId'].touched)" class="invalid-feedback">
-                   <div *ngIf="f['categoriaId'].errors?.['required']">La categoría es obligatoria.</div>
-                 </div>
-               </div>
-            </div>
+              <div class="row mb-3">
+                <div class="col-md-3">
+                  <label for="codigo" class="form-label masterserv-label">Código <span class="text-danger">*</span></label>
+                  <input type="text" id="codigo" class="form-control masterserv-input" formControlName="codigo"
+                         [ngClass]="{ 'is-invalid': f['codigo'].invalid && (f['codigo'].dirty || f['codigo'].touched) }">
+                  <div *ngIf="f['codigo'].invalid && (f['codigo'].dirty || f['codigo'].touched)" class="invalid-feedback">
+                    <div *ngIf="f['codigo'].errors?.['required']">El código es obligatorio.</div>
+                    <div *ngIf="f['codigo'].errors?.['maxlength']">Máximo 50 caracteres.</div>
+                  </div>
+                </div>
+                <div class="col-md-9">
+                  <label for="nombre" class="form-label masterserv-label">Nombre <span class="text-danger">*</span></label>
+                  <input type="text" id="nombre" class="form-control masterserv-input" formControlName="nombre"
+                         [ngClass]="{ 'is-invalid': f['nombre'].invalid && (f['nombre'].dirty || f['nombre'].touched) }">
+                  <div *ngIf="f['nombre'].invalid && (f['nombre'].dirty || f['nombre'].touched)" class="invalid-feedback">
+                    <div *ngIf="f['nombre'].errors?.['required']">El nombre es obligatorio.</div>
+                    <div *ngIf="f['nombre'].errors?.['maxlength']">Máximo 255 caracteres.</div>
+                  </div>
+                </div>
+              </div>
 
-             <div class="row mb-3">
-              <div class="col-md-6">
-                <label for="estado" class="form-label">Estado <span class="text-danger">*</span></label>
-                 <select id="estado" class="form-select" formControlName="estado"
-                         [ngClass]="{ 'is-invalid': f['estado'].invalid && (f['estado'].dirty || f['estado'].touched) }">
-                   <option value="ACTIVO">Activo</option>
-                   <option value="INACTIVO">Inactivo</option>
-                 </select>
-                  <div *ngIf="f['estado'].invalid && (f['estado'].dirty || f['estado'].touched)" class="invalid-feedback">
-                   <div *ngIf="f['estado'].errors?.['required']">El estado es obligatorio.</div>
+              <div class="mb-4">
+                <label for="descripcion" class="form-label masterserv-label">Descripción</label>
+                <textarea id="descripcion" class="form-control masterserv-input" formControlName="descripcion" rows="3"></textarea>
+              </div>
+
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <label for="precioVenta" class="form-label masterserv-label">Precio Venta <span class="text-danger">*</span></label>
+                  <div class="input-group">
+                    <span class="input-group-text masterserv-input">$</span>
+                    <input type="number" id="precioVenta" class="form-control masterserv-input" formControlName="precioVenta" min="0" step="0.01"
+                           [ngClass]="{ 'is-invalid': f['precioVenta'].invalid && (f['precioVenta'].dirty || f['precioVenta'].touched) }">
+                  </div>
+                   <div *ngIf="f['precioVenta'].invalid && (f['precioVenta'].dirty || f['precioVenta'].touched)" class="invalid-feedback d-block">
+                    <div *ngIf="f['precioVenta'].errors?.['required']">Obligatorio.</div>
+                    <div *ngIf="f['precioVenta'].errors?.['min']">No puede ser negativo.</div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label for="precioCosto" class="form-label masterserv-label">Precio Costo <span class="text-danger">*</span></label>
+                   <div class="input-group">
+                     <span class="input-group-text masterserv-input">$</span>
+                     <input type="number" id="precioCosto" class="form-control masterserv-input" formControlName="precioCosto" min="0" step="0.01"
+                            [ngClass]="{ 'is-invalid': f['precioCosto'].invalid && (f['precioCosto'].dirty || f['precioCosto'].touched) }">
+                  </div>
+                   <div *ngIf="f['precioCosto'].invalid && (f['precioCosto'].dirty || f['precioCosto'].touched)" class="invalid-feedback d-block">
+                     <div *ngIf="f['precioCosto'].errors?.['required']">Obligatorio.</div>
+                     <div *ngIf="f['precioCosto'].errors?.['min']">No puede ser negativo.</div>
+                   </div>
+                </div>
+              </div>
+
+              <div class="row mb-4">
+                 <div class="col-md-6">
+                   <label for="stockMinimo" class="form-label masterserv-label">Stock Mínimo <span class="text-danger">*</span></label>
+                   <input type="number" id="stockMinimo" class="form-control masterserv-input" formControlName="stockMinimo" min="0" step="1"
+                          [ngClass]="{ 'is-invalid': f['stockMinimo'].invalid && (f['stockMinimo'].dirty || f['stockMinimo'].touched) }">
+                   <div *ngIf="f['stockMinimo'].invalid && (f['stockMinimo'].dirty || f['stockMinimo'].touched)" class="invalid-feedback">
+                     <div *ngIf="f['stockMinimo'].errors?.['required']">Obligatorio.</div>
+                     <div *ngIf="f['stockMinimo'].errors?.['min']">No puede ser negativo.</div>
+                   </div>
+                 </div>
+                 <div class="col-md-6">
+                   <label for="categoriaId" class="form-label masterserv-label">Categoría <span class="text-danger">*</span></label>
+                   <select id="categoriaId" class="form-select masterserv-input" formControlName="categoriaId"
+                           [ngClass]="{ 'is-invalid': f['categoriaId'].invalid && (f['categoriaId'].dirty || f['categoriaId'].touched) }">
+                     <option [ngValue]="null" disabled>Seleccione una categoría...</option>
+                     <option *ngFor="let cat of categorias" [value]="cat.id">{{ cat.nombre }}</option>
+                   </select>
+                   <div *ngIf="f['categoriaId'].invalid && (f['categoriaId'].dirty || f['categoriaId'].touched)" class="invalid-feedback">
+                     <div *ngIf="f['categoriaId'].errors?.['required']">La categoría es obligatoria.</div>
+                   </div>
                  </div>
               </div>
-              <div class="col-md-6">
-                 <label for="imagenUrl" class="form-label">URL de Imagen</label>
-                 <input type="url" id="imagenUrl" class="form-control" formControlName="imagenUrl"
-                        [ngClass]="{ 'is-invalid': f['imagenUrl'].invalid && (f['imagenUrl'].dirty || f['imagenUrl'].touched) }">
-                  <div *ngIf="f['imagenUrl'].invalid && (f['imagenUrl'].dirty || f['imagenUrl'].touched)" class="invalid-feedback">
-                    <div *ngIf="f['imagenUrl'].errors?.['maxlength']">Máximo 255 caracteres.</div>
+
+               <div class="row mb-4">
+                <div class="col-md-6">
+                  <label for="estado" class="form-label masterserv-label">Estado <span class="text-danger">*</span></label>
+                   <select id="estado" class="form-select masterserv-input" formControlName="estado"
+                           [ngClass]="{ 'is-invalid': f['estado'].invalid && (f['estado'].dirty || f['estado'].touched) }">
+                     <option value="ACTIVO">Activo</option>
+                     <option value="INACTIVO">Inactivo</option>
+                   </select>
+                    <div *ngIf="f['estado'].invalid && (f['estado'].dirty || f['estado'].touched)" class="invalid-feedback">
+                     <div *ngIf="f['estado'].errors?.['required']">El estado es obligatorio.</div>
+                   </div>
+                </div>
+                <div class="col-md-6">
+                   <label for="imagenUrl" class="form-label masterserv-label">URL de Imagen</label>
+                   <input type="url" id="imagenUrl" class="form-control masterserv-input" formControlName="imagenUrl"
+                          [ngClass]="{ 'is-invalid': f['imagenUrl'].invalid && (f['imagenUrl'].dirty || f['imagenUrl'].touched) }">
+                    <div *ngIf="f['imagenUrl'].invalid && (f['imagenUrl'].dirty || f['imagenUrl'].touched)" class="invalid-feedback">
+                      <div *ngIf="f['imagenUrl'].errors?.['maxlength']">Máximo 255 caracteres.</div>
                     </div>
+                </div>
               </div>
-            </div>
 
-            <div class="d-flex justify-content-end mt-4">
-              <button type="button" class="btn btn-secondary me-2" [routerLink]="['/productos']">Cancelar</button>
-              <button type="submit" class="btn btn-primary" [disabled]="productoForm.invalid || isLoading">
-                <span *ngIf="!isLoading">{{ esEdicion ? 'Actualizar Producto' : 'Crear Producto' }}</span>
-                <span *ngIf="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-              </button>
-            </div>
+              <div class="d-flex justify-content-end mt-4 pt-3 border-top border-metal">
+                <button type="button" class="btn masterserv-btn-secondary me-2" [routerLink]="['/pos/productos']">
+                  <i class="bi bi-arrow-left me-1"></i>Cancelar
+                </button>
+                <button type="submit" class="btn masterserv-btn-primary" [disabled]="productoForm.invalid || isLoading">
+                  <span *ngIf="!isLoading">
+                    <i class="bi" [class.bi-check-lg]="!esEdicion" [class.bi-arrow-repeat]="esEdicion"></i>
+                    {{ esEdicion ? 'Actualizar Producto' : 'Crear Producto' }}
+                  </span>
+                  <span *ngIf="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                </button>
+              </div>
 
-          </form> </div> </div> </div> </div> </div> ```
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

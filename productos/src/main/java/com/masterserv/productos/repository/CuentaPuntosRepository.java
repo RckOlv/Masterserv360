@@ -10,8 +10,17 @@ import java.util.Optional;
 @Repository
 public interface CuentaPuntosRepository extends JpaRepository<CuentaPuntos, Long> {
 
-    // Método para encontrar la "billetera" 1:1 de un cliente
+    /**
+     * Busca la cuenta de puntos asociada a un cliente/usuario específico.
+     * Es clave para la integración con el módulo de Ventas.
+     */
     Optional<CuentaPuntos> findByCliente(Usuario cliente);
-    
-    Optional<CuentaPuntos> findByCliente_Id(Long clienteId);
+
+    /**
+     * Busca por el ID del cliente.
+     */
+    Optional<CuentaPuntos> findByClienteId(Long clienteId);
+
+    // Nos permite encontrar la cuenta directamente desde el email del Principal (Spring Security)
+    Optional<CuentaPuntos> findByCliente_Email(String clienteEmail);
 }

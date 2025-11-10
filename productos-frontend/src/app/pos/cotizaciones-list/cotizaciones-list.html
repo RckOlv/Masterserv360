@@ -1,0 +1,73 @@
+<ng-container *ngIf="(cotizaciones$ | async) as cotizaciones">
+
+  <div class="container-fluid mt-4">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="bi bi-file-earmark-text me-2"></i>
+          Cotizaciones Recibidas (Pendientes de Aprobación)
+        </h5>
+        <button class="btn btn-light btn-sm" (click)="loadCotizaciones()" [disabled]="isLoading">
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1" role="status"></span>
+          <i *ngIf="!isLoading" class="bi bi-arrow-clockwise"></i> Recargar
+        </button>
+      </div>
+
+      <div class="card-body">
+        
+        <div *ngIf="isLoading" class="d-flex justify-content-center p-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+        </div>
+
+        <div *ngIf="!isLoading">
+          
+          <div *ngIf="cotizaciones.length === 0" class="alert alert-info text-center">
+            <i class="bi bi-info-circle me-2"></i>
+            No hay cotizaciones pendientes de revisión.
+          </div>
+
+          <div *ngIf="cotizaciones.length > 0" class="table-responsive">
+            <table class="table table-hover table-striped align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Proveedor</th>
+                  <th>Items</th>
+                  <th>Total Ofertado</th>
+                  <th>Entrega Estimada</th>
+                  <th>Recomendada</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let cot of cotizaciones">
+                  <td><span class="badge bg-secondary">#{{ cot.id }}</span></td>
+                  <td>{{ cot.proveedorNombre }}</td>
+                  <td>{{ cot.items.length }} items</td>
+                  <td><strong>{{ cot.precioTotalOfertado | currency:'ARS':'symbol':'1.2-2' }}</strong></td>
+                  <td>{{ cot.fechaEntregaOfertada | date:'dd/MM/yyyy' }}</td>
+                  <td>
+                    <span *ngIf="cot.esRecomendada" class="badge bg-success">
+                      <i class="bi bi-star-fill me-1"></i> Sí
+                    </span>
+                    <span *ngIf="!cot.esRecomendada" class="text-muted fst-italic">—</span>
+                  </td>
+                  <td>
+                    <a [routerLink]="['/pos/cotizaciones', cot.id]" class="btn btn-primary btn-sm">
+                      Revisar y Aprobar
+                      <i class="bi bi-chevron-right ms-1"></i>
+                    </a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</ng-container>

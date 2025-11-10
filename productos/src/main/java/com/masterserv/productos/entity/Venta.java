@@ -51,8 +51,12 @@ public class Venta extends AuditableEntity {
     private Usuario cliente;
 
     // --- Relación Inversa ---
-    
+
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ToString.Exclude // ¡Clave para evitar StackOverflowError!
     private Set<DetalleVenta> detalles;
+
+    @OneToOne // Una Venta puede tener un Cupón
+    @JoinColumn(name = "cupon_id", referencedColumnName = "id")
+    private Cupon cupon;
 }

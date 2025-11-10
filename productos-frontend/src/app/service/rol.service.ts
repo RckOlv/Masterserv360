@@ -4,8 +4,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, catchError, shareReplay } from 'rxjs/operators';
 import { API_URL } from '../app.config';
-import { RolDTO } from '../models/rol.model';
-import { mostrarToast } from '../utils/toast'; // Asegúrate que la ruta sea correcta
+import { RolDTO } from '../models/rol.model'; // Asegúrate de tener este modelo
+import { mostrarToast } from '../utils/toast'; // Importar si lo usas aquí
 
 @Injectable({
   providedIn: 'root'
@@ -14,9 +14,10 @@ export class RolService {
   private http = inject(HttpClient);
   private apiUrl = `${API_URL}/api/roles`;
 
-  // Propiedad para la Caché del ID Cliente
-  // La hacemos directamente Observable<number | null> para simplificar
+  // --- Propiedades para Caché de IDs ---
   private clienteRoleId$: Observable<number | null> | null = null;
+  private vendedorRoleId$: Observable<number | null> | null = null; // <-- NUEVA CACHÉ
+  // ------------------------------------
 
   constructor() { }
 
@@ -58,30 +59,46 @@ export class RolService {
 
   /**
    * Obtiene el ID numérico del rol 'ROLE_CLIENTE' desde la API (con caché).
-   * @returns Un Observable que emite el ID del rol cliente o null si no se encuentra/hay error.
    */
   getClienteRoleId(): Observable<number | null> {
     if (!this.clienteRoleId$) {
-      this.clienteRoleId$ = this.getRolByNombre('ROLE_CLIENTE').pipe(
-        // --- CORRECCIÓN AQUÍ ---
-        // Aseguramos que el map devuelva 'number' o 'null', nunca 'undefined'
-        map(rol => rol?.id ?? null), // Usa optional chaining (?.) y nullish coalescing (??)
-        // Alternativa si no usas TS moderno: map(rol => (rol && rol.id) ? rol.id : null),
-        // -------------------------
+      this.clienteRoleId$ = this.getRolByNombre('ROLE_CLIENTE').pipe( // Busca por el nombre exacto
+        map(rol => rol?.id ?? null), // Extrae el ID o devuelve null
         catchError((error) => {
             console.error("¡ERROR CRÍTICO! No se pudo obtener el ID del rol ROLE_CLIENTE desde la API.", error);
-            // Asegúrate que mostrarToast esté disponible aquí o usa console.error
              try {
                mostrarToast("Error crítico: No se pudo configurar el rol de cliente.", "danger");
-             } catch (e) {
-               console.error("Fallo al mostrar toast:", e);
-             }
-            return of(null); // catchError devuelve Observable<null>
+             } catch (e) { console.error("Fallo al mostrar toast:", e); }
+            return of(null);
         }),
-        shareReplay(1) // Cachea el resultado (number | null)
+        shareReplay(1) // Cachea el resultado
       );
     }
-    // Devolvemos el observable cacheado, que ahora sí es Observable<number | null>
     return this.clienteRoleId$;
   }
+
+  // --- ¡NUEVO MÉTODO CON CACHÉ PARA VENDEDOR! ---
+  /**
+   * Obtiene el ID numérico del rol 'ROLE_VENDEDOR' desde la API (con caché).
+   * **IMPORTANTE:** Asegúrate de que 'ROLE_VENDEDOR' sea el nombre exacto en tu BD.
+   * @returns Un Observable que emite el ID del rol vendedor o null si no se encuentra/hay error.
+   */
+  getVendedorRoleId(): Observable<number | null> {
+    if (!this.vendedorRoleId$) {
+      // Reemplaza 'ROLE_VENDEDOR' si el nombre en tu BD es diferente (ej. 'VENDEDOR')
+      this.vendedorRoleId$ = this.getRolByNombre('ROLE_VENDEDOR').pipe(
+        map(rol => rol?.id ?? null), // Extrae el ID o devuelve null
+        catchError((error) => {
+            console.error("¡ERROR CRÍTICO! No se pudo obtener el ID del rol ROLE_VENDEDOR desde la API.", error);
+             try {
+               mostrarToast("Error crítico: No se pudo configurar el rol de vendedor.", "danger");
+             } catch (e) { console.error("Fallo al mostrar toast:", e); }
+            return of(null);
+        }),
+        shareReplay(1) // Cachea el resultado
+      );
+    }
+    return this.vendedorRoleId$;
+  }
+  // ---------------------------------------------
 }

@@ -1,16 +1,16 @@
 package com.masterserv.productos.dto;
 
-import com.masterserv.productos.enums.EstadoVenta; // Asegúrate de tener este Enum
+import com.masterserv.productos.enums.EstadoVenta;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime; // Importar LocalDateTime
-import java.util.List; // Usamos List en DTOs, más flexible que Set
+import java.time.LocalDateTime;
+import java.util.List;
 
-@Data // @Data está bien aquí
+@Data
 public class VentaDTO {
 
     // --- Campos de Lectura (Para respuestas GET) ---
@@ -18,21 +18,23 @@ public class VentaDTO {
     private LocalDateTime fechaVenta;
     private EstadoVenta estado;
     private BigDecimal totalVenta;
-    // Nombres para mostrar en la UI
-    private String clienteNombre; // Asume que Usuario tiene nombre/apellido
-    private String vendedorNombre; // Asume que Usuario tiene nombre/apellido
-    // Campos de auditoría
+    private String clienteNombre; 
+    private String vendedorNombre;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaModificacion;
 
+    // --- ¡CAMPO AÑADIDO! ---
+    // (Opcional) El código del cupón que el cliente quiere usar
+    private String codigoCupon; 
+    // No lleva @NotBlank, porque es opcional
+    // ------------------------
+
     // --- Campos de Entrada (Para creación POST) ---
     @NotNull(message = "El ID del cliente es obligatorio")
-    private Long clienteId; // Corresponde a cliente_usuario_id en la entidad
-
-    // El vendedorId NO viene en el DTO, se tomará del usuario autenticado (Principal)
+    private Long clienteId; 
 
     @NotEmpty(message = "La venta debe tener al menos un producto")
-    @Valid // ¡Importante! Valida cada DetalleVentaDTO dentro de la lista
+    @Valid 
     private List<DetalleVentaDTO> detalles;
 
 }

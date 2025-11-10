@@ -1,15 +1,22 @@
 package com.masterserv.productos.repository;
 
+import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.entity.Venta;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import java.time.LocalDateTime; // Importar si añades métodos con fecha
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Repository
-public interface VentaRepository extends JpaRepository<Venta, Long> {
+public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecificationExecutor<Venta> {
 
     /**
      * Sobrescribe el findAll de JpaRepository para optimizarlo.
@@ -44,10 +51,13 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
     @EntityGraph(attributePaths = {"cliente", "vendedor"})
     Page<Venta> findByFechaVentaBetween(LocalDateTime inicio, LocalDateTime fin, Pageable pageable);
 
-    // Podrías necesitar un método para cargar una Venta CON sus detalles,
-    // similar al 'findByIdWithDetails' de PedidoRepository.
-    // @Query("SELECT v FROM Venta v LEFT JOIN FETCH v.detalles d LEFT JOIN FETCH d.producto WHERE v.id = :id")
-    // @EntityGraph(attributePaths = {"cliente", "vendedor", "detalles", "detalles.producto"})
-    // Optional<Venta> findByIdWithDetails(@Param("id") Long id);
+    @Query("SELECT v FROM Venta v WHERE v.id = :id") // <-- AÑADIR ESTA LÍNEA
+    @EntityGraph(attributePaths = {"cliente", "vendedor", "detalles", "detalles.producto"})
+    Optional<Venta> findByIdWithDetails(@Param("id") Long id); // <-- AÑADIR @Param
 
+    //(Suma los totales de ventas COMPLETADAS de este mes)
+    @Query("SELECT SUM(v.totalVenta) FROM Venta v WHERE v.estado = 'COMPLETADA' AND EXTRACT(MONTH FROM v.fechaVenta) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM v.fechaVenta) = EXTRACT(YEAR FROM CURRENT_DATE)")
+    BigDecimal sumTotalVentasMesActual();
+
+    Page<Venta> findByCliente(Usuario cliente, Pageable pageable);
 }

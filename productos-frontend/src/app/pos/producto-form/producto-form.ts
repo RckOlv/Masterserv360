@@ -140,7 +140,7 @@ export default class ProductoFormComponent implements OnInit {
         mostrarToast(`Producto ${this.esEdicion ? 'actualizado' : 'creado'} correctamente`, 'success');
         this.isLoading = false;
         // Redirigir a la lista de productos
-        this.router.navigate(['/productos']);
+        this.router.navigate(['/pos/productos']);
       },
       error: (err: any) => {
         console.error(`Error al ${this.esEdicion ? 'actualizar' : 'crear'} producto:`, err);

@@ -12,7 +12,7 @@ import com.masterserv.productos.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.masterserv.productos.exceptions.StockInsuficienteException;
 import java.math.BigDecimal; // Para cálculos de total
 import java.util.HashSet;
 import java.util.Optional; // Para manejar búsquedas opcionales

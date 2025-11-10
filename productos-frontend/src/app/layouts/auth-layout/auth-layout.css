@@ -1,0 +1,29 @@
+/* src/app/layouts/auth-layout/auth-layout.css */
+
+/*
+ * :host es el selector para el propio componente <app-auth-layout>
+ * Lo forzamos a tener el fondo oscuro global.
+*/
+:host {
+  /* * Usamos la variable CSS (--bs-body-bg) que definiste 
+   * en la paleta de :root en styles.scss.
+   */
+  background-color: var(--bs-body-bg, #121212); /* Usa la variable, o negro si falla */
+  
+  /* Aseguramos que ocupe toda la pantalla */
+  display: block;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* * Ahora, el .auth-container solo se encarga de centrar.
+ * Ya no necesita fondo, porque su padre (:host) ya lo tiene.
+*/
+.auth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh; /* Ocupa toda la altura */
+  width: 100%;
+  padding: 20px;
+}

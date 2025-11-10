@@ -1,8 +1,12 @@
 package com.masterserv.productos.enums;
 
+/**
+ * Define los tipos de transacciones de puntos de fidelización.
+ */
 public enum TipoMovimientoPuntos {
-    ACUMULACION, // Ganar puntos (por venta o ajuste)
-    CANJE,       // Gastar puntos (para generar un cupón)
-    AJUSTE_MANUAL, // Corrección de admin
-    VENCIMIENTO  // Puntos que expiran
+    GANADO,     // Puntos obtenidos por una compra
+    CANJEADO,   // Puntos utilizados para un descuento/premio
+    EXPIRADO,   // Puntos caducados por el tiempo
+    REVERSION, // Puntos devueltos por una cancelación o devolución
+    AJUSTE      // Ajuste manual por el administrador
 }

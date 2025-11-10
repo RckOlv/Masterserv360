@@ -1,0 +1,61 @@
+/* --- Estilos para la barra lateral de filtros --- */
+.filters-sidebar {
+  position: sticky; /* ¡Se pega al scrollear! */
+  top: 20px;
+}
+.category-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  padding: 10px;
+  border-radius: 0.375rem;
+}
+.category-list .form-check {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+/* --- La Tarjeta de Producto (Contenedor) --- */
+.product-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* --- Contenido Estándar (Visible) --- */
+.card-content-standard {
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* --- Contenido Hover (Oculto) --- */
+.card-content-hover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.98); 
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+}
+
+/* --- ¡La Magia! --- */
+.product-card:hover .card-content-standard {
+  opacity: 0;
+}
+.product-card:hover .card-content-hover {
+  opacity: 1;
+}
+
+/* --- Estilos de la Imagen --- */
+.card-img-top {
+  height: 220px;
+  object-fit: cover;
+}
