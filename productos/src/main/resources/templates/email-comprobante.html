@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; }
+        .container { width: 90%; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .header { font-size: 24px; color: #E41E26; /* Rojo Masterserv */ }
+        .content { margin-top: 20px; }
+        .total { font-size: 20px; font-weight: bold; color: #333; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header">¡Gracias por tu compra!</h1>
+        
+        <div class="content">
+            <p>Hola <strong th:text="${clienteNombre}">Nombre Cliente</strong>,</p>
+            <p>Muchas gracias por elegir Masterserv360. Adjuntamos el comprobante (no fiscal) de tu reciente compra.</p>
+
+            <div class="total">
+                Total de la compra: <span th:text="${totalVenta}">$0.00</span>
+            </div>
+
+            <p style="margin-top: 25px;">
+                ¡Esperamos verte pronto!
+            </p>
+            
+            <p>Atte.,<br>El equipo de Masterserv360</p>
+        </div>
+    </div>
+</body>
+</html>

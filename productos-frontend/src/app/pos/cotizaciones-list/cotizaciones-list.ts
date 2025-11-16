@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common'; 
 import { Router, RouterLink } from '@angular/router'; 
-import { Observable, EMPTY, of } from 'rxjs'; // <-- ¡IMPORTAMOS 'of'!
+import { Observable, EMPTY, of } from 'rxjs'; 
 import { catchError, tap } from 'rxjs/operators';
 import { HttpErrorResponse } from '@angular/common/http';
 
@@ -12,10 +12,22 @@ import { CotizacionService } from '../../service/cotizacion.service';
 // Utils
 import { mostrarToast } from '../../utils/toast';
 
+// --- Mentor: INICIO DE LA MODIFICACIÓN ---
+// 1. Importar la nueva directiva de permisos
+import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
+// --- Mentor: FIN DE LA MODIFICACIÓN ---
+
 @Component({
   selector: 'app-cotizaciones-list',
   standalone: true,
-  imports: [CommonModule, RouterLink], 
+  imports: [
+    CommonModule, 
+    RouterLink,
+    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+    // 2. Añadir la directiva a los imports del componente
+    HasPermissionDirective
+    // --- Mentor: FIN DE LA MODIFICACIÓN ---
+  ], 
   templateUrl: './cotizaciones-list.html',
   styleUrls: ['./cotizaciones-list.css']
 })
@@ -25,39 +37,30 @@ export default class CotizacionesListComponent implements OnInit {
   private router = inject(Router);
 
   public cotizaciones$: Observable<CotizacionAdminDTO[]>;
-  public isLoading = true; // <-- El valor inicial es 'true'
+  public isLoading = true; 
 
   constructor() {
-    console.log('1. Constructor() - Componente Creado');
     this.cotizaciones$ = EMPTY; 
   }
 
   ngOnInit(): void {
-    console.log('2. ngOnInit() - Componente Iniciado');
     this.loadCotizaciones();
   }
 
   loadCotizaciones(): void {
-    console.log('3. loadCotizaciones() - Llamando al servicio...');
-    // ¡YA NO ponemos isLoading = true aquí!
+    this.isLoading = true; // <-- Ponemos el loading en true al INICIAR la carga
     
     this.cotizaciones$ = this.cotizacionService.getCotizacionesRecibidas().pipe(
       tap(() => {
-        // Solo lo ponemos en 'false' cuando los datos LLEGAN
-        console.log('4. pipe() - ¡Datos recibidos! Poniendo isLoading = false');
         this.isLoading = false; 
       }),
       catchError((err: HttpErrorResponse) => {
-        // O también si hay un ERROR
-        console.error('5. catchError() - ¡ERROR ATRAPADO!', err);
         this.isLoading = false; 
         const errorMsg = err.error?.message || 'Error al cargar las cotizaciones recibidas.';
         mostrarToast(errorMsg, 'danger'); 
-        return of([]); // <-- Devolvemos un array vacío para que el | async no falle
+        return of([]); 
       })
     );
-    
-    console.log('3b. loadCotizaciones() - Observable asignado.');
   }
 
   verDetalle(id: number): void {

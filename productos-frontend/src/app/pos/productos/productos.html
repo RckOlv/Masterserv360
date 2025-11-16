@@ -1,18 +1,17 @@
 <div class="productos-container">
   <div class="card masterserv-card">
-    <!-- HEADER -->
     <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
       <h4 class="masterserv-title">
         <i class="bi bi-box-seam me-2"></i>Gestión de Productos
       </h4>
-      <button class="btn masterserv-btn-success btn-sm" (click)="abrirModalNuevoProducto()">
+      
+      <button *appHasPermission="'PRODUCTOS_MANAGE'" class="btn masterserv-btn-success btn-sm" (click)="abrirModalNuevoProducto()">
         <i class="bi bi-plus-lg"></i> Nuevo Producto
       </button>
-    </div>
+      </div>
 
     <div class="card-body masterserv-card-body d-flex flex-column">
       
-      <!-- Filtros -->
       <form [formGroup]="filtroForm" (ngSubmit)="aplicarFiltros()" class="mb-3 p-3 masterserv-filter rounded border">
         <div class="row g-2 align-items-end">
           <div class="col-md-5">
@@ -46,18 +45,10 @@
               <label for="filtroCategoria" class="form-label form-label-sm masterserv-label">Categoría</label>
               <select id="filtroCategoria" class="form-select form-select-sm masterserv-input" formControlName="categoriaId">
                 <option [ngValue]="null">Todas</option>
-                
-                <!-- Loading para categorías -->
-                <option *ngIf="isLoadingCategorias" disabled>
-                  Cargando categorías...
-                </option>
-                
-                <!-- Categorías dinámicas -->
+                <option *ngIf="isLoadingCategorias" disabled>Cargando categorías...</option>
                 <option *ngFor="let categoria of categorias" [value]="categoria.id">
                   {{ categoria.nombre }}
                 </option>
-                
-                <!-- Mensaje si no hay categorías -->
                 <option *ngIf="!isLoadingCategorias && categorias.length === 0" disabled>
                   No hay categorías disponibles
                 </option>
@@ -83,22 +74,18 @@
         </div>
       </form>
 
-      <!-- Contenido principal -->
       <div class="content-main flex-grow-1 d-flex flex-column">
         
-        <!-- Loading -->
         <div *ngIf="isLoading" class="loading-container flex-grow-1 d-flex align-items-center justify-content-center">
           <div class="spinner-border masterserv-spinner" role="status">
             <span class="visually-hidden">Cargando...</span>
           </div>
         </div>
 
-        <!-- Error -->
-        <div *ngIf="errorMessage" class="alert masterserv-alert-danger mb-3">
+        <div *ngIf="errorMessage && !isLoading" class="alert masterserv-alert-danger mb-3">
           <i class="bi bi-exclamation-triangle me-2"></i>{{ errorMessage }}
         </div>
 
-        <!-- Tabla con datos -->
         <div *ngIf="!isLoading && productosPage && productosPage.content.length > 0" class="table-responsive flex-grow-1">
           <table class="table table-hover table-sm align-middle masterserv-table">
             <thead class="masterserv-table-header">
@@ -109,8 +96,9 @@
                 <th class="text-nowrap text-end pe-3">Precio Venta</th>
                 <th class="text-nowrap text-end pe-3">Stock Actual</th>
                 <th class="text-nowrap text-center">Estado</th>
-                <th class="text-nowrap text-center pe-3">Acciones</th>
-              </tr>
+                
+                <th *appHasPermission="'PRODUCTOS_MANAGE'" class="text-nowrap text-center pe-3">Acciones</th>
+                </tr>
             </thead>
             <tbody>
               <tr *ngFor="let prod of productosPage.content" class="masterserv-table-row">
@@ -135,7 +123,8 @@
                     {{ prod.estado === 'ACTIVO' ? 'ACTIVO' : 'INACTIVO' }}
                   </span>
                 </td>
-                <td class="text-center text-nowrap pe-3">
+                
+                <td *appHasPermission="'PRODUCTOS_MANAGE'" class="text-center text-nowrap pe-3">
                   <div class="btn-group btn-group-sm" role="group">
                     <button
                       class="btn masterserv-btn-outline-primary btn-action"
@@ -152,14 +141,21 @@
                     >
                       <i class="bi bi-trash"></i>
                     </button>
+                    <button
+                      *ngIf="prod.estado !== 'ACTIVO'"
+                      class="btn masterserv-btn-outline-primary btn-action"
+                      (click)="abrirModalEditarProducto(prod)"
+                      title="Reactivar (Editar)"
+                    >
+                      <i class="bi bi-check-circle"></i>
+                    </button>
                   </div>
                 </td>
-              </tr>
+                </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- Sin resultados -->
         <div *ngIf="!isLoading && (!productosPage || productosPage.content.length === 0)" class="empty-container flex-grow-1 d-flex align-items-center justify-content-center">
           <div class="alert masterserv-alert-info text-center">
             <i class="bi bi-info-circle me-2"></i>
@@ -172,48 +168,37 @@
           </div>
         </div>
 
-        <!-- PAGINACIÓN MEJORADA Y VISIBLE -->
         <div *ngIf="!isLoading && productosPage && productosPage.totalPages > 1" class="masterserv-pagination">
-          <!-- Información de página -->
           <div class="pagination-info">
             Mostrando {{ productosPage.content.length }} de {{ productosPage.totalElements }} productos
             - Página {{ productosPage.number + 1 }} de {{ productosPage.totalPages }}
           </div>
           
           <ul class="pagination pagination-sm justify-content-center masterserv-pagination">
-            <!-- Botón Primera Página -->
             <li class="page-item" [class.disabled]="productosPage.number === 0">
               <a class="page-link masterserv-page-link" href="javascript:void(0)" 
                  (click)="irAPagina(0)" title="Primera página">
                 <i class="bi bi-chevron-double-left"></i>
               </a>
             </li>
-
-            <!-- Botón Anterior -->
             <li class="page-item" [class.disabled]="productosPage.number === 0">
               <a class="page-link masterserv-page-link" href="javascript:void(0)" 
                  (click)="irAPagina(productosPage.number - 1)" title="Página anterior">
                 <i class="bi bi-chevron-left"></i>
               </a>
             </li>
-
-            <!-- Páginas numéricas -->
             <li class="page-item" *ngFor="let page of paginas" [class.active]="page === productosPage.number">
               <a class="page-link masterserv-page-link" href="javascript:void(0)" 
                  (click)="irAPagina(page)">
                 {{ page + 1 }}
               </a>
             </li>
-
-            <!-- Botón Siguiente -->
             <li class="page-item" [class.disabled]="productosPage.number + 1 >= productosPage.totalPages">
               <a class="page-link masterserv-page-link" href="javascript:void(0)" 
                  (click)="irAPagina(productosPage.number + 1)" title="Página siguiente">
                 <i class="bi bi-chevron-right"></i>
               </a>
             </li>
-
-            <!-- Botón Última Página -->
             <li class="page-item" [class.disabled]="productosPage.number + 1 >= productosPage.totalPages">
               <a class="page-link masterserv-page-link" href="javascript:void(0)" 
                  (click)="irAPagina(productosPage.totalPages - 1)" title="Última página">
@@ -227,7 +212,6 @@
   </div>
 </div>
 
-<!-- MODAL PARA NUEVO/EDITAR PRODUCTO -->
 <div *ngIf="mostrarModal" class="modal-overlay">
   <div class="modal-container">
     <div class="modal-content">
@@ -241,13 +225,11 @@
       </div>
       
       <div class="modal-body">
-        <!-- Mensaje de error -->
         <div *ngIf="modalErrorMessage" class="alert masterserv-alert-danger mb-3">
           <i class="bi bi-exclamation-triangle me-2"></i>{{ modalErrorMessage }}
         </div>
 
         <form [formGroup]="productoForm" (ngSubmit)="onSubmitModal()">
-          <!-- CÓDIGO Y NOMBRE (MÁS IMPORTANTE) -->
           <div class="row mb-3">
             <div class="col-md-4">
               <label for="codigo" class="form-label masterserv-label">Código <span class="text-danger">*</span></label>
@@ -268,8 +250,6 @@
               </div>
             </div>
           </div>
-
-          <!-- CATEGORÍA Y ESTADO (IMPORTANTE) -->
           <div class="row mb-3">
             <div class="col-md-6">
               <label for="categoriaId" class="form-label masterserv-label">Categoría <span class="text-danger">*</span></label>
@@ -294,8 +274,6 @@
               </div>
             </div>
           </div>
-
-          <!-- PRECIOS (IMPORTANTE) -->
           <div class="row mb-3">
             <div class="col-md-6">
               <label for="precioVenta" class="form-label masterserv-label">Precio Venta <span class="text-danger">*</span></label>
@@ -304,26 +282,24 @@
                 <input type="number" id="precioVenta" class="form-control masterserv-input" formControlName="precioVenta" min="0" step="0.01"
                        [ngClass]="{ 'is-invalid': f['precioVenta'].invalid && (f['precioVenta'].dirty || f['precioVenta'].touched) }">
               </div>
-               <div *ngIf="f['precioVenta'].invalid && (f['precioVenta'].dirty || f['precioVenta'].touched)" class="invalid-feedback d-block">
-                <div *ngIf="f['precioVenta'].errors?.['required']">Obligatorio.</div>
-                <div *ngIf="f['precioVenta'].errors?.['min']">No puede ser negativo.</div>
-              </div>
+                <div *ngIf="f['precioVenta'].invalid && (f['precioVenta'].dirty || f['precioVenta'].touched)" class="invalid-feedback d-block">
+                 <div *ngIf="f['precioVenta'].errors?.['required']">Obligatorio.</div>
+                 <div *ngIf="f['precioVenta'].errors?.['min']">No puede ser negativo.</div>
+               </div>
             </div>
             <div class="col-md-6">
               <label for="precioCosto" class="form-label masterserv-label">Precio Costo <span class="text-danger">*</span></label>
-               <div class="input-group">
-                 <span class="input-group-text masterserv-input">$</span>
-                 <input type="number" id="precioCosto" class="form-control masterserv-input" formControlName="precioCosto" min="0" step="0.01"
-                        [ngClass]="{ 'is-invalid': f['precioCosto'].invalid && (f['precioCosto'].dirty || f['precioCosto'].touched) }">
+                <div class="input-group">
+                  <span class="input-group-text masterserv-input">$</span>
+                  <input type="number" id="precioCosto" class="form-control masterserv-input" formControlName="precioCosto" min="0" step="0.01"
+                         [ngClass]="{ 'is-invalid': f['precioCosto'].invalid && (f['precioCosto'].dirty || f['precioCosto'].touched) }">
               </div>
-               <div *ngIf="f['precioCosto'].invalid && (f['precioCosto'].dirty || f['precioCosto'].touched)" class="invalid-feedback d-block">
-                 <div *ngIf="f['precioCosto'].errors?.['required']">Obligatorio.</div>
-                 <div *ngIf="f['precioCosto'].errors?.['min']">No puede ser negativo.</div>
-               </div>
+                <div *ngIf="f['precioCosto'].invalid && (f['precioCosto'].dirty || f['precioCosto'].touched)" class="invalid-feedback d-block">
+                  <div *ngIf="f['precioCosto'].errors?.['required']">Obligatorio.</div>
+                  <div *ngIf="f['precioCosto'].errors?.['min']">No puede ser negativo.</div>
+                </div>
             </div>
           </div>
-
-          <!-- STOCK (IMPORTANTE) -->
           <div class="row mb-3">
             <div class="col-md-6">
               <label for="stockMinimo" class="form-label masterserv-label">Stock Mínimo <span class="text-danger">*</span></label>
@@ -335,13 +311,10 @@
               </div>
             </div>
           </div>
-
-          <!-- DESCRIPCIÓN E IMAGEN (MENOS IMPORTANTE) -->
           <div class="mb-3">
             <label for="descripcion" class="form-label masterserv-label">Descripción</label>
             <textarea id="descripcion" class="form-control masterserv-input" formControlName="descripcion" rows="2"></textarea>
           </div>
-
           <div class="mb-3">
             <label for="imagenUrl" class="form-label masterserv-label">URL de Imagen</label>
             <input type="url" id="imagenUrl" class="form-control masterserv-input" formControlName="imagenUrl"
@@ -350,7 +323,6 @@
               <div *ngIf="f['imagenUrl'].errors?.['maxlength']">Máximo 255 caracteres.</div>
             </div>
           </div>
-
           <div class="d-flex justify-content-end mt-4 pt-3 border-top border-metal">
             <button type="button" class="btn masterserv-btn-secondary me-2" (click)="cerrarModal()" [disabled]="isSubmitting">
               <i class="bi bi-arrow-left me-1"></i>Cancelar

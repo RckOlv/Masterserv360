@@ -3,7 +3,7 @@ package com.masterserv.productos.mapper;
 import com.masterserv.productos.dto.UsuarioDTO;
 import com.masterserv.productos.entity.Rol;
 import com.masterserv.productos.entity.Usuario;
-import com.masterserv.productos.entity.TipoDocumento; // <-- NECESITAS ESTE IMPORT
+import com.masterserv.productos.entity.TipoDocumento; 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -11,50 +11,49 @@ import org.mapstruct.Mappings;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = {RolMapper.class})
 public interface UsuarioMapper {
 
-    // --- Mapeo Entidad -> DTO ---
     @Mappings({
-        @Mapping(source = "tipoDocumento.id", target = "tipoDocumentoId"), // OK
+        @Mapping(source = "tipoDocumento.id", target = "tipoDocumentoId"),
+        @Mapping(source = "tipoDocumento.nombreCorto", target = "tipoDocumentoNombre"),
         @Mapping(target = "passwordHash", ignore = true),
-        @Mapping(target = "fechaCreacion", ignore = true),
-        @Mapping(target = "fechaModificacion", ignore = true)
+        
+        // --- Mentor: CORRECCIÓN CRÍTICA ---
+        // ¡Quitamos estos Mappings de aquí!
+        // @Mapping(target = "fechaCreacion", ignore = true),
+        // @Mapping(target = "fechaModificacion", ignore = true)
+        // --- Fin Corrección ---
     })
     UsuarioDTO toUsuarioDTO(Usuario usuario);
 
     List<UsuarioDTO> toUsuarioDTOList(List<Usuario> usuarios);
 
-    // --- Mapeo DTO -> Entidad (Creación/Guardado) ---
+    // ESTE ESTÁ CORRECTO
     @Mappings({
         @Mapping(target = "id", ignore = true),
         @Mapping(target = "passwordHash", ignore = true),
-        @Mapping(target = "roles", ignore = true),
+        @Mapping(target = "roles", ignore = true), 
         @Mapping(target = "estado", ignore = true),
-        @Mapping(source = "tipoDocumentoId", target = "tipoDocumento"), // OK, llama al helper
+        @Mapping(source = "tipoDocumentoId", target = "tipoDocumento"), 
         @Mapping(target = "fechaCreacion", ignore = true),
         @Mapping(target = "fechaModificacion", ignore = true)
     })
     Usuario toUsuario(UsuarioDTO usuarioDTO);
     
-    // --- Mapeo Actualización (UPDATE) ---
+    // ESTE ESTÁ CORRECTO
     @Mappings({
         @Mapping(target = "id", ignore = true),
         @Mapping(target = "passwordHash", ignore = true),
-        @Mapping(target = "roles", ignore = true),
+        @Mapping(target = "roles", ignore = true), 
         @Mapping(target = "estado", ignore = true),
-        @Mapping(source = "tipoDocumentoId", target = "tipoDocumento"), // OK, llama al helper
+        @Mapping(source = "tipoDocumentoId", target = "tipoDocumento"), 
         @Mapping(target = "fechaCreacion", ignore = true),
         @Mapping(target = "fechaModificacion", ignore = true)
     })
     void updateUsuarioFromDto(UsuarioDTO dto, @MappingTarget Usuario entity);
 
-    // --- MÉTODO HELPER AÑADIDO ---
-    /**
-     * Convierte el ID (Long) de tipoDocumento a una Entidad TipoDocumento para JPA.
-     * @param tipoDocumentoId El ID del tipo de documento.
-     * @return Una entidad TipoDocumento con solo el ID seteado.
-     */
+    // --- MÉTODO HELPER (ya lo tenías, está perfecto) ---
     default TipoDocumento mapTipoDocumento(Long tipoDocumentoId) {
         if (tipoDocumentoId == null) {
             return null;

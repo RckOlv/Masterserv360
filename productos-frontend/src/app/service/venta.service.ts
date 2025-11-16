@@ -71,4 +71,12 @@ export class VentaService {
     return this.http.post<Page<VentaDTO>>(`${this.apiUrl}/filtrar`, filtro, { params });
   }
 
+  getComprobantePdf(id: number): Observable<Blob> {
+    // ¡Clave! 'responseType: 'blob'' le dice a Angular
+    // que la respuesta no es JSON, sino un archivo binario.
+    return this.http.get(`${this.apiUrl}/${id}/comprobante`, {
+      responseType: 'blob'
+    });
+  }
+
 }

@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest; // Necesario para loguear
 
+// --- Mentor: ¡IMPORTE AGREGADO! ---
+// Necesitamos importar la excepción que queremos atrapar.
+import jakarta.persistence.EntityNotFoundException;
+
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -24,7 +28,6 @@ public class GlobalExceptionHandler {
     /**
      * Nivel 1: Maneja las credenciales inválidas (Login).
      * Devuelve 401 Unauthorized.
-     * (Tu código original, está perfecto).
      */
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, String>> handleAuthenticationException(AuthenticationException e) {
@@ -36,7 +39,6 @@ public class GlobalExceptionHandler {
     /**
      * Nivel 1: Maneja los errores de validación de DTOs (@Valid).
      * Devuelve 400 Bad Request.
-     * (Tu código original, está excelente).
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
@@ -49,6 +51,22 @@ public class GlobalExceptionHandler {
         );
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST); // 400
     }
+
+    // --- Mentor: ¡NUEVO MANEJADOR DE ERROR! ---
+    /**
+     * Nivel 2: Maneja errores de "recurso no encontrado" (ej. Categoría 9999).
+     * Lanzado por .orElseThrow() en los servicios.
+     * Devuelve 404 Not Found.
+     */
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleEntityNotFoundException(EntityNotFoundException e) {
+        // 404 Not Found es el código correcto para "el recurso que pediste no existe"
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND) // 404
+                .body(Map.of("status", "error", "message", e.getMessage()));
+    }
+    // --- FIN DEL NUEVO MANEJADOR ---
+
 
     /**
      * Nivel 2: Maneja errores de negocio CONFLICTIVOS (ej. "Email ya existe", "Código duplicado").

@@ -1,64 +1,77 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-// Importar FormsModule para [(ngModel)] y ReactiveFormsModule para [formGroup]
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+// Importar FormsModule para [(ngModel)]
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router'; // Mentor: Router para la navegación
 import { ProveedorService } from '../../service/proveedor.service';
 import { ProveedorDTO } from '../../models/proveedor.model';
-import { CategoriaService } from '../../service/categoria.service'; // Para el multi-select
-import { CategoriaDTO } from '../../models/categoria.model';   // Para el multi-select
+import { CategoriaService } from '../../service/categoria.service'; 
+import { CategoriaDTO } from '../../models/categoria.model'; 
 import { mostrarToast } from '../../utils/toast';
+import { HttpErrorResponse } from '@angular/common/http';
+// import { AuthService } from '../../service/auth.service'; // Mentor: ELIMINADO
 
-// Declarar Bootstrap globalmente
-declare var bootstrap: any;
+// --- Mentor: INICIO DE LA MODIFICACIÓN ---
+// 1. Importar la nueva directiva de permisos
+import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
+// --- Mentor: FIN DE LA MODIFICACIÓN ---
 
 @Component({
   selector: 'app-proveedores',
   standalone: true,
-  // ¡Asegúrate de importar FormsModule y ReactiveFormsModule!
-  imports: [CommonModule, ReactiveFormsModule, FormsModule], 
+  imports: [
+    CommonModule, 
+    ReactiveFormsModule, // Lo mantenemos por si usas un filtroForm
+    FormsModule, 
+    RouterModule,
+    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+    // 2. Añadir la directiva a los imports del componente
+    HasPermissionDirective
+    // --- Mentor: FIN DE LA MODIFICACIÓN ---
+  ], 
   templateUrl: './proveedores.html',
   styleUrls: ['./proveedores.css']
 })
 export default class ProveedoresComponent implements OnInit {
 
-  private fb = inject(FormBuilder);
+  // Mentor: Quitamos FormBuilder ya que el formulario modal se movió
   private proveedorService = inject(ProveedorService);
-  private categoriaService = inject(CategoriaService); // Inyectar
+  private categoriaService = inject(CategoriaService);
+  // Mentor: ELIMINADA la inyección de AuthService
+  // private authService = inject(AuthService); 
+  private router = inject(Router); 
 
   // Estado
-  proveedores: ProveedorDTO[] = []; // Lista completa (filtrada por estado)
-  proveedoresFiltrados: ProveedorDTO[] = []; // Lista para la tabla (filtrada por nombre/cuit)
-  categorias: CategoriaDTO[] = []; // Lista de categorías para el modal
+  proveedores: ProveedorDTO[] = [];
+  proveedoresFiltrados: ProveedorDTO[] = [];
+  categorias: CategoriaDTO[] = []; 
   terminoBusqueda: string = '';
-  filtroEstado: string = 'ACTIVO'; // Estado por defecto
+  filtroEstado: string = 'ACTIVO';
   
-  proveedorForm: FormGroup;
-  esEdicion = false;
-  proveedorEditId: number | null = null;
   isLoading = false;
   errorMessage: string | null = null;
+  
+  // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+  // 3. 'isAdmin' se elimina por completo
+  // public isAdmin = false;
+  // --- Mentor: FIN DE LA MODIFICACIÓN ---
 
   constructor() {
-    this.proveedorForm = this.fb.group({
-      id: [null],
-      razonSocial: ['', [Validators.required, Validators.maxLength(255)]],
-      cuit: ['', [Validators.required, Validators.maxLength(20)]],
-      email: ['', [Validators.email, Validators.maxLength(100)]],
-      telefono: ['', [Validators.maxLength(20)]],
-      direccion: ['', [Validators.maxLength(255)]],
-      estado: ['ACTIVO'],
-      categoriaIds: [[]] // Para el multi-select de categorías
-    });
+    // El constructor queda vacío
   }
 
   ngOnInit() {
+    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+    // 4. Esta línea se elimina
+    // this.isAdmin = this.authService.hasRole('ROLE_ADMIN');
+    // --- Mentor: FIN DE LA MODIFICACIÓN ---
+    
     this.listarProveedores();
-    this.cargarCategorias(); // Cargar categorías para el modal
+    this.cargarCategorias();
   }
 
-  /** 🔹 Carga categorías (para el modal) */
+  /** 🔹 Carga categorías (para el badge de nombre) */
   cargarCategorias(): void {
-    // Llama al servicio de categorías (que ya filtra por 'ACTIVO' por defecto)
     this.categoriaService.listarCategorias('ACTIVO').subscribe({
       next: (data) => this.categorias = data,
       error: (err: any) => console.error('Error al cargar categorías', err)
@@ -76,10 +89,9 @@ export default class ProveedoresComponent implements OnInit {
         this.filtrarLocalmente(); // Aplicar filtro de búsqueda local
         this.isLoading = false;
       },
-      error: (err: any) => {
+      error: (err: HttpErrorResponse) => { 
         console.error('Error al listar proveedores:', err);
-        this.errorMessage = 'Error al cargar proveedores.';
-        if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+        this.handleError(err, 'cargar'); 
         this.isLoading = false;
       },
     });
@@ -87,8 +99,6 @@ export default class ProveedoresComponent implements OnInit {
 
   /** 🔹 Se llama cuando cambian los filtros */
   aplicarFiltros(): void {
-    // Si cambia el estado, recarga del backend
-    // Si cambia el término de búsqueda, filtra localmente
     this.listarProveedores();
   }
 
@@ -112,79 +122,12 @@ export default class ProveedoresComponent implements OnInit {
     mostrarToast('Filtros reiniciados');
   }
 
-  abrirModalNuevo() {
-    this.esEdicion = false;
-    this.proveedorEditId = null;
-    this.proveedorForm.reset({
-      id: null,
-      razonSocial: '',
-      cuit: '',
-      email: '',
-      telefono: '',
-      direccion: '',
-      estado: 'ACTIVO',
-      categoriaIds: [] // Resetea el multi-select
-    });
-    this.errorMessage = null;
-    const modal = new bootstrap.Modal(document.getElementById('proveedorModal'));
-    modal.show();
-  }
-
-  abrirModalEditar(proveedor: ProveedorDTO) {
-    if (!proveedor.id) return;
-    this.esEdicion = true;
-    this.proveedorEditId = proveedor.id;
-    // Usamos el servicio 'getById' para asegurarnos de tener los 'categoriaIds'
-    this.proveedorService.getById(proveedor.id).subscribe({
-      next: (data) => {
-        this.proveedorForm.patchValue(data); // Carga todos los datos, incluyendo categoriaIds
-        this.errorMessage = null;
-        const modal = new bootstrap.Modal(document.getElementById('proveedorModal'));
-        modal.show();
-      },
-      error: (err: any) => {
-        mostrarToast('Error al cargar datos del proveedor', 'danger');
-        this.errorMessage = err.error?.message;
-      }
-    });
-  }
-
-  guardarProveedor() {
-    this.proveedorForm.markAllAsTouched();
-    if (this.proveedorForm.invalid) {
-      mostrarToast("Revise los campos obligatorios.", "warning");
-      return;
-    }
-
-    this.isLoading = true;
-    this.errorMessage = null;
-    const proveedorData = this.proveedorForm.value as ProveedorDTO;
-    
-    const obs = this.esEdicion
-      ? this.proveedorService.actualizar(this.proveedorEditId!, proveedorData)
-      : this.proveedorService.crear(proveedorData);
-
-    obs.subscribe({
-      next: (guardado: ProveedorDTO) => {
-        this.listarProveedores(); // Recarga la lista
-        mostrarToast(this.esEdicion ? 'Proveedor actualizado' : 'Proveedor creado', 'success');
-        this.cerrarModal();
-        this.isLoading = false;
-      },
-      error: (err: any) => {
-        console.error('Error al guardar proveedor:', err);
-        this.errorMessage = err.error?.message || 'Error al guardar el proveedor.';
-        if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
-        this.isLoading = false;
-      },
-    });
-  }
-
-  cerrarModal() {
-    const modalElement = document.getElementById('proveedorModal');
-    if (modalElement) {
-      const modal = bootstrap.Modal.getInstance(modalElement);
-      if (modal) modal.hide();
+  /** Navega al formulario de nuevo o edición */
+  navegarAFormulario(id?: number): void {
+    if (id) {
+      this.router.navigate(['/pos/proveedores/editar', id]);
+    } else {
+      this.router.navigate(['/pos/proveedores/nuevo']);
     }
   }
 
@@ -192,14 +135,15 @@ export default class ProveedoresComponent implements OnInit {
     if (!id) return;
     if (confirm('¿Estás seguro de marcar este proveedor como INACTIVO?')) {
       this.isLoading = true;
+      this.errorMessage = null;
       this.proveedorService.softDelete(id).subscribe({
         next: () => {
           this.listarProveedores(); 
           mostrarToast('Proveedor marcado como inactivo', 'warning');
         },
-        error: (err: any) => {
+        error: (err: HttpErrorResponse) => {
           console.error('Error al eliminar proveedor:', err);
-          if (err.error?.message) mostrarToast(err.error.message, 'danger');
+          this.handleError(err, 'eliminar');
           this.isLoading = false;
         },
       });
@@ -215,20 +159,28 @@ export default class ProveedoresComponent implements OnInit {
            this.listarProveedores(); 
            mostrarToast('Proveedor reactivado', 'success');
          },
-         error: (err: any) => {
+         error: (err: HttpErrorResponse) => {
            console.error('Error al reactivar proveedor:', err);
-           if (err.error?.message) mostrarToast(err.error.message, 'danger');
+           this.handleError(err, 'reactivar');
            this.isLoading = false;
          },
        });
      }
-  }
-    
+   }
+  
   obtenerNombreCategoria(catId: number): string {
     const categoria = this.categorias.find(c => c.id === catId);
     return categoria ? categoria.nombre : `ID: ${catId}`;
   }
 
-  // Helper para validación
-  get f() { return this.proveedorForm.controls; }
+  private handleError(err: HttpErrorResponse, context: string) {
+    if (err.status === 403) {
+      this.errorMessage = 'Acción no permitida: No tiene permisos de Administrador.';
+    } else if (err.status === 500) {
+      this.errorMessage = 'Ocurrió un error interno en el servidor.';
+    } else {
+      this.errorMessage = err.error?.message || `Error al ${context} el proveedor.`;
+    }
+    if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+  }
 }

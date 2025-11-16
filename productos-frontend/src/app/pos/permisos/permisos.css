@@ -1,0 +1,247 @@
+/* ================================
+   ESTILOS MASTERSERV360 - PERMISOS
+   ================================ */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.permisos-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+/* Card principal */
+.masterserv-card {
+  background: linear-gradient(180deg, #121212 0%, #1a1a1a 100%);
+  border: 1px solid #9E9E9E;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.masterserv-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #E41E26, #c4181f);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.masterserv-card-header {
+  background: #121212;
+  color: #FFFFFF;
+  border-bottom: 1px solid #E41E26;
+  padding: 1rem 1.5rem;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.masterserv-card-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(228, 30, 38, 0.1), transparent);
+  animation: headerShine 3s ease-in-out infinite;
+}
+
+.masterserv-card-body {
+  background: #1a1a1a;
+  color: #E0E0E0;
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  margin: 0;
+}
+
+.masterserv-title {
+  color: #E41E26;
+  font-weight: 700;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  font-size: 1.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Botones */
+.masterserv-btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+  border: none;
+  color: white;
+}
+.masterserv-btn-primary {
+  background: linear-gradient(135deg, #E41E26 0%, #c4181f 100%);
+  border: none;
+  color: white;
+}
+.masterserv-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #9E9E9E;
+  color: #E0E0E0;
+}
+
+/* Botones de Acción de Tabla */
+.btn-action {
+  transition: all 0.3s ease;
+}
+.btn-action:hover {
+  transform: translateY(-2px);
+}
+.masterserv-btn-outline-primary {
+  background: transparent;
+  border: 1px solid #E41E26;
+  color: #E41E26;
+}
+.masterserv-btn-outline-primary:hover {
+  background: #E41E26;
+  color: white;
+}
+.masterserv-btn-outline-danger {
+  background: transparent;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+}
+.masterserv-btn-outline-danger:hover {
+  background: #dc3545;
+  color: white;
+}
+
+
+/* Filtros (Formulario de creación) */
+.masterserv-filter {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #9E9E9E !important;
+  flex-shrink: 0;
+  margin-bottom: 1rem;
+}
+
+.masterserv-label {
+  color: #FFC107 !important;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.masterserv-input {
+  background: #121212;
+  border: 1px solid #9E9E9E;
+  color: #E0E0E0 !important;
+}
+.masterserv-input:focus {
+  background: #121212;
+  border-color: #E41E26;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 0 0.2rem rgba(228, 30, 38, 0.25);
+}
+
+/* Tabla */
+.table-responsive {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid #9E9E9E;
+  border-radius: 6px;
+  background: #121212;
+  min-height: 0;
+}
+
+.masterserv-table {
+  background: #121212;
+  color: #E0E0E0 !important;
+  margin-bottom: 0;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.masterserv-table th,
+.masterserv-table td {
+  border: 1px solid #9E9E9E;
+  padding: 0.75rem 0.5rem;
+  vertical-align: middle;
+  color: #E0E0E0 !important;
+  white-space: nowrap;
+}
+
+.masterserv-table-header {
+  background: rgba(228, 30, 38, 0.1) !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.masterserv-table-header th {
+  color: #E41E26 !important;
+  font-weight: 600;
+  border-bottom: 2px solid #9E9E9E;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.masterserv-table-row:hover {
+  background: rgba(228, 30, 38, 0.05);
+}
+
+/* Celdas especiales */
+.masterserv-code {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  color: #FFC107 !important;
+}
+.text-metal {
+  color: #9E9E9E;
+}
+
+/* Alertas y Spinner */
+.masterserv-alert-danger {
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid #dc3545;
+  color: #f8d7da;
+}
+.masterserv-alert-info {
+  background: rgba(23, 162, 184, 0.1);
+  border: 1px solid #17a2b8;
+  color: #d1ecf1;
+}
+.loading-container {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.masterserv-spinner {
+  color: #E41E26;
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Animaciones */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes headerShine {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}

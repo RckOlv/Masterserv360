@@ -1,61 +1,61 @@
-<ng-container *ngIf="(cotizaciones$ | async) as cotizaciones">
+<div class="cotizaciones-container" *appHasPermission="'PEDIDOS_MANAGE'">
+  <div class="card masterserv-card shadow-sm">
+    
+    <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
+      <h4 class="masterserv-title">
+        <i class="bi bi-inbox-fill me-2"></i>Cotizaciones Recibidas
+      </h4>
+      <button class="btn masterserv-btn-secondary btn-sm" (click)="loadCotizaciones()" [disabled]="isLoading">
+        <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1" role="status"></span>
+        <i *ngIf="!isLoading" class="bi bi-arrow-clockwise"></i> Recargar
+      </button>
+    </div>
 
-  <div class="container-fluid mt-4">
-    <div class="card shadow-sm">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-          <i class="bi bi-file-earmark-text me-2"></i>
-          Cotizaciones Recibidas (Pendientes de Aprobación)
-        </h5>
-        <button class="btn btn-light btn-sm" (click)="loadCotizaciones()" [disabled]="isLoading">
-          <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-1" role="status"></span>
-          <i *ngIf="!isLoading" class="bi bi-arrow-clockwise"></i> Recargar
-        </button>
-      </div>
+    <div class="card-body masterserv-card-body d-flex flex-column">
 
-      <div class="card-body">
-        
-        <div *ngIf="isLoading" class="d-flex justify-content-center p-5">
-          <div class="spinner-border text-primary" role="status">
+      <ng-container *ngIf="(cotizaciones$ | async) as cotizaciones">
+
+        <div *ngIf="isLoading" class="loading-container flex-grow-1 d-flex align-items-center justify-content-center">
+          <div class="spinner-border masterserv-spinner" role="status">
             <span class="visually-hidden">Cargando...</span>
           </div>
         </div>
 
         <div *ngIf="!isLoading">
           
-          <div *ngIf="cotizaciones.length === 0" class="alert alert-info text-center">
+          <div *ngIf="cotizaciones.length === 0" class="alert masterserv-alert-info text-center">
             <i class="bi bi-info-circle me-2"></i>
             No hay cotizaciones pendientes de revisión.
           </div>
 
-          <div *ngIf="cotizaciones.length > 0" class="table-responsive">
-            <table class="table table-hover table-striped align-middle">
-              <thead class="table-light">
+          <div *ngIf="cotizaciones.length > 0" class="table-responsive flex-grow-1">
+            <table class="table table-hover table-sm align-middle masterserv-table">
+              <thead class="masterserv-table-header">
                 <tr>
-                  <th>ID</th>
+                  <th class="ps-3">ID</th>
                   <th>Proveedor</th>
                   <th>Items</th>
-                  <th>Total Ofertado</th>
+                  <th class="text-end">Total Ofertado</th>
                   <th>Entrega Estimada</th>
-                  <th>Recomendada</th>
-                  <th>Acciones</th>
+                  <th class="text-center">Recomendada</th>
+                  <th class="text-center pe-3">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let cot of cotizaciones">
-                  <td><span class="badge bg-secondary">#{{ cot.id }}</span></td>
-                  <td>{{ cot.proveedorNombre }}</td>
-                  <td>{{ cot.items.length }} items</td>
-                  <td><strong>{{ cot.precioTotalOfertado | currency:'ARS':'symbol':'1.2-2' }}</strong></td>
-                  <td>{{ cot.fechaEntregaOfertada | date:'dd/MM/yyyy' }}</td>
-                  <td>
-                    <span *ngIf="cot.esRecomendada" class="badge bg-success">
+                <tr *ngFor="let cot of cotizaciones" class="masterserv-table-row">
+                  <td class="ps-3"><span class="badge masterserv-badge bg-dark">#{{ cot.id }}</span></td>
+                  <td class="masterserv-name">{{ cot.proveedorNombre }}</td>
+                  <td class="text-metal">{{ cot.items.length }} items</td>
+                  <td class="masterserv-price text-end">{{ cot.precioTotalOfertado | currency:'ARS':'symbol':'1.2-2' }}</td>
+                  <td class="text-metal">{{ cot.fechaEntregaOfertada | date:'dd/MM/yyyy' }}</td>
+                  <td class="text-center">
+                    <span *ngIf="cot.esRecomendada" class="badge masterserv-badge masterserv-badge-success">
                       <i class="bi bi-star-fill me-1"></i> Sí
                     </span>
-                    <span *ngIf="!cot.esRecomendada" class="text-muted fst-italic">—</span>
+                    <span *ngIf="!cot.esRecomendada" class="text-metal">—</span>
                   </td>
-                  <td>
-                    <a [routerLink]="['/pos/cotizaciones', cot.id]" class="btn btn-primary btn-sm">
+                  <td class="text-center pe-3">
+                    <a [routerLink]="['/pos/cotizaciones', cot.id]" class="btn masterserv-btn-primary btn-sm">
                       Revisar y Aprobar
                       <i class="bi bi-chevron-right ms-1"></i>
                     </a>
@@ -64,10 +64,8 @@
               </tbody>
             </table>
           </div>
-
         </div>
-      </div>
+      </ng-container>
     </div>
   </div>
-
-</ng-container>
+</div>

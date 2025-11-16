@@ -20,7 +20,7 @@ export class PuntosService {
    * para obtener el saldo de puntos del cliente autenticado.
    */
   getMiSaldo(): Observable<SaldoPuntosDTO> {
-    return this.http.get<SaldoPuntosDTO>(`${API_URL}/mi-saldo`);
+    return this.http.get<SaldoPuntosDTO>(`${API_URL}/saldo`);
   }
 
   /**

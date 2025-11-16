@@ -11,6 +11,7 @@ import com.masterserv.productos.entity.Cotizacion;
 import com.masterserv.productos.entity.DetallePedido;
 import com.masterserv.productos.entity.ItemCotizacion;
 import com.masterserv.productos.entity.Pedido;
+import com.masterserv.productos.entity.Usuario; // ¡IMPORTADO!
 
 // Enums
 import com.masterserv.productos.enums.EstadoCotizacion;
@@ -21,6 +22,7 @@ import com.masterserv.productos.enums.EstadoPedido;
 import com.masterserv.productos.repository.CotizacionRepository;
 import com.masterserv.productos.repository.ItemCotizacionRepository;
 import com.masterserv.productos.repository.PedidoRepository;
+import com.masterserv.productos.repository.UsuarioRepository; // ¡IMPORTADO!
 
 // Excepciones y Spring
 import jakarta.persistence.EntityNotFoundException;
@@ -34,6 +36,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -50,8 +53,11 @@ public class CotizacionService {
     @Autowired
     private PedidoRepository pedidoRepository;
     
-    // (No necesitamos ProductoRepository aquí, ya que el 'itemGanador'
-    // ya tiene la referencia al producto)
+    // --- ¡INICIO DE LA CORRECCIÓN 1! ---
+    @Autowired
+    private UsuarioRepository usuarioRepository; // 1. Inyectamos el repo de Usuario
+    // --- FIN DE LA CORRECCIÓN 1 ---
+    
 
     // --- MÉTODOS PÚBLICOS (Para el Portal de Proveedor) ---
 
@@ -153,7 +159,6 @@ public class CotizacionService {
         item.setEstado(EstadoItemCotizacion.CANCELADO_ADMIN);
         itemCotizacionRepository.save(item);
         
-        // Recalculamos el total de la cotización padre
         recalcularTotalCotizacion(item.getCotizacion());
     }
 
@@ -176,9 +181,15 @@ public class CotizacionService {
     /**
      * ¡La acción principal! Confirma la cotización ganadora.
      */
+    // --- ¡INICIO DE LA CORRECCIÓN 2! ---
     @Transactional
-    public Pedido confirmarCotizacion(Long id) {
-        // 1. Obtener la cotización ganadora
+    public Pedido confirmarCotizacion(Long id, String adminEmail) { // 2. Aceptamos el email del Admin
+        
+        // 3. Buscamos al Admin que está confirmando
+        Usuario adminUsuario = usuarioRepository.findByEmail(adminEmail)
+            .orElseThrow(() -> new EntityNotFoundException("Usuario Admin no encontrado: " + adminEmail));
+        
+        // 4. Obtener la cotización ganadora
         Cotizacion cotizacionGanadora = cotizacionRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Cotización no encontrada: " + id));
 
@@ -186,29 +197,27 @@ public class CotizacionService {
             throw new IllegalStateException("Solo se pueden confirmar cotizaciones en estado 'RECIBIDA'.");
         }
         
-        // 2. Crear el Pedido (la entidad que ya tenías)
+        // 5. Crear el Pedido
         Pedido pedido = new Pedido();
         pedido.setFechaPedido(LocalDateTime.now());
-        pedido.setEstado(EstadoPedido.PENDIENTE); // Pasa a PENDIENTE (de recibir)
+        pedido.setEstado(EstadoPedido.PENDIENTE); 
         pedido.setProveedor(cotizacionGanadora.getProveedor());
-        // (Nota: Faltaría el 'Usuario' admin que confirmó. 
-        //  Necesitaríamos pasarlo como argumento desde el controller)
-        // pedido.setUsuario(usuarioAdmin); 
+        
+        // 6. ¡ASIGNAMOS EL USUARIO ADMIN AL PEDIDO! (Esto arregla el bug)
+        pedido.setUsuario(adminUsuario); 
         
         Set<DetallePedido> detallesPedido = new HashSet<>();
         BigDecimal totalPedido = BigDecimal.ZERO;
 
-        // 3. Convertir Items de Cotización a Detalles de Pedido
+        // 7. Convertir Items de Cotización a Detalles de Pedido
         for (ItemCotizacion itemGanador : cotizacionGanadora.getItems()) {
-            
-            // ¡Solo añadimos items que estén COTIZADOS (no PENDIENTES o CANCELADOS)!
             if (itemGanador.getEstado() == EstadoItemCotizacion.COTIZADO) {
                 
                 DetallePedido detalle = new DetallePedido();
                 detalle.setPedido(pedido);
                 detalle.setProducto(itemGanador.getProducto());
                 detalle.setCantidad(itemGanador.getCantidadSolicitada());
-                detalle.setPrecioUnitario(itemGanador.getPrecioUnitarioOfertado()); // ¡El precio de COSTO!
+                detalle.setPrecioUnitario(itemGanador.getPrecioUnitarioOfertado()); 
                 
                 detallesPedido.add(detalle);
                 totalPedido = totalPedido.add(
@@ -224,17 +233,18 @@ public class CotizacionService {
         pedido.setDetalles(detallesPedido);
         pedido.setTotalPedido(totalPedido);
 
-        // 4. Guardar el nuevo Pedido
+        // 8. Guardar el nuevo Pedido
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
 
-        // 5. Actualizar estados de las cotizaciones
+        // 9. Actualizar estados de las cotizaciones
         cotizacionGanadora.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
         cotizacionRepository.save(cotizacionGanadora);
         
         // (Futura mejora: buscar y cancelar las otras cotizaciones competidoras)
         
-        return pedidoGuardado;
+        return pedidoGuardado; // Devolvemos la entidad Pedido
     }
+    // --- FIN DE LA CORRECCIÓN 2 ---
     
     /**
      * Helper para recalcular el total de una cotización si se cancela un item.
@@ -242,7 +252,6 @@ public class CotizacionService {
     private void recalcularTotalCotizacion(Cotizacion cotizacion) {
         BigDecimal nuevoTotal = BigDecimal.ZERO;
         for (ItemCotizacion item : cotizacion.getItems()) {
-            // Suma solo si el item fue cotizado (tiene precio) Y no está cancelado
             if (item.getEstado() == EstadoItemCotizacion.COTIZADO && item.getPrecioUnitarioOfertado() != null) {
                 nuevoTotal = nuevoTotal.add(
                     item.getPrecioUnitarioOfertado().multiply(new BigDecimal(item.getCantidadSolicitada()))

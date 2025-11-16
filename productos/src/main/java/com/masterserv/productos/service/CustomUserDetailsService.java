@@ -1,5 +1,6 @@
 package com.masterserv.productos.service;
 
+import com.masterserv.productos.entity.Permiso; // Mentor: Importar Permiso
 import com.masterserv.productos.entity.Rol;
 import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.repository.UsuarioRepository;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.HashSet; // Mentor: Importar HashSet
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -31,31 +33,41 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         
-        // 1. Buscamos el usuario en nuestra BD usando el método que creamos
+        // 1. Buscamos el usuario en nuestra BD (Tu código original, está perfecto)
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> 
                         new UsernameNotFoundException("Usuario no encontrado con email: " + email));
 
-        // 2. Convertimos nuestros Roles (de la entidad) a GrantedAuthority (de Spring Security)
-        Collection<? extends GrantedAuthority> authorities = mapRolesToAuthorities(usuario.getRoles());
+        // 2. Convertimos Roles Y PERMISOS a GrantedAuthority
+        Collection<? extends GrantedAuthority> authorities = mapRolesAndPermissionsToAuthorities(usuario.getRoles());
 
         // 3. Creamos y retornamos el objeto UserDetails que Spring Security entiende
         return new User(
             usuario.getEmail(),
             usuario.getPasswordHash(),
-            authorities
+            authorities // ¡Esta lista ahora contiene roles Y permisos!
         );
-        // NOTA: Spring Security se encargará de verificar el estado (activo, bloqueado) 
-        // y de comparar el password hash.
     }
 
     /**
-     * Método helper para convertir nuestro Set<Rol> en una Collection<GrantedAuthority>.
-     * Spring Security necesita este formato para manejar la autorización.
+     * Mentor: MÉTODO MODIFICADO
+     * Este helper ahora extrae tanto los Roles como los Permisos anidados
+     * y los convierte en una sola lista de GrantedAuthority.
      */
-    private Collection<? extends GrantedAuthority> mapRolesToAuthorities(Set<Rol> roles) {
-        return roles.stream()
-                .map(rol -> new SimpleGrantedAuthority(rol.getNombreRol()))
-                .collect(Collectors.toList());
+    private Collection<? extends GrantedAuthority> mapRolesAndPermissionsToAuthorities(Set<Rol> roles) {
+        // Usamos un Set para evitar duplicados si un permiso se repite
+        Set<GrantedAuthority> authorities = new HashSet<>();
+
+        roles.forEach(rol -> {
+            // 1. Agregamos el ROL (ej. "ROLE_ADMIN")
+            authorities.add(new SimpleGrantedAuthority(rol.getNombreRol()));
+            
+            // 2. Agregamos todos los PERMISOS de ese rol (ej. "PRODUCTOS_MANAGE")
+            rol.getPermisos().forEach(permiso -> {
+                authorities.add(new SimpleGrantedAuthority(permiso.getNombrePermiso()));
+            });
+        });
+        
+        return authorities;
     }
 }

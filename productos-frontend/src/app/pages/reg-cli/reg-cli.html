@@ -1,98 +1,132 @@
-<div class="container mt-5 mb-5">
-  <div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-      <div class="card shadow-sm">
-        <div class="card-body p-4">
-          <h2 class="card-title text-center mb-4">Crear Cuenta de Cliente</h2>
-          
-          <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+<div class="card shadow-lg border-0" style="max-width: 650px; width: 100%;">
+  <div class="card-body p-4 p-md-5">
 
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="nombre" class="form-label">Nombre <span class="text-danger">*</span></label>
-                <input type="text" id="nombre" class="form-control" formControlName="nombre"
-                       [ngClass]="{ 'is-invalid': f['nombre'].invalid && (f['nombre'].dirty || f['nombre'].touched) }">
-                <div *ngIf="f['nombre'].invalid && (f['nombre'].dirty || f['nombre'].touched)" class="invalid-feedback">
-                  <div *ngIf="f['nombre'].errors?.['required']">Obligatorio.</div>
-                </div>
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="apellido" class="form-label">Apellido <span class="text-danger">*</span></label>
-                <input type="text" id="apellido" class="form-control" formControlName="apellido"
-                       [ngClass]="{ 'is-invalid': f['apellido'].invalid && (f['apellido'].dirty || f['apellido'].touched) }">
-                <div *ngIf="f['apellido'].invalid && (f['apellido'].dirty || f['apellido'].touched)" class="invalid-feedback">
-                  <div *ngIf="f['apellido'].errors?.['required']">Obligatorio.</div>
-                </div>
-              </div>
-            </div>
+    <h3 class="card-title text-center fw-bold mb-2">Crear Cuenta de Cliente</h3>
+    <p class="card-subtitle text-center text-muted mb-4">Bienvenido a Masterserv360</p>
 
-            <div class="mb-3">
-              <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-              <input type="email" id="email" class="form-control" formControlName="email"
-                     [ngClass]="{ 'is-invalid': f['email'].invalid && (f['email'].dirty || f['email'].touched) }">
-              <div *ngIf="f['email'].invalid && (f['email'].dirty || f['email'].touched)" class="invalid-feedback">
-                <div *ngIf="f['email'].errors?.['required']">Obligatorio.</div>
-                <div *ngIf="f['email'].errors?.['email']">Email no válido.</div>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label for="password" class="form-label">Contraseña <span class="text-danger">*</span></label>
-              <input type="password" id="password" class="form-control" formControlName="password"
-                     [ngClass]="{ 'is-invalid': f['password'].invalid && (f['password'].dirty || f['password'].touched) }">
-              <div *ngIf="f['password'].invalid && (f['password'].dirty || f['password'].touched)" class="invalid-feedback">
-                <div *ngIf="f['password'].errors?.['required']">Obligatoria.</div>
-                <div *ngIf="f['password'].errors?.['minlength']">Mínimo 8 caracteres.</div>
-              </div>
-            </div>
-            
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="tipoDocumentoId" class="form-label">Tipo Doc. <span class="text-danger">*</span></label>
-                <select id="tipoDocumentoId" class="form-select" formControlName="tipoDocumentoId"
-                        [ngClass]="{ 'is-invalid': f['tipoDocumentoId'].invalid && (f['tipoDocumentoId'].dirty || f['tipoDocumentoId'].touched) }">
-                  <option [ngValue]="null" disabled>Seleccione...</option>
-                  <option *ngFor="let td of tiposDocumento" [ngValue]="td.id">{{ td.nombreCorto }}</option>
-                </select>
-                <div *ngIf="f['tipoDocumentoId'].invalid && (f['tipoDocumentoId'].dirty || f['tipoDocumentoId'].touched)" class="invalid-feedback">
-                  <div *ngIf="f['tipoDocumentoId'].errors?.['required']">Obligatorio.</div>
-                </div>
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="documento" class="form-label">Documento <span class="text-danger">*</span></label>
-                <input type="text" id="documento" class="form-control" formControlName="documento"
-                       [ngClass]="{ 'is-invalid': f['documento'].invalid && (f['documento'].dirty || f['documento'].touched) }">
-                <div *ngIf="f['documento'].invalid && (f['documento'].dirty || f['documento'].touched)" class="invalid-feedback">
-                  <div *ngIf="f['documento'].errors?.['required']">Obligatorio.</div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="mb-3">
-              <label for="telefono" class="form-label">Teléfono <span class="text-danger">*</span></label>
-              <input type="tel" id="telefono" class="form-control" formControlName="telefono"
-                     [ngClass]="{ 'is-invalid': f['telefono'].invalid && (f['telefono'].dirty || f['telefono'].touched) }">
-              <div *ngIf="f['telefono'].invalid && (f['telefono'].dirty || f['telefono'].touched)" class="invalid-feedback">
-                <div *ngIf="f['telefono'].errors?.['required']">Obligatorio.</div>
-              </div>
-            </div>
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
 
-            <div *ngIf="errorMessage" class="alert alert-danger p-2 text-center mt-3">
-              {{ errorMessage }}
-            </div>
-
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary" [disabled]="registerForm.invalid || !tiposDocumento.length">
-                Crear Cuenta
-              </button>
-            </div>
-            
-            <div class="text-center mt-3">
-              <a [routerLink]="['/login']">¿Ya tienes cuenta? Inicia sesión</a>
-            </div>
-
-          </form> 
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label for="nombre" class="form-label">Nombre <span class="text-danger">*</span></label>
+          <input type="text" id="nombre" class="form-control" formControlName="nombre" placeholder="Juan"
+            maxlength="50"
+            [class.is-invalid]="f['nombre'].touched && f['nombre'].invalid">
+          <div *ngIf="f['nombre'].touched && f['nombre'].errors" class="invalid-feedback">
+            <div *ngIf="f['nombre'].errors?.['required']">El nombre es obligatorio.</div>
+            <div *ngIf="f['nombre'].errors?.['maxlength']">Máximo 50 caracteres.</div>
+          </div>
+        </div>
+        <div class="col-md-6 mt-3 mt-md-0">
+          <label for="apellido" class="form-label">Apellido <span class="text-danger">*</span></label>
+          <input type="text" id="apellido" class="form-control" formControlName="apellido" placeholder="Pérez"
+            maxlength="50"
+            [class.is-invalid]="f['apellido'].touched && f['apellido'].invalid">
+          <div *ngIf="f['apellido'].touched && f['apellido'].errors" class="invalid-feedback">
+            <div *ngIf="f['apellido'].errors?.['required']">El apellido es obligatorio.</div>
+            <div *ngIf="f['apellido'].errors?.['maxlength']">Máximo 50 caracteres.</div>
+          </div>
         </div>
       </div>
-    </div>
+
+      <div class="mb-3">
+        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+        <input type="email" id="email" class="form-control" formControlName="email" placeholder="juan.perez@correo.com"
+          maxlength="100"
+          [class.is-invalid]="f['email'].touched && f['email'].invalid">
+        <div *ngIf="f['email'].touched && f['email'].errors" class="invalid-feedback">
+          <div *ngIf="f['email'].errors?.['required']">El email es obligatorio.</div>
+          <div *ngIf="f['email'].errors?.['email']">Por favor, ingrese un email válido.</div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label">Contraseña <span class="text-danger">*</span></label>
+        <input type="password" id="password" class="form-control" formControlName="password" placeholder="••••••••"
+          maxlength="100"
+          [class.is-invalid]="f['password'].touched && f['password'].invalid">
+        <div *ngIf="f['password'].touched && f['password'].errors" class="invalid-feedback">
+          <div *ngIf="f['password'].errors?.['required']">La contraseña es obligatoria.</div>
+          <div *ngIf="f['password'].errors?.['minlength']">La contraseña debe tener al menos 8 caracteres.</div>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-5">
+          <label for="tipoDoc" class="form-label">Tipo Doc. <span class="text-danger">*</span></label>
+          <select id="tipoDoc" class="form-select" formControlName="tipoDocumentoId"
+            [class.is-invalid]="f['tipoDocumentoId'].touched && f['tipoDocumentoId'].invalid">
+            <option [ngValue]="null" disabled>Seleccione...</option>
+            <option *ngFor="let tipo of tiposDocumento" [value]="tipo.id">
+              {{ tipo.nombreCorto }}
+            </option>
+          </select>
+          <div *ngIf="f['tipoDocumentoId'].touched && f['tipoDocumentoId'].errors?.['required']"
+            class="invalid-feedback">
+            Seleccione un tipo.
+          </div>
+        </div>
+        <div class="col-md-7 mt-3 mt-md-0">
+          <label for="documento" class="form-label">Documento <span class="text-danger">*</span></label>
+          <input type="text" id="documento" class="form-control" formControlName="documento" placeholder="12345678"
+            [class.is-invalid]="f['documento'].touched && f['documento'].invalid">
+          
+          <div *ngIf="f['documento'].touched && f['documento'].errors" class="invalid-feedback">
+            <div *ngIf="f['documento'].errors?.['required']">El documento es obligatorio.</div>
+            
+            <div *ngIf="selectedTipoDocNombre === 'DNI'">
+              <div *ngIf="f['documento'].errors?.['pattern']">El DNI solo acepta números.</div>
+              <div *ngIf="f['documento'].errors?.['minlength'] || f['documento'].errors?.['maxlength']">
+                El DNI debe tener entre 7 y 8 números.
+              </div>
+            </div>
+
+            <div *ngIf="selectedTipoDocNombre === 'CUIT'">
+              <div *ngIf="f['documento'].errors?.['pattern']">El CUIT solo acepta números.</div>
+              <div *ngIf="f['documento'].errors?.['minlength'] || f['documento'].errors?.['maxlength']">
+                El CUIT debe tener exactamente 11 números.
+              </div>
+            </div>
+            
+            <div *ngIf="selectedTipoDocNombre === 'PAS'">
+              <div *ngIf="f['documento'].errors?.['pattern']">El Pasaporte solo acepta letras y números (sin espacios).</div>
+              <div *ngIf="f['documento'].errors?.['minlength'] || f['documento'].errors?.['maxlength']">
+                El Pasaporte debe tener entre 6 y 20 caracteres.
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label for="telefono" class="form-label">Teléfono <span class="text-danger">*</span></label>
+        <input type="tel" id="telefono" class="form-control" formControlName="telefono" placeholder="3758123456"
+          maxlength="15"
+          [class.is-invalid]="f['telefono'].touched && f['telefono'].invalid">
+        <div *ngIf="f['telefono'].touched && f['telefono'].errors" class="invalid-feedback">
+          <div *ngIf="f['telefono'].errors?.['required']">El teléfono es obligatorio.</div>
+          <div *ngIf="f['telefono'].errors?.['minlength']">Teléfono demasiado corto.</div>
+        </div>
+      </div>
+
+      <div class="d-grid">
+        <button type="submit" class="btn btn-primary btn-lg" [disabled]="registerForm.invalid || isLoading">
+          <span *ngIf="!isLoading">Crear Cuenta</span>
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span *ngIf="isLoading" class="ms-1">Registrando...</span>
+        </button>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger mt-3">
+        {{ errorMessage }}
+      </div>
+
+      <div class="text-center mt-4">
+        <span class="text-muted">¿Ya tienes cuenta?</span>
+        <a routerLink="/login" class="ms-1">Inicia sesión</a>
+      </div>
+
+    </form>
   </div>
 </div>

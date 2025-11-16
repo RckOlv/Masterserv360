@@ -1,44 +1,147 @@
-<div class="dashboard container-fluid py-4">
-
+<div class="dashboard-container">
+  
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="fw-bold text-dark mb-0">
+    <h3 class="masterserv-title mb-0">
       <i class="bi bi-speedometer2 me-2"></i>Panel de Control
-    </h3>
-    
-    <div>
-      <button class="btn btn-primary" (click)="nuevoProducto()">
-        <i class="bi bi-plus-circle-fill me-2"></i>
-        Nuevo Producto
-      </button>
+    </h3> 
+    <div *appHasPermission="'PRODUCTOS_MANAGE'">
     </div>
-  </div>
-
-  <div class="row g-4 mb-4">
-    <div class="col-md-4 col-lg-4" *ngFor="let s of stats">
-      <a [routerLink]="s.link" class="stat-card-link">
-        <div class="stat-card text-white text-center py-4 rounded-4 shadow-sm h-100" 
-             [ngClass]="s.bg"> 
-          <i class="bi" [ngClass]="'bi-' + s.icono" style="font-size: 2.5rem;"></i>
-          <h6 class="mt-2">{{ s.titulo }}</h6>
-          
-          <h3 *ngIf="s.icono !== 'cash-coin'" class="fw-bold mb-0">{{ s.valor | number }}</h3>
-          <h3 *ngIf="s.icono === 'cash-coin'" class="fw-bold mb-0">{{ s.valor | currency:'ARS':'symbol-narrow':'1.0-0' }}</h3>
+    </div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card kpi-card kpi-card-success">
+        <div class="card-body">
+          <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
+          <div class="kpi-text">
+            <div class="kpi-label">Ventas de Hoy (ARS)</div>
+            <div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.totalVentasHoy | currency:'ARS':'symbol-narrow':'1.0-0' }}</div>
+            <div *ngIf="isLoadingStats" class="kpi-value placeholder">...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card kpi-card kpi-card-success-dark">
+        <div class="card-body">
+          <div class="kpi-icon"><i class="bi bi-calendar-check"></i></div>
+          <div class="kpi-text">
+            <div class="kpi-label">Ventas del Mes (ARS)</div>
+            <div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.totalVentasMes | currency:'ARS':'symbol-narrow':'1.0-0' }}</div>
+            <div *ngIf="isLoadingStats" class="kpi-value placeholder">...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card kpi-card kpi-card-warning">
+        <div class="card-body">
+          <div class="kpi-icon"><i class="bi bi-box-seam"></i></div>
+          <div class="kpi-text">
+            <div class="kpi-label">Productos Bajos de Stock</div>
+            <div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.productosBajoStock | number }}</div>
+            <div *ngIf="isLoadingStats" class="kpi-value placeholder">...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <a [routerLink]="!canManageUsers ? null : '/pos/usuarios'" 
+         class="kpi-link" 
+         [class.disabled]="!canManageUsers">
+      <div class="card kpi-card kpi-card-info">
+          <div class="card-body">
+            <div class="kpi-icon"><i class="bi bi-people"></i></div>
+            <div class="kpi-text">
+              <div class="kpi-label">Clientes Activos</div>
+              <div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.clientesActivos | number }}</div>
+              <div *ngIf="isLoadingStats" class="kpi-value placeholder">...</div>
+            </div>
+          </div>
         </div>
       </a>
     </div>
   </div>
-  
-</div>
 
-<style>
-  .stat-card-link {
-    text-decoration: none;
-  }
-  .stat-card {
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-  }
-  .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-  }
-</style>
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card masterserv-card h-100">
+        <div class="card-header masterserv-card-header">
+          <h5 class="masterserv-subtitle mb-0">Ventas (Últimos 7 Días)</h5>
+        </div>
+        <div class="card-body masterserv-card-body">
+          <div *ngIf="isLoadingChart" class="loading-container">
+            <div class="spinner-border masterserv-spinner" role="status"></div>
+          </div>
+          <app-sales-chart *ngIf="!isLoadingChart" [chartData]="ventasSemanales"></app-sales-chart>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card masterserv-card h-100">
+        <div class="card-header masterserv-card-header">
+          <h5 class="masterserv-subtitle mb-0">Top 5 Productos del Mes</h5>
+        </div>
+        <div class="card-body masterserv-card-body p-0">
+          <div *ngIf="isLoadingTopProducts" class="loading-container">
+            <div class="spinner-border masterserv-spinner" role="status"></div>
+          </div>
+          <div *ngIf="!isLoadingTopProducts" class="table-responsive">
+            <table class="table table-sm masterserv-table mb-0">
+              <tbody>
+                <tr *ngFor="let prod of topProductos; let i = index" class="masterserv-table-row">
+                  <td class="ps-3"><strong>#{{ i + 1 }}</strong></td>
+                  <td class="masterserv-name">{{ prod.nombre }}</td>
+                  <td class="masterserv-stock text-end pe-3">{{ prod.cantidadVendida }} <span class="text-metal">unid.</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-12">
+      <div class="card masterserv-card">
+        <div class="card-header masterserv-card-header">
+          <h5 class="masterserv-subtitle mb-0">Últimas Ventas Registradas</h5>
+        </div>
+        <div class="card-body masterserv-card-body p-0">
+          <div *ngIf="isLoadingRecentSales" class="loading-container">
+            <div class="spinner-border masterserv-spinner" role="status"></div>
+          </div>
+          <div *ngIf="!isLoadingRecentSales" class="table-responsive">
+            <table class="table table-sm table-hover align-middle masterserv-table mb-0">
+              <thead class="masterserv-table-header">
+                <tr>
+                  <th class="ps-3">ID</th>
+                  <th>Fecha</th>
+                  <th>Cliente</th>
+                  <th>Vendedor</th>
+                  <th class="text-end pe-3">Total</th>
+                  <th class="text-center">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let venta of ultimasVentas" class="masterserv-table-row" [routerLink]="['/pos/ventas', venta.id]">
+                  <td class="ps-3">#{{ venta.id }}</td>
+                  <td>{{ venta.fechaVenta | date:'dd/MM HH:mm' }}hs</td>
+                  <td class="masterserv-name">{{ venta.clienteNombre }}</td>
+                  <td>{{ venta.vendedorNombre }}</td>
+                  <td class="masterserv-price text-end pe-3">{{ venta.totalVenta | currency:'ARS':'symbol':'1.2-2' }}</td>
+                  <td class="text-center">
+                    <span class="badge masterserv-badge" [ngClass]="venta.estado === 'COMPLETADA' ? 'masterserv-badge-success' : 'masterserv-badge-danger'">
+                      {{ venta.estado }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

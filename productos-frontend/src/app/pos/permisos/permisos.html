@@ -1,50 +1,117 @@
-<div class="container mt-4">
-  <h3>Gestión de Permisos</h3>
+<div class="permisos-container" *appHasPermission="'ROLES_MANAGE'">
+  <div class="card masterserv-card shadow-sm">
+    
+    <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
+      <h4 class="masterserv-title">
+        <i class="bi bi-key-fill me-2"></i>Gestión de Permisos
+      </h4>
+      <button class="btn masterserv-btn-success btn-sm" (click)="abrirModalNuevo()">
+        <i class="bi bi-plus-lg"></i> Nuevo Permiso
+      </button>
+    </div>
 
-  <!-- Formulario de Permiso -->
-  <form [formGroup]="permisoForm" (ngSubmit)="guardarPermiso()" class="mb-4 mt-3">
-    <div class="mb-3">
-      <label>Nombre del Permiso</label>
-      <input type="text" formControlName="nombre" class="form-control" placeholder="Nombre del permiso">
-      <div class="text-danger" *ngIf="permisoForm.get('nombre')?.touched && permisoForm.get('nombre')?.invalid">
-        El nombre es obligatorio.
+    <div class="card-body masterserv-card-body d-flex flex-column">
+
+      <div class="mb-3 p-3 masterserv-filter rounded border">
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label for="filtroNombre" class="form-label form-label-sm masterserv-label">Buscar por Nombre o Descripción</label>
+            <input type="text" id="filtroNombre" class="form-control form-control-sm masterserv-input" 
+                   placeholder="Escriba para filtrar..."
+                   [(ngModel)]="filtroNombre"
+                   (input)="filtrarLocalmente()">
+          </div>
+        </div>
+      </div>
+      
+      <div *ngIf="isLoading" class="loading-container flex-grow-1 d-flex align-items-center justify-content-center">
+        <div class="spinner-border masterserv-spinner" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+      </div>
+      
+      <div *ngIf="errorMessage && !isLoading && !isSubmitting" class="alert masterserv-alert-danger">
+        {{ errorMessage }}
+      </div>
+      
+      <div *ngIf="!isLoading && permisosFiltrados.length > 0" class="table-responsive flex-grow-1">
+        <table class="table table-sm align-middle masterserv-table">
+          <thead class="masterserv-table-header">
+            <tr>
+              <th class="ps-3">Nombre (Clave)</th>
+              <th>Descripción</th>
+              <th class="text-center pe-3">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of permisosFiltrados" class="masterserv-table-row">
+              <td class="ps-3 masterserv-code"><strong>{{ p.nombrePermiso }}</strong></td>
+              <td class="text-metal">{{ p.descripcion }}</td>
+              <td class="text-center pe-3">
+                <div class="btn-group btn-group-sm" role="group">
+                  <button class="btn masterserv-btn-outline-primary btn-action" (click)="abrirModalEditar(p)">
+                    <i class="bi bi-pencil"></i> Editar
+                  </button>
+                  <button class="btn masterserv-btn-outline-danger btn-action" (click)="eliminarPermiso(p.id!)">
+                    <i class="bi bi-trash"></i> Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div *ngIf="!isLoading && permisosFiltrados.length === 0" class="alert masterserv-alert-info text-center">
+        No se encontraron permisos.
       </div>
     </div>
+  </div>
+</div>
 
-    <div class="mb-3">
-      <label>Descripción</label>
-      <input type="text" formControlName="descripcion" class="form-control" placeholder="Descripción (opcional)">
+<div class="modal fade" id="permisoModal" tabindex="-1" aria-labelledby="permisoModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="permisoModalLabel">{{ editMode ? 'Editar' : 'Nuevo' }} Permiso</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="cerrarModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        
+        <div *ngIf="errorMessage && isSubmitting" class="alert masterserv-alert-danger">
+          {{ errorMessage }}
+        </div>
+        
+        <form [formGroup]="permisoForm" id="ngPermisoForm" (ngSubmit)="guardarPermiso()">
+          
+          <div class="mb-3">
+            <label for="nombrePermiso" class="form-label masterserv-label">Nombre (Clave) <span class="text-danger">*</span></label>
+            <input type="text" id="nombrePermiso" class="form-control masterserv-input" 
+                   formControlName="nombrePermiso"
+                   placeholder="Ej: PRODUCTOS_MANAGE"
+                   [ngClass]="{ 'is-invalid': f['nombrePermiso'].invalid && f['nombrePermiso'].touched }">
+            <div *ngIf="f['nombrePermiso'].invalid && f['nombrePermiso'].touched" class="invalid-feedback">
+              El nombre es obligatorio.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="descripcion" class="form-label masterserv-label">Descripción</label>
+            <textarea id="descripcion" class="form-control masterserv-input" 
+                      formControlName="descripcion" 
+                      rows="3"
+                      placeholder="Ej: Permite crear, editar y eliminar productos"></textarea>
+          </div>
+          
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn masterserv-btn-secondary" (click)="cerrarModal()" [disabled]="isSubmitting">Cancelar</button>
+        <button type="submit" form="ngPermisoForm" class="btn masterserv-btn-primary" [disabled]="permisoForm.invalid || isSubmitting">
+          <span *ngIf="!isSubmitting">{{ editMode ? 'Actualizar' : 'Crear' }}</span>
+          <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        </button>
+      </div>
     </div>
-
-    <button type="submit" class="btn btn-primary">{{ editMode ? 'Actualizar' : 'Agregar' }}</button>
-    <button type="button" class="btn btn-secondary ms-2" (click)="resetForm()">Cancelar</button>
-  </form>
-
-  <!-- Tabla de permisos -->
-  <table class="table table-striped table-hover text-center align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>Nombre</th>
-        <th>Descripción</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let p of permisos">
-        <td>{{ p.nombrePermiso }}</td>
-        <td>{{ p.descripcion }}</td>
-        <td>
-          <button class="btn btn-warning btn-sm me-2" (click)="editarPermiso(p)">
-            <i class="bi bi-pencil"></i> Editar
-          </button>
-          <button class="btn btn-danger btn-sm" (click)="eliminarPermiso(p.id!)">
-            <i class="bi bi-trash"></i> Eliminar
-          </button>
-        </td>
-      </tr>
-      <tr *ngIf="permisos.length === 0">
-        <td colspan="3" class="text-muted py-3">No hay permisos registrados.</td>
-      </tr>
-    </tbody>
-  </table>
+  </div>
 </div>

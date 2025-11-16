@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule, CurrencyPipe } from '@angular/common'; // ¡Importamos CommonModule!
+import { CommonModule, CurrencyPipe } from '@angular/common'; 
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { Observable, EMPTY, Subject } from 'rxjs';
 import { catchError, switchMap, tap, startWith } from 'rxjs/operators';
@@ -9,18 +9,26 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CotizacionAdminDTO } from '../../models/cotizacion-admin.model';
 import { ItemCotizacionAdminDTO } from '../../models/item-cotizacion-admin.model';
 import { CotizacionService } from '../../service/cotizacion.service';
-import { PedidoDTO } from '../../models/pedido.model'; // (Import de Pedido)
+import { PedidoDTO } from '../../models/pedido.model'; 
 
 // Utils
 import { mostrarToast } from '../../utils/toast';
 
+// --- Mentor: INICIO DE LA MODIFICACIÓN ---
+// 1. Importar la nueva directiva de permisos
+import { HasPermissionDirective } from '../../directives/has-permission.directive';
+// --- Mentor: FIN DE LA MODIFICACIÓN ---
+
 @Component({
   selector: 'app-cotizacion-detalle',
   standalone: true,
-  // ¡Importamos CommonModule y RouterLink!
-  // CommonModule nos da acceso a los pipes (como currency) si los inyectamos
-  imports: [CommonModule, RouterLink], 
-  providers: [CurrencyPipe], // ¡Añadimos el CurrencyPipe aquí!
+  // 2. Añadir la directiva al array de imports
+  imports: [
+    CommonModule, 
+    RouterLink,
+    HasPermissionDirective 
+  ], 
+  providers: [CurrencyPipe], 
   templateUrl: './cotizacion-detalle.html',
   styleUrls: ['./cotizacion-detalle.css']
 })
@@ -29,8 +37,6 @@ export default class CotizacionDetalleComponent implements OnInit {
   private cotizacionService = inject(CotizacionService);
   private router = inject(Router);
   private route = inject(ActivatedRoute); 
-  
-  // ¡Inyectamos el Pipe para usarlo en TS!
   private currencyPipe = inject(CurrencyPipe); 
 
   public cotizacion$: Observable<CotizacionAdminDTO | null>;
@@ -116,14 +122,9 @@ export default class CotizacionDetalleComponent implements OnInit {
    * Acción: Confirma la cotización y genera el Pedido.
    */
   onConfirmarCotizacion(cotizacion: CotizacionAdminDTO): void {
-    
-    // --- ¡INICIO DE LA CORRECCIÓN! ---
-    // 1. Formateamos el precio usando el CurrencyPipe inyectado
     const precioFormateado = this.currencyPipe.transform(cotizacion.precioTotalOfertado, 'ARS', 'symbol', '1.2-2');
 
-    // 2. Usamos la variable formateada en el confirm()
     if (!confirm(`¿Confirmar esta oferta por ${precioFormateado}? Se generará un Pedido formal.`)) {
-    // --- FIN DE LA CORRECCIÓN ---
       return;
     }
 

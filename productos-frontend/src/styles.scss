@@ -1,6 +1,8 @@
+@use "sass:color"; // Importamos el módulo de color para las funciones modernas
+
 /* ================================
-   PALETA DE COLORES MASTERSERV
-   ================================ */
+   PALETA DE COLORES MASTERSERV
+   ================================ */
 
 // Colores principales de la marca
 $masterserv-primary: #E41E26;
@@ -29,11 +31,17 @@ $masterserv-accent: #FFC107;
   --bs-input-border-color: #{$masterserv-metal};
   --bs-input-color: #{$masterserv-white};
   --bs-heading-color: #{$masterserv-white};
+
+  /* Definiendo explícitamente los colores de validación de formulario */
+  --bs-form-valid-color: var(--bs-success);
+  --bs-form-valid-border-color: var(--bs-success);
+  --bs-form-invalid-color: var(--bs-danger);
+  --bs-form-invalid-border-color: var(--bs-danger);
 }
 
 /* ================================
-   ESTILOS GLOBALES MASTERSERV
-   ================================ */
+   ESTILOS GLOBALES MASTERSERV
+   ================================ */
 
 body {
   background-color: $masterserv-black;
@@ -64,14 +72,16 @@ body {
 
 /* Botones personalizados */
 .btn-masterserv {
-  background: linear-gradient(135deg, $masterserv-primary, darken($masterserv-primary, 10%));
+  // CORRECCIÓN: Usar color.adjust en lugar de darken()
+  background: linear-gradient(135deg, $masterserv-primary, color.adjust($masterserv-primary, $lightness: -10%));
   border: none;
   color: $masterserv-white;
   font-weight: 600;
   transition: all 0.3s ease;
   
   &:hover {
-    background: linear-gradient(135deg, lighten($masterserv-primary, 5%), $masterserv-primary);
+    // CORRECCIÓN: Usar color.adjust en lugar de lighten()
+    background: linear-gradient(135deg, color.adjust($masterserv-primary, $lightness: 5%), $masterserv-primary);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba($masterserv-primary, 0.4);
     color: $masterserv-white;
@@ -79,13 +89,15 @@ body {
 }
 
 .btn-masterserv-accent {
-  background: linear-gradient(135deg, $masterserv-accent, darken($masterserv-accent, 10%));
+  // CORRECCIÓN: Usar color.adjust en lugar de darken()
+  background: linear-gradient(135deg, $masterserv-accent, color.adjust($masterserv-accent, $lightness: -10%));
   border: none;
   color: $masterserv-black;
   font-weight: 600;
   
   &:hover {
-    background: linear-gradient(135deg, lighten($masterserv-accent, 5%), $masterserv-accent);
+    // CORRECCIÓN: Usar color.adjust en lugar de lighten()
+    background: linear-gradient(135deg, color.adjust($masterserv-accent, $lightness: 5%), $masterserv-accent);
     color: $masterserv-black;
   }
 }
@@ -111,7 +123,8 @@ body {
 /* Sidebar con nueva paleta */
 /* Estas reglas se aplican a <app-sidebar> */
 app-sidebar .sidebar {
-  background: linear-gradient(180deg, $masterserv-black 0%, lighten($masterserv-black, 5%) 100%);
+  // CORRECCIÓN: Usar color.adjust en lugar de lighten()
+  background: linear-gradient(180deg, $masterserv-black 0%, color.adjust($masterserv-black, $lightness: 5%) 100%);
   border-right: 1px solid $masterserv-metal;
   
   .sidebar-header {
@@ -191,10 +204,12 @@ app-sidebar .sidebar {
   }
   
   .btn-custom {
-    background: linear-gradient(135deg, $masterserv-primary, darken($masterserv-primary, 10%));
+    // CORRECCIÓN: Usar color.adjust en lugar de darken()
+    background: linear-gradient(135deg, $masterserv-primary, color.adjust($masterserv-primary, $lightness: -10%));
     
     &:hover:not(:disabled) {
-      background: linear-gradient(135deg, lighten($masterserv-primary, 5%), $masterserv-primary);
+      // CORRECCIÓN: Usar color.adjust en lugar de lighten()
+      background: linear-gradient(135deg, color.adjust($masterserv-primary, $lightness: 5%), $masterserv-primary);
     }
   }
 }
@@ -202,7 +217,7 @@ app-sidebar .sidebar {
 /* Tablas personalizadas */
 .table-masterserv {
   background-color: $masterserv-gray-dark;
-  color: $masterserv-text;
+  color: $masterserv-text; // Color por defecto (se aplica al tbody)
   
   thead {
     background-color: rgba($masterserv-primary, 0.1);
@@ -213,6 +228,11 @@ app-sidebar .sidebar {
     }
   }
   
+  tbody, tbody tr, tbody td, tbody th {
+    color: $masterserv-text !important; /* Forza el texto del <tbody> a ser claro */
+    border-color: $masterserv-metal; /* Arregla los bordes de la fila */
+  }
+
   tbody tr:hover {
     background-color: rgba($masterserv-primary, 0.05);
   }
@@ -235,7 +255,35 @@ app-sidebar .sidebar {
   border: 1px solid $masterserv-metal;
 }
 
+/* --- INICIO DE LA CORRECCIÓN DE FORMULARIOS --- */
+
 .form-control {
+  background-color: $masterserv-gray-dark;
+  border: 1px solid $masterserv-metal;
+  color: $masterserv-text; /* Color del texto que escribes */
+  
+  &:focus {
+    background-color: $masterserv-gray-dark;
+    border-color: $masterserv-primary;
+    color: $masterserv-text;
+    box-shadow: 0 0 0 0.2rem rgba($masterserv-primary, 0.25);
+  }
+
+  &::placeholder {
+    color: #{$masterserv-metal};
+    opacity: 0.7;
+  }
+
+  &:-webkit-autofill,
+  &:-webkit-autofill:hover, 
+  &:-webkit-autofill:focus, 
+  &:-webkit-autofill:active  {
+    -webkit-text-fill-color: $masterserv-text;
+    -webkit-box-shadow: 0 0 0 30px $masterserv-gray-dark inset !important;
+  }
+}
+
+.form-select {
   background-color: $masterserv-gray-dark;
   border: 1px solid $masterserv-metal;
   color: $masterserv-text;
@@ -251,6 +299,71 @@ app-sidebar .sidebar {
 .form-label {
   color: $masterserv-text;
 }
+
+.invalid-feedback {
+  color: var(--bs-danger) !important;
+}
+
+.form-control.is-invalid, .form-select.is-invalid {
+  border-color: var(--bs-danger) !important;
+}
+
+.card-subtitle {
+  color: var(--bs-secondary) !important;
+}
+
+/* --- FIN DE LA CORRECCIÓN DE FORMULARIOS --- */
+
+
+/* --- Mentor: INICIO DE ESTILOS GLOBALES PARA NG-SELECT (V3) --- */
+/*
+  Estas reglas son globales porque el dropdown de ng-select
+  se renderiza en el <body>, fuera del componente.
+*/
+.ng-dropdown-panel {
+  background: $masterserv-gray-dark !important; /* Fondo del panel */
+  border: 1px solid $masterserv-metal !important; /* Borde del panel */
+  color: $masterserv-text !important; /* Color de texto general */
+}
+
+/* La fila/opción (contenedora) */
+.ng-dropdown-panel .ng-option {
+  background: $masterserv-gray-dark !important;
+}
+
+/* El contenido DENTRO de la opción (tu template) */
+.ng-dropdown-panel .ng-option .ng-option-label,
+.ng-dropdown-panel .ng-option .ng-option-label div {
+  color: $masterserv-text !important; /* Texto claro (nombre del producto) */
+  background: transparent !important;
+}
+
+/* **CORRECCIÓN CRÍTICA:** Color para el texto secundario (small/muted) */
+.ng-dropdown-panel .ng-option .ng-option-label small {
+  color: $masterserv-metal !important; /* Texto gris más oscuro para el código */
+  background: transparent !important;
+}
+
+
+/* La fila/opción CUANDO ESTÁ SELECCIONADA (hover/focus) */
+.ng-dropdown-panel .ng-option.ng-option-marked {
+  background: $masterserv-primary !important; /* Fondo Rojo */
+  color: $masterserv-white !important; /* Texto Blanco */
+}
+
+/* El contenido DENTRO de la opción SELECCIONADA (forzamos el blanco) */
+.ng-dropdown-panel .ng-option.ng-option-marked .ng-option-label,
+.ng-dropdown-panel .ng-option.ng-option-marked .ng-option-label div,
+.ng-dropdown-panel .ng-option.ng-option-marked .ng-option-label small {
+  color: $masterserv-white !important; /* Forzamos el texto a ser blanco en el hover */
+  background: transparent !important;
+}
+
+.ng-dropdown-panel .ng-option-disabled {
+  color: $masterserv-metal !important;
+}
+/* --- Mentor: FIN DE ESTILOS GLOBALES PARA NG-SELECT (V3) --- */
+
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -270,14 +383,7 @@ app-sidebar .sidebar {
 }
 
 
-/* --- ¡INICIO DE LA CORRECCIÓN DE LAYOUT GLOBAL! --- */
-/*
- * Estas reglas se aplican GLOBALMENTE y le dicen al
- * layout del admin (admin-layout.html) cómo organizarse.
-*/
-
-/* 1. Reglas para el tag <app-sidebar> (el "hijo") */
-/* Esto le da el tamaño y posición */
+/* --- LAYOUT GLOBAL DEL ADMIN --- */
 .admin-container app-sidebar {
   width: 250px;
   height: 100vh;
@@ -288,8 +394,6 @@ app-sidebar .sidebar {
   transition: all 0.3s ease-in-out;
 }
 
-/* 2. Regla para el <main class="content"> (el "hermano") */
-/* Esto lo "empuja" 250px a la derecha */
 .admin-container .content {
   margin-left: 250px;
   width: calc(100% - 250px);
@@ -301,22 +405,18 @@ app-sidebar .sidebar {
   transition: all 0.3s ease-in-out;
 }
 
-/* 3. Regla responsive */
 @media (max-width: 992px) {
-  /* El contenido ocupa el 100% */
   .admin-container .content { 
     margin-left: 0;
     width: 100%;
     padding: 15px;
   }
   
-  /* El sidebar se oculta */
   .admin-container app-sidebar {
     transform: translateX(-100%);
   }
   
-  .admin-container app-sidebar.open { /* (Si implementas un botón de toggle) */
+  .admin-container app-sidebar.open {
     transform: translateX(0);
   }
 }
-/* --- FIN DE LA CORRECCIÓN DE LAYOUT --- */

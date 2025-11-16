@@ -1,8 +1,11 @@
-import { PermisoDTO } from "./permiso.model"; // Si usas permisos en el futuro
+import { PermisoDTO } from "./permiso.model"; // Importar el PermisoDTO
 
 export interface RolDTO {
-  id?: number;
-  nombreRol: string; // Ej: 'ROLE_ADMIN', 'ROLE_VENDEDOR'
-  descripcion?: string;
-  // permisos?: PermisoDTO[]; // Comentar si no tienes PermisoDTO todavía
+    id?: number;
+    nombreRol: string;
+    descripcion: string;
+    
+    // Mentor: ¡NUEVO CAMPO CRÍTICO!
+    permisos?: PermisoDTO[]; 
+    // Los permisos se envían y reciben en este DTO
 }

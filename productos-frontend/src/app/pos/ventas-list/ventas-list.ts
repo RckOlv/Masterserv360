@@ -1,13 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms'; // Importar Forms
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms'; 
 
 // --- Servicios y Modelos ---
 import { VentaService } from '../../service/venta.service';
 import { UsuarioService } from '../../service/usuario.service';
-import { RolService } from '../../service/rol.service'; // Importar RolService
-import { AuthService } from '../../service/auth.service'; // <-- ¡IMPORTAR AUTH SERVICE!
+import { RolService } from '../../service/rol.service'; 
+// import { AuthService } from '../../service/auth.service'; // Mentor: ELIMINADO
 import { Page } from '../../models/page.model';
 import { VentaDTO, EstadoVenta } from '../../models/venta.model';
 import { VentaFiltroDTO } from '../../models/venta-filtro.model';
@@ -15,19 +15,32 @@ import { UsuarioDTO } from '../../models/usuario.model';
 import { UsuarioFiltroDTO } from '../../models/usuario-filtro.model';
 
 // --- RxJS y ng-select ---
-import { NgSelectModule } from '@ng-select/ng-select'; // <-- Importar NgSelectModule
+import { NgSelectModule } from '@ng-select/ng-select';
 import { forkJoin, Observable, Subject, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, filter, map, switchMap, tap, take } from 'rxjs/operators';
 
 // --- Utils ---
 import { mostrarToast } from '../../utils/toast';
+import { HttpErrorResponse } from '@angular/common/http';
+
+// --- Mentor: INICIO DE LA MODIFICACIÓN ---
+// 1. Importar la nueva directiva de permisos
+import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
+// --- Mentor: FIN DE LA MODIFICACIÓN ---
 
 @Component({
   selector: 'app-ventas-list',
   standalone: true,
-  // --- ¡ASEGURAR NgSelectModule EN IMPORTS! ---
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, NgSelectModule],
-  // --------------------------------------------
+  imports: [
+    CommonModule, 
+    RouterLink, 
+    ReactiveFormsModule, 
+    NgSelectModule,
+    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+    // 2. Añadir la directiva a los imports del componente
+    HasPermissionDirective
+    // --- Mentor: FIN DE LA MODIFICACIÓN ---
+  ],
   templateUrl: './ventas-list.html',
   styleUrls: ['./ventas-list.css']
 })
@@ -36,8 +49,8 @@ export default class VentasListComponent implements OnInit {
   // --- Inyección de Dependencias ---
   private ventaService = inject(VentaService);
   private usuarioService = inject(UsuarioService);
-  private rolService = inject(RolService); // Inyectar RolService
-  private authService = inject(AuthService); // <-- ¡INYECTAR AUTH SERVICE!
+  private rolService = inject(RolService);
+  // private authService = inject(AuthService); // Mentor: ELIMINADO
   private fb = inject(FormBuilder);
 
   // --- Estado del Componente ---
@@ -46,11 +59,14 @@ export default class VentasListComponent implements OnInit {
   public isLoadingFilters = false;
   public errorMessage: string | null = null;
   public cancelingVentaId: number | null = null;
-  public isAdmin: boolean = false; // <-- Propiedad para controlar visibilidad
+  
+  // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+  // 3. 'isAdmin' se elimina por completo
+  // public isAdmin: boolean = false; 
+  // --- Mentor: FIN DE LA MODIFICACIÓN ---
 
   // --- Formulario de Filtros ---
   public filtroForm: FormGroup;
-  // Ya no necesitamos 'clientes: UsuarioDTO[] = [];'
   public vendedores: UsuarioDTO[] = [];
   public estadosVenta: EstadoVenta[] = ['COMPLETADA', 'CANCELADA'];
 
@@ -59,7 +75,7 @@ export default class VentasListComponent implements OnInit {
   public clienteSearch$ = new Subject<string>();
   public isLoadingClientes = false;
 
-  // --- IDs de Roles (obtenidos dinámicamente) ---
+  // --- IDs de Roles ---
   private clienteRoleId: number | null = null;
   private vendedorRoleId: number | null = null;
 
@@ -68,10 +84,9 @@ export default class VentasListComponent implements OnInit {
   public pageSize = 15;
 
   constructor() {
-    // Inicializar los FormControl, deshabilitados para evitar warnings y esperar datos
     this.filtroForm = this.fb.group({
-      clienteId: [{ value: null, disabled: true }], // Deshabilitar inicialmente
-      vendedorId: [{ value: null, disabled: true }], // Deshabilitar inicialmente
+      clienteId: [{ value: null, disabled: true }], 
+      vendedorId: [{ value: null, disabled: true }], 
       fechaDesde: [null],
       fechaHasta: [null],
       estado: [null]
@@ -79,10 +94,11 @@ export default class VentasListComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // 1. Obtener Rol Actual
-    this.isAdmin = this.authService.hasRole('ROLE_ADMIN'); // Determinar si el usuario es Admin
+    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+    // 4. Esta línea se elimina
+    // this.isAdmin = this.authService.hasRole('ROLE_ADMIN'); 
+    // --- Mentor: FIN DE LA MODIFICACIÓN ---
 
-    // 2. Cargar datos
     this.obtenerIdsRolesYCargarVendedores();
     this.initClienteSearch();
   }
@@ -90,11 +106,9 @@ export default class VentasListComponent implements OnInit {
   /** Obtiene IDs de Rol, carga Vendedores y luego la tabla */
   obtenerIdsRolesYCargarVendedores(): void {
     this.isLoadingFilters = true;
-
-    // Deshabilitar controles que dependen de esta carga
-    this.filtroForm.get('clienteId')?.disable();
-    this.filtroForm.get('vendedorId')?.disable();
-
+    this.filtroForm.get('clienteId')?.disable(); 
+    this.filtroForm.get('vendedorId')?.disable(); // Siempre deshabilitado al inicio
+ 
     forkJoin({
       clienteId: this.rolService.getClienteRoleId(),
       vendedorId: this.rolService.getVendedorRoleId()
@@ -103,16 +117,19 @@ export default class VentasListComponent implements OnInit {
         this.clienteRoleId = ids.clienteId;
         this.vendedorRoleId = ids.vendedorId;
 
-        // Validar que obtuvimos los IDs
         if (this.clienteRoleId === null || this.vendedorRoleId === null) {
           this.handleCriticalError("Error crítico al configurar roles para filtros.");
           return;
         }
 
-        // Cargar lista estática de Vendedores (usando el ID)
-        this.cargarListaVendedores();
-        // Carga inicial de la tabla
+        this.filtroForm.get('clienteId')?.enable();
+        
         this.aplicarFiltros(true);
+
+        // Esta lógica es correcta, el filtro de vendedor se habilita 
+        // solo si se cargan los vendedores.
+        this.cargarListaVendedores();
+        
       },
       error: (err) => {
         console.error("Error obteniendo IDs de roles:", err);
@@ -121,9 +138,14 @@ export default class VentasListComponent implements OnInit {
     });
   }
 
-   /** Carga solo la lista de Vendedores (usando el ID obtenido) */
+  /** Carga solo la lista de Vendedores (usando el ID obtenido) */
   cargarListaVendedores(): void {
-    if (this.vendedorRoleId === null) return;
+    // Si no tenemos el ID del rol Vendedor, no podemos cargar la lista.
+    if (this.vendedorRoleId === null) {
+      this.isLoadingFilters = false;
+      return;
+    }
+
     const emptyUserPage: Page<UsuarioDTO> = { content: [], totalPages: 0, totalElements: 0, size: 0, number: 0 };
     const filtroVendedor: UsuarioFiltroDTO = { rolId: this.vendedorRoleId, estado: 'ACTIVO' };
 
@@ -134,8 +156,8 @@ export default class VentasListComponent implements OnInit {
       })
     ).subscribe(page => {
         this.vendedores = page.content;
-        this.filtroForm.get('vendedorId')?.enable(); // HABILITAR SELECT VENDEDOR
-        this.filtroForm.get('clienteId')?.enable(); // HABILITAR NG-SELECT CLIENTE
+        // Habilitamos el dropdown (la directiva *appHasPermission lo mostrará u ocultará)
+        this.filtroForm.get('vendedorId')?.enable(); 
         this.isLoadingFilters = false;
     });
   }
@@ -148,7 +170,7 @@ export default class VentasListComponent implements OnInit {
       filter((): boolean => this.clienteRoleId !== null),
       tap(() => this.isLoadingClientes = true),
       switchMap(term => {
-        if (!term || term.length < 2) {
+         if (!term || term.length < 2) {
              return of([]);
          }
         const filtro: UsuarioFiltroDTO = {
@@ -176,25 +198,29 @@ export default class VentasListComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
 
-    const filtro: VentaFiltroDTO = this.filtroForm.value;
+    const filtro: VentaFiltroDTO = this.filtroForm.getRawValue();
 
     this.ventaService.filtrarVentas(filtro, this.currentPage, this.pageSize).subscribe({
       next: (pageData) => {
         this.ventasPage = pageData;
         this.isLoading = false;
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         console.error("Error al cargar ventas filtradas:", err);
-        this.errorMessage = "No se pudieron cargar las ventas con los filtros aplicados.";
-        if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
-        this.isLoading = false;
+        this.handleCriticalError(err.error?.message || "No se pudieron cargar las ventas.");
       }
     });
   }
 
   /** Limpia los filtros y recarga la lista */
   limpiarFiltros(): void {
-    this.filtroForm.reset();
+    this.filtroForm.reset({
+      clienteId: null,
+      vendedorId: null, 
+      fechaDesde: null,
+      fechaHasta: null,
+      estado: null
+    });
     this.aplicarFiltros(true);
   }
 
@@ -213,11 +239,35 @@ export default class VentasListComponent implements OnInit {
     }
   }
 
-  irAPagina(pageNumber: number): void {
-     if (pageNumber >= 0 && pageNumber < (this.ventasPage?.totalPages ?? 0)) {
-         this.currentPage = pageNumber;
-         this.aplicarFiltros();
-     }
+  descargarComprobante(ventaId: number | undefined, event: Event): void {
+    if (!ventaId) return;
+    event.stopPropagation();
+    mostrarToast(`Generando comprobante #${ventaId}...`, 'warning');
+
+    this.ventaService.getComprobantePdf(ventaId).subscribe({
+      next: (pdfBlob: Blob) => {
+        this.downloadBlob(pdfBlob, `Comprobante-Venta-${ventaId}.pdf`);
+        mostrarToast('Descarga iniciada.', 'success');
+      },
+      error: (err: HttpErrorResponse) => {
+        this.handleCriticalError(err.error?.message || 'No se pudo descargar el comprobante.'); 
+      }
+    });
+  }
+
+  private downloadBlob(blob: Blob, fileName: string) {
+    try {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error al descargar el Blob del PDF:", error);
+      mostrarToast("No se pudo descargar el comprobante.", "warning");
+    }
   }
 
   onCancelarVenta(venta: VentaDTO): void {
@@ -235,12 +285,11 @@ export default class VentasListComponent implements OnInit {
       next: () => {
         mostrarToast(`Venta #${venta.id} cancelada exitosamente. Stock repuesto.`, 'success');
         this.cancelingVentaId = null;
-        this.aplicarFiltros(); // Recargar CON los filtros actuales
+        this.aplicarFiltros(); 
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         console.error("Error al cancelar venta:", err);
-        this.errorMessage = err.error?.message || "No se pudo cancelar la venta.";
-        if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+        this.handleCriticalError(err.error?.message || "No se pudo cancelar la venta.");
         this.cancelingVentaId = null;
       }
     });

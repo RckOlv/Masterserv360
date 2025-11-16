@@ -3,6 +3,20 @@ import { DetalleVentaDTO } from "./detalle-venta.model"; // Importa el DTO del d
 // Coincide con el Enum EstadoVenta del backend
 export type EstadoVenta = 'COMPLETADA' | 'CANCELADA' | 'PENDIENTE'; // Ajusta si tienes otros estados
 
+export interface VentasPorDiaDTO {
+  fecha: string; // El backend envía LocalDate, Angular lo recibe como string
+  total: number;
+}
+
+/**
+ * DTO para el gráfico de productos top (TopProductoDTO del backend)
+ */
+export interface TopProductoDTO {
+  productoId: number;
+  nombre: string;
+  cantidadVendida: number;
+}
+
 export interface VentaDTO {
   // --- Campos para ENVIAR al backend (POST) ---
   clienteId: number;
@@ -18,4 +32,6 @@ export interface VentaDTO {
   vendedorNombre?: string; // Nombre/Apellido del vendedor
   fechaCreacion?: string;
   fechaModificacion?: string;
+  comprobantePdf?: string;
+  codigoCupon?: string | null;
 }

@@ -1,85 +1,100 @@
-<div class="container-fluid my-4">
-
-  <a routerLink="/ventas-historial" class="btn btn-outline-secondary mb-3"> <i class="bi bi-arrow-left"></i> Volver al Historial
-  </a>
-
-  <h4 *ngIf="venta && !isLoading">
-    <i class="bi bi-receipt-cutoff"></i> Detalle de Venta #{{ venta.id }}
-  </h4>
-  <hr *ngIf="venta && !isLoading">
-
-  <div *ngIf="isLoading" class="text-center my-5">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Cargando detalle...</span>
+<div class="detalle-container">
+  
+  <div class="card masterserv-card shadow-sm">
+    
+    <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
+      <h4 class="masterserv-title mb-0">
+        <i class="bi bi-receipt-cutoff me-2"></i>
+        <span *ngIf="venta">Detalle de Venta #{{ venta.id }}</span>
+        <span *ngIf="!venta">Cargando detalle...</span>
+      </h4>
+      <a routerLink="/pos/ventas-historial" class="btn masterserv-btn-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Volver al Historial
+      </a>
     </div>
-  </div>
-  <div *ngIf="errorMessage && !isLoading" class="alert alert-danger">{{ errorMessage }}</div>
 
-  <div *ngIf="!isLoading && venta && !errorMessage">
-    <div class="card shadow-sm">
-      <div class="card-header">
-        Información General
+    <div class="card-body masterserv-card-body">
+
+      <div *ngIf="isLoading" class="loading-container flex-grow-1 d-flex align-items-center justify-content-center">
+        <div class="spinner-border masterserv-spinner" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
       </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <p><strong>Fecha:</strong> {{ venta.fechaVenta | date:'dd/MM/yyyy HH:mm:ss' }}</p>
-            <p><strong>Cliente:</strong> {{ venta.clienteNombre || 'N/A' }}</p>
+
+      <div *ngIf="errorMessage && !isLoading" class="alert masterserv-alert-danger">
+        <i class="bi bi-exclamation-triangle me-2"></i>{{ errorMessage }}
+      </div>
+      
+      <div *ngIf="!isLoading && venta && !errorMessage">
+
+        <div class="masterserv-filter p-3 mb-4">
+          <h5 class="masterserv-label border-bottom pb-2 mb-3">Información General</h5>
+          <div class="row">
+            <div class="col-md-6">
+              <p class="mb-2">
+                <strong class="masterserv-label-sm">Fecha:</strong>
+                <span class="ms-2 masterserv-data">{{ venta.fechaVenta | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+              </p>
+              <p class="mb-0">
+                <strong class="masterserv-label-sm">Cliente:</strong>
+                <span class="ms-2 masterserv-data">{{ venta.clienteNombre || 'N/A' }}</span>
+              </p>
+            </div>
+            <div class="col-md-6">
+              <p class="mb-2">
+                <strong class="masterserv-label-sm">Vendedor:</strong>
+                <span class="ms-2 masterserv-data">{{ venta.vendedorNombre || 'N/A' }}</span>
+              </p>
+              <p class="mb-0">
+                <strong class="masterserv-label-sm">Estado:</strong>
+                <span class="badge ms-2 masterserv-badge" [ngClass]="{
+                  'masterserv-badge-success': venta.estado === 'COMPLETADA',
+                  'masterserv-badge-danger': venta.estado === 'CANCELADA'
+                }">
+                  {{ venta.estado }}
+                </span>
+              </p>
+            </div>
           </div>
-          <div class="col-md-6">
-            <p><strong>Vendedor:</strong> {{ venta.vendedorNombre || 'N/A' }}</p>
-            <p><strong>Estado:</strong>
-              <span class="badge ms-2" [ngClass]="{
-                'bg-success': venta.estado === 'COMPLETADA',
-                'bg-danger': venta.estado === 'CANCELADA',
-                'bg-warning': venta.estado === 'PENDIENTE'
-              }">
-                {{ venta.estado }}
-              </span>
-            </p>
-          </div>
+        </div>
+
+        <h5 class="masterserv-label border-bottom pb-2 mb-3">Detalles de Productos</h5>
+        
+        <div *ngIf="!venta.detalles || venta.detalles.length === 0" class="alert masterserv-alert-info text-center">
+          Esta venta no tiene productos asociados (puede ser un error).
+        </div>
+
+        <div class="table-responsive" *ngIf="venta.detalles && venta.detalles.length > 0">
+          <table class="table table-sm align-middle masterserv-table">
+            <thead class="masterserv-table-header">
+              <tr>
+                <th class="ps-3">Producto</th>
+                <th class="text-center">Código</th>
+                <th class="text-end">Precio Unit. (Venta)</th>
+                <th class="text-center">Cantidad</th>
+                <th class="text-end pe-3">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let detalle of venta.detalles" class="masterserv-table-row">
+                  <td class="masterserv-name ps-3">{{ detalle.productoNombre || 'N/A' }}</td>
+                  <td class="masterserv-code text-center">{{ detalle.productoCodigo || 'N/A' }}</td>
+                  <td class="masterserv-price text-end">{{ detalle.precioUnitario | currency:'ARS':'symbol':'1.2-2' }}</td>
+                  <td class="masterserv-stock text-center">{{ detalle.cantidad }}</td>
+                  <td class="masterserv-price text-end pe-3">{{ detalle.subtotal | currency:'ARS':'symbol':'1.2-2' }}</td>
+              </tr>
+            </tbody>
+            <tfoot class="masterserv-table-footer">
+              <tr>
+                <td colspan="4" class="text-end fs-5 fw-bold">TOTAL VENTA:</td>
+                <td class="text-end fs-5 fw-bold pe-3">
+                  {{ venta.totalVenta | currency:'ARS':'symbol':'1.2-2' }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
     </div>
-
-    <div class="card shadow-sm mt-3">
-       <div class="card-header">
-         Detalles de Productos
-       </div>
-       <div class="card-body p-0">
-          <div *ngIf="!venta.detalles || venta.detalles.length === 0" class="alert alert-warning m-3 text-center">
-            Esta venta no tiene productos asociados (puede ser un error).
-          </div>
-
-          <div class="table-responsive" *ngIf="venta.detalles && venta.detalles.length > 0">
-            <table class="table table-sm table-striped mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>Producto</th>
-                  <th class="text-center">Código</th>
-                  <th class="text-end">Precio Unit. (Venta)</th>
-                  <th class="text-center">Cantidad</th>
-                  <th class="text-end">Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let detalle of venta.detalles">
-                   <td>{{ detalle.productoNombre || 'N/A' }}</td>
-                   <td class="text-center">{{ detalle.productoCodigo || 'N/A' }}</td>
-                   <td class="text-end">{{ detalle.precioUnitario | currency:'ARS':'symbol':'1.2-2' }}</td>
-                   <td class="text-center">{{ detalle.cantidad }}</td>
-                   <td class="text-end fw-bold">{{ detalle.subtotal | currency:'ARS':'symbol':'1.2-2' }}</td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr class="table-light">
-                  <td colspan="4" class="text-end fs-5 fw-bold">TOTAL VENTA:</td>
-                  <td class="text-end fs-5 fw-bold">
-                    {{ venta.totalVenta | currency:'ARS':'symbol':'1.2-2' }}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-       </div>
-    </div> </div> </div>
+  </div>
+</div>

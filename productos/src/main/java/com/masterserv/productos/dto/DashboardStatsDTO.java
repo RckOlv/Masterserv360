@@ -1,12 +1,17 @@
 package com.masterserv.productos.dto;
 
-import lombok.Data;
 import java.math.BigDecimal;
+import lombok.Data; // Asumo que usas Lombok por tus otros DTOs
 
-@Data
+@Data // Genera getters, setters, etc.
 public class DashboardStatsDTO {
-    // Nombres que tu frontend ya espera
-    private long productosBajoStock;
+
     private BigDecimal totalVentasMes;
+    private long productosBajoStock;
     private long clientesActivos;
+    
+    // --- Mentor: CAMPO NUEVO AÑADIDO ---
+    private BigDecimal totalVentasHoy;
+    
+    // (Podríamos añadir más, como pedidosPendientes)
 }

@@ -1,14 +1,26 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common'; // Para *ngIf, *ngFor, pipes
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms'; // Para el formulario
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ReglaPuntosService } from '../../service/regla-puntos.service';
 import { ReglaPuntosDTO } from '../../models/regla-puntos.model';
 import { mostrarToast } from '../../utils/toast';
 
+// --- Mentor: INICIO DE LA MODIFICACIÓN ---
+// 1. Importar la nueva directiva de permisos
+import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
+// --- Mentor: FIN DE LA MODIFICACIÓN ---
+
 @Component({
   selector: 'app-reglas-puntos',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule], // Importar ReactiveFormsModule
+  imports: [
+    CommonModule, 
+    ReactiveFormsModule,
+    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+    // 2. Añadir la directiva a los imports del componente
+    HasPermissionDirective
+    // --- Mentor: FIN DE LA MODIFICACIÓN ---
+  ], 
   templateUrl: './reglas-puntos.html',
   styleUrls: ['./reglas-puntos.css']
 })
@@ -21,7 +33,7 @@ export default class ReglasPuntosComponent implements OnInit {
   // --- Estado del Componente ---
   public reglaActiva: ReglaPuntosDTO | null = null;
   public historialReglas: ReglaPuntosDTO[] = [];
-  public isLoading = true; // Empieza cargando
+  public isLoading = true; 
   public isSubmitting = false;
   public errorMessage: string | null = null;
 
@@ -30,10 +42,7 @@ export default class ReglasPuntosComponent implements OnInit {
 
   constructor() {
     this.reglaForm = this.fb.group({
-      // --- ¡CAMPO AÑADIDO! ---
       descripcion: ['', [Validators.required, Validators.maxLength(100)]],
-      // ---------------------
-
       montoGasto: [1000, [Validators.required, Validators.min(1)]],
       puntosGanados: [100, [Validators.required, Validators.min(1)]],
       equivalenciaPuntos: [1, [Validators.required, Validators.min(0.01)]],
@@ -56,9 +65,7 @@ export default class ReglasPuntosComponent implements OnInit {
         this.reglaActiva = data;
         if (data) {
           this.reglaForm.patchValue({
-            // --- ¡CAMPO AÑADIDO! ---
             descripcion: data.descripcion,
-            // ---------------------
             montoGasto: data.montoGasto,
             puntosGanados: data.puntosGanados,
             equivalenciaPuntos: data.equivalenciaPuntos,
@@ -68,7 +75,7 @@ export default class ReglasPuntosComponent implements OnInit {
         this.isLoading = false; 
       },
       error: (err) => {
-        if (err.status !== 404) { // Si el error NO es 404 (Not Found)
+        if (err.status !== 404) { 
           this.errorMessage = "Error al cargar la regla activa.";
           if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
         } else {
@@ -105,19 +112,13 @@ export default class ReglasPuntosComponent implements OnInit {
     
     const formValue = this.reglaForm.value;
 
-    // Construimos el DTO con TODOS los campos que espera el backend
     const nuevaReglaDTO: any = { 
-      // --- ¡CAMPO AÑADIDO! ---
       descripcion: formValue.descripcion,
-      // ---------------------
       montoGasto: formValue.montoGasto,
       puntosGanados: formValue.puntosGanados,
       equivalenciaPuntos: formValue.equivalenciaPuntos,
       caducidadPuntosMeses: formValue.caducidadPuntosMeses,
     };
-    
-    // (Recuerda que 'estadoRegla' lo asigna tu servicio en el backend,
-    // por eso ya no lo enviamos desde aquí. ¡Eso está perfecto!)
     
     console.log("Enviando este objeto al backend:", nuevaReglaDTO);
 
@@ -125,7 +126,6 @@ export default class ReglasPuntosComponent implements OnInit {
       next: (reglaCreada) => {
         mostrarToast('¡Nueva regla de puntos activada exitosamente!', 'success');
         this.isSubmitting = false;
-        // Reseteamos el formulario a sus valores iniciales (limpio)
         this.reglaForm.reset({
           descripcion: '',
           montoGasto: 1000,
@@ -133,7 +133,6 @@ export default class ReglasPuntosComponent implements OnInit {
           equivalenciaPuntos: 1,
           caducidadPuntosMeses: 12
         });
-        // Recargamos los datos para mostrar la nueva regla activa y el historial
         this.cargarDatos();
       },
       error: (err) => {

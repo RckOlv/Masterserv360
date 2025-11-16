@@ -25,7 +25,9 @@
         </a>
       </li>
 
+      
       <li class="menu-header"><span>Inventario</span></li>
+      
       <li>
         <a routerLink="/pos/productos" routerLinkActive="active">
           <i class="bi bi-box-seam"></i> <span>Productos</span>
@@ -36,18 +38,18 @@
           <i class="bi bi-tags"></i> <span>Categorías</span>
         </a>
       </li>
-      <li>
+
+      <li *appHasPermission="'PROVEEDORES_MANAGE'">
         <a routerLink="/pos/proveedores" routerLinkActive="active">
           <i class="bi bi-truck"></i> <span>Proveedores</span>
         </a>
       </li>
-      <li>
+      <li *appHasPermission="'PEDIDOS_MANAGE'">
         <a routerLink="/pos/pedidos" routerLinkActive="active">
           <i class="bi bi-clipboard-data"></i> <span>Pedidos</span>
         </a>
       </li>
-
-      <ng-container *ngIf="isAdmin">
+      <ng-container *appHasPermission="'USUARIOS_MANAGE'">
         <li class="menu-header"><span>Administración</span></li>
         
         <li> 

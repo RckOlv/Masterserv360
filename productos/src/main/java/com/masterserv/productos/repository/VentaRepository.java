@@ -1,5 +1,7 @@
 package com.masterserv.productos.repository;
 
+import com.masterserv.productos.dto.TopProductoDTO;
+import com.masterserv.productos.dto.VentasPorDiaDTO;
 import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.entity.Venta;
 import org.springframework.data.domain.Page;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -60,4 +63,24 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
     BigDecimal sumTotalVentasMesActual();
 
     Page<Venta> findByCliente(Usuario cliente, Pageable pageable);
+
+    // Consulta para el gráfico de líneas: Suma las ventas por día
+    @Query("SELECT new com.masterserv.productos.dto.VentasPorDiaDTO(CAST(v.fechaVenta AS LocalDate), SUM(v.totalVenta)) " +
+           "FROM Venta v " +
+           "WHERE v.estado = 'COMPLETADA' AND v.fechaVenta >= :fechaInicio " +
+           "GROUP BY CAST(v.fechaVenta AS LocalDate) " +
+           "ORDER BY CAST(v.fechaVenta AS LocalDate) ASC")
+    List<VentasPorDiaDTO> findVentasSumarizadasPorDia(@Param("fechaInicio") LocalDateTime fechaInicio);
+
+    // Consulta para el gráfico de barras: Cuenta los productos más vendidos
+    @Query("SELECT new com.masterserv.productos.dto.TopProductoDTO(dv.producto.id, dv.producto.nombre, SUM(dv.cantidad)) " +
+           "FROM DetalleVenta dv " +
+           "WHERE dv.venta.estado = 'COMPLETADA' AND dv.venta.fechaVenta >= :fechaInicio " +
+           "GROUP BY dv.producto.id, dv.producto.nombre " +
+           "ORDER BY SUM(dv.cantidad) DESC " +
+           "LIMIT 5")
+    List<TopProductoDTO> findTop5ProductosVendidos(@Param("fechaInicio") LocalDateTime fechaInicio);
+
+    @Query("SELECT SUM(v.totalVenta) FROM Venta v WHERE v.estado = 'COMPLETADA' AND v.fechaVenta BETWEEN :inicio AND :fin")
+    Optional<BigDecimal> findTotalVentasEntreFechas(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
 }

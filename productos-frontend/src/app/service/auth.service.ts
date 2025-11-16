@@ -19,43 +19,54 @@ export class AuthService {
   private router = inject(Router);
   private apiUrl = `${API_URL}/api/auth`; 
   private readonly TOKEN_KEY = 'jwt_token';
+  private readonly PERMISSIONS_KEY = 'user_permissions';
+  
   private readonly jwtHelper = new JwtHelperService(); 
 
-  // --- ¡CORRECCIÓN 1! ---
-  // El estado inicial de 'loggedIn' ahora VERIFICA la expiración.
   private loggedIn = new BehaviorSubject<boolean>(this.hasToken());
   public isLoggedIn$ = this.loggedIn.asObservable();
-  // --------------------
-
+  
   private currentUserEmail = new BehaviorSubject<string | null>(this.getEmailFromToken());
   public currentUserEmail$ = this.currentUserEmail.asObservable();
+  
   private currentUserRole = new BehaviorSubject<string | null>(this.getRoleFromToken());
   public currentUserRole$ = this.currentUserRole.asObservable();
+
+  private currentUserPermissions = new BehaviorSubject<string[]>(this.getPermissionsFromStorage());
+  public currentUserPermissions$ = this.currentUserPermissions.asObservable();
 
   constructor() { }
 
   login(credentials: LoginRequestDTO): Observable<AuthResponseDTO> {
+    // --- Mentor: ¡CORRECCIÓN AQUÍ! ---
+    // Cambiado 'this->apiUrl' por 'this.apiUrl'
     return this.http.post<AuthResponseDTO>(`${this.apiUrl}/login`, credentials).pipe(
       tap(response => {
         this.saveToken(response.token);
-        // Actualizamos todos los estados
+        this.savePermissions(response.permisos);
+
         this.loggedIn.next(true);
-        this.currentUserEmail.next(this.getEmailFromToken());
-        this.currentUserRole.next(this.getRoleFromToken());
+        this.currentUserEmail.next(response.email);
+        this.currentUserRole.next(response.roles ? response.roles[0] : null); 
+        this.currentUserPermissions.next(response.permisos);
       })
     );
   }
 
   register(data: RegisterRequestDTO): Observable<any> {
+    // --- Mentor: ¡CORRECCIÓN AQUÍ! ---
+    // Cambiado 'this->apiUrl' por 'this.apiUrl'
     return this.http.post<any>(`${this.apiUrl}/register`, data);
   }
 
   logout(): void {
     localStorage.removeItem(this.TOKEN_KEY);
-    // Reseteamos todos los estados
+    localStorage.removeItem(this.PERMISSIONS_KEY);
+    
     this.loggedIn.next(false);
     this.currentUserEmail.next(null);
     this.currentUserRole.next(null);
+    this.currentUserPermissions.next([]);
     this.router.navigate(['/login']);
   }
 
@@ -67,24 +78,27 @@ export class AuthService {
     return localStorage.getItem(this.TOKEN_KEY);
   }
 
-  // --- ¡CORRECCIÓN 2! ---
-  /**
-   * Verifica si hay un token Y si NO ha expirado.
-   */
+  private savePermissions(permissions: string[]): void {
+    localStorage.setItem(this.PERMISSIONS_KEY, JSON.stringify(permissions));
+  }
+  
+  private getPermissionsFromStorage(): string[] {
+    const permissions = localStorage.getItem(this.PERMISSIONS_KEY);
+    return permissions ? JSON.parse(permissions) : [];
+  }
+
   hasToken(): boolean {
     const token = this.getToken();
-    // Revisa si el token existe Y si el jwtHelper dice que NO está expirado
     return !!token && !this.jwtHelper.isTokenExpired(token);
   }
-  // --------------------
 
   public getDecodedToken(): any | null {
     const token = this.getToken();
-    if (token) {
+    if (token && this.hasToken()) { 
       try {
         return this.jwtHelper.decodeToken(token);
       } catch (e) {
-        return null; // Token corrupto
+        return null;
       }
     }
     return null;
@@ -109,6 +123,14 @@ export class AuthService {
       return false;
     }
     return token.roles.includes(roleName);
+  }
+
+  /**
+   * Verifica si el usuario logueado tiene un PERMISO específico.
+   * Lee la lista de permisos guardada en localStorage.
+   */
+  public hasPermission(permissionName: string): boolean {
+    return this.currentUserPermissions.value.includes(permissionName);
   }
 
   getApiUrlBase(): string {

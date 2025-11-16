@@ -19,17 +19,22 @@ public class UsuarioSpecification {
             
             List<Predicate> predicates = new ArrayList<>();
 
-            // Filtro por Nombre, Apellido o Email
+            // Filtro por Nombre, Apellido, Email o Documento
             if (filtro.getNombreOEmail() != null && !filtro.getNombreOEmail().isEmpty()) {
                 String busquedaLower = "%" + filtro.getNombreOEmail().toLowerCase() + "%";
+                String busquedaNormal = "%" + filtro.getNombreOEmail() + "%"; // Para el documento (que no es lowercase)
+
+                // --- ¡INICIO DE LA CORRECCIÓN! ---
                 predicates.add(cb.or(
                     cb.like(cb.lower(root.get("nombre")), busquedaLower),
                     cb.like(cb.lower(root.get("apellido")), busquedaLower),
-                    cb.like(cb.lower(root.get("email")), busquedaLower)
+                    cb.like(cb.lower(root.get("email")), busquedaLower),
+                    cb.like(root.get("documento"), busquedaNormal) // ¡AÑADIDO! Busca también por documento
                 ));
+                // --- FIN DE LA CORRECCIÓN! ---
             }
 
-            // Filtro por Documento
+            // Filtro por Documento (Este es un filtro separado, lo dejamos por si acaso)
             if (filtro.getDocumento() != null && !filtro.getDocumento().isEmpty()) {
                 predicates.add(cb.like(root.get("documento"), "%" + filtro.getDocumento() + "%"));
             }

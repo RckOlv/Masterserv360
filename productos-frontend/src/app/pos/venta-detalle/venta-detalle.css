@@ -1,0 +1,251 @@
+/* ================================
+   ESTILOS MASTERSERV360 - VENTA DETALLE
+   (Copiado de Productos.css para consistencia)
+   ================================ */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.detalle-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Card principal */
+.masterserv-card {
+  background: linear-gradient(180deg, #121212 0%, #1a1a1a 100%);
+  border: 1px solid #9E9E9E;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  margin: 0;
+  overflow: hidden;
+}
+
+.masterserv-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #E41E26, #c4181f);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.masterserv-card-header {
+  background: #121212;
+  color: #FFFFFF;
+  border-bottom: 1px solid #E41E26;
+  padding: 1rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.masterserv-card-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(228, 30, 38, 0.1), transparent);
+  animation: headerShine 3s ease-in-out infinite;
+}
+
+.masterserv-card-body {
+  background: #1a1a1a;
+  color: #E0E0E0;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.masterserv-title {
+  color: #E41E26;
+  font-weight: 700;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  font-size: 1.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Botón 'Volver' */
+.masterserv-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #9E9E9E;
+  color: #E0E0E0;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.masterserv-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #E0E0E0;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Panel de Filtros (reutilizado para Info General) */
+.masterserv-filter {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #9E9E9E !important;
+}
+
+.masterserv-label {
+  color: #FFC107 !important;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.masterserv-label-sm {
+  color: #FFC107 !important;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.masterserv-data {
+  color: #FFFFFF;
+  font-weight: 500;
+}
+
+/* TABLA */
+.table-responsive {
+  overflow: auto;
+  border: 1px solid #9E9E9E;
+  border-radius: 6px;
+  background: #121212;
+}
+
+.masterserv-table {
+  background: #121212;
+  color: #E0E0E0 !important;
+  margin-bottom: 0;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.masterserv-table th,
+.masterserv-table td {
+  border: 1px solid #9E9E9E;
+  padding: 0.75rem 0.5rem;
+  white-space: nowrap;
+  vertical-align: middle;
+  color: #E0E0E0 !important;
+}
+
+/* HEADER DE TABLA */
+.masterserv-table-header {
+  background: rgba(228, 30, 38, 0.1) !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.masterserv-table-header th {
+  color: #E41E26 !important;
+  font-weight: 600;
+  border-bottom: 2px solid #9E9E9E;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  padding: 0.75rem 0.5rem;
+}
+
+/* FILAS DE TABLA */
+.masterserv-table-row {
+  transition: all 0.3s ease;
+}
+.masterserv-table-row:hover {
+  background: rgba(228, 30, 38, 0.05);
+}
+
+/* FOOTER DE TABLA (NUEVO) */
+.masterserv-table-footer {
+  background: #121212;
+  border-top: 2px solid #9E9E9E;
+}
+.masterserv-table-footer td {
+  color: #FFC107 !important;
+}
+
+
+/* ESTILOS ESPECÍFICOS PARA CELDAS (Copiados de Productos) */
+.masterserv-code {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #FFC107 !important;
+}
+.masterserv-name {
+  font-weight: 500;
+  color: #FFFFFF !important;
+}
+.masterserv-category {
+  color: #E0E0E0 !important;
+}
+.masterserv-price {
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  color: #FFC107 !important;
+}
+.masterserv-stock {
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  color: #E0E0E0 !important;
+}
+
+/* Badges */
+.masterserv-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35em 0.65em;
+}
+.masterserv-badge-success {
+  background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+  color: white;
+}
+.masterserv-badge-danger {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+}
+
+/* Alertas */
+.masterserv-alert-danger {
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid #dc3545;
+  color: #f8d7da;
+}
+.masterserv-alert-info {
+  background: rgba(23, 162, 184, 0.1);
+  border: 1px solid #17a2b8;
+  color: #d1ecf1;
+}
+
+/* Spinner */
+.masterserv-spinner {
+  color: #E41E26;
+  border-width: 2px;
+  width: 2rem;
+  height: 2rem;
+}
+.loading-container {
+  min-height: 200px;
+}
+
+/* Animaciones */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes headerShine {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}

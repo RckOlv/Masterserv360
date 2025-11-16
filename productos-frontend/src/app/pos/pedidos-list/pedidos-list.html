@@ -1,86 +1,103 @@
-<div class="container-fluid mt-4">
-  <div class="card shadow-sm">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h4>Gestión de Pedidos a Proveedores</h4>
-      <button class="btn btn-success btn-sm" [routerLink]="['/pedidos/nuevo']">
+<div class="pedidos-container">
+
+  <div class="card masterserv-card">
+    
+    <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
+      <h4 class="masterserv-title">
+        <i class="bi bi-clipboard-data me-2"></i>Gestión de Pedidos a Proveedores
+      </h4>
+      <button *appHasPermission="'PEDIDOS_MANAGE'" class="btn masterserv-btn-success btn-sm" [routerLink]="['/pos/pedidos/nuevo']">
         <i class="bi bi-plus-lg"></i> Nuevo Pedido
       </button>
-    </div>
-    <div class="card-body">
+      </div>
 
-      <div *ngIf="isLoading" class="text-center my-3">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Cargando...</span>
+    <div class="card-body masterserv-card-body d-flex flex-column">
+      
+      <div class="content-main flex-grow-1 d-flex flex-column">
+        
+        <div *ngIf="isLoading" class="loading-container flex-grow-1 d-flex align-items-center justify-content-center">
+          <div class="spinner-border masterserv-spinner" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
         </div>
+
+        <div *ngIf="errorMessage && !isLoading" class="alert masterserv-alert-danger mb-3">
+          <i class="bi bi-exclamation-triangle me-2"></i>{{ errorMessage }}
+        </div>
+
+        <div *ngIf="!isLoading && pedidosPage && pedidosPage.content.length > 0" class="table-responsive flex-grow-1">
+          <table class="table table-hover table-sm align-middle masterserv-table">
+            <thead class="masterserv-table-header">
+              <tr>
+                <th class="ps-3">ID Pedido</th>
+                <th>Proveedor</th>
+                <th>Fecha</th>
+                <th class="text-end">Total</th>
+                <th class="text-center">Estado</th>
+                <th *appHasPermission="'PEDIDOS_MANAGE'" class="text-center pe-3">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of pedidosPage.content" class="masterserv-table-row">
+                <td class="ps-3">#{{ p.id }}</td>
+                <td class="masterserv-name">{{ p.proveedorRazonSocial || 'N/A' }}</td>
+                <td>{{ p.fechaPedido | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td class="masterserv-price text-end">{{ p.totalPedido | currency:'ARS':'symbol':'1.2-2' }}</td>
+                <td class="text-center">
+                  <span class="badge masterserv-badge" 
+                        [ngClass]="{
+                          'masterserv-badge-warning': p.estado === 'PENDIENTE', 
+                          'masterserv-badge-success': p.estado === 'COMPLETADO', 
+                          'masterserv-badge-danger': p.estado === 'CANCELADO'
+                        }">
+                    {{ p.estado }}
+                  </span>
+                </td>
+                <td *appHasPermission="'PEDIDOS_MANAGE'" class="text-center pe-3">
+                  <ng-container *ngIf="p.estado === 'PENDIENTE'">
+                    <button class="btn btn-action-success btn-sm me-1" 
+                            (click)="marcarCompletado(p.id)" 
+                            title="Marcar como Completado (Ingresar Stock)">
+                      <i class="bi bi-check-lg"></i> Completar
+                    </button>
+                    <button class="btn masterserv-btn-outline-danger btn-sm" 
+                            (click)="marcarCancelado(p.id)" 
+                            title="Cancelar Pedido">
+                      <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                  </ng-container>
+                </td>
+                </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="!isLoading && pedidosPage && pedidosPage.content.length === 0" class="empty-container flex-grow-1 d-flex align-items-center justify-content-center">
+          <div class="alert masterserv-alert-info text-center">
+            <i class="bi bi-info-circle me-2"></i>
+            No se encontraron pedidos.
+          </div>
+        </div>
+
+        <div *ngIf="!isLoading && pedidosPage && pedidosPage.totalPages > 1" class="masterserv-pagination">
+          <div class="pagination-info">
+             Página {{ pedidosPage.number + 1 }} de {{ totalPaginas }}
+          </div>
+          
+          <ul class="pagination pagination-sm justify-content-center">
+            <li class="page-item" [class.disabled]="pedidosPage.number === 0">
+              <a class="page-link masterserv-page-link" href="javascript:void(0)" (click)="irAPagina(pedidosPage.number - 1)">&laquo;</a>
+            </li>
+            <li class="page-item active">
+               <span class="page-link masterserv-page-link">{{ pedidosPage.number + 1 }}</span>
+            </li>
+            <li class="page-item" [class.disabled]="pedidosPage.number + 1 >= totalPaginas">
+              <a class="page-link masterserv-page-link" href="javascript:void(0)" (click)="irAPagina(pedidosPage.number + 1)">&raquo;</a>
+            </li>
+          </ul>
+        </div>
+
       </div>
-
-      <div *ngIf="errorMessage && !isLoading" class="alert alert-danger">
-        {{ errorMessage }}
-      </div>
-
-      <div *ngIf="!isLoading && pedidosPage && pedidosPage.content.length > 0" class="table-responsive">
-        <table class="table table-striped table-hover table-sm align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>ID Pedido</th>
-              <th>Proveedor</th>
-              <th>Fecha</th>
-              <th>Total</th>
-              <th>Estado</th>
-              <th class="text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let p of pedidosPage.content">
-              <td>#{{ p.id }}</td>
-              <td>{{ p.proveedorRazonSocial || 'N/A' }}</td>
-              <td>{{ p.fechaPedido | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td>{{ p.totalPedido | currency:'ARS':'symbol':'1.2-2' }}</td>
-              <td>
-                <span class="badge" 
-                      [ngClass]="{
-                        'bg-warning text-dark': p.estado === 'PENDIENTE', 
-                        'bg-success': p.estado === 'COMPLETADO', 
-                        'bg-danger': p.estado === 'CANCELADO'
-                      }">
-                  {{ p.estado }}
-                </span>
-              </td>
-              <td class="text-center">
-                <ng-container *ngIf="p.estado === 'PENDIENTE'">
-                  <button class="btn btn-outline-success btn-sm me-1" 
-                          (click)="marcarCompletado(p.id)" 
-                          title="Marcar como Completado (Ingresar Stock)">
-                    <i class="bi bi-check-lg"></i> Completar
-                  </button>
-                  <button class="btn btn-outline-danger btn-sm" 
-                          (click)="marcarCancelado(p.id)" 
-                          title="Cancelar Pedido">
-                    <i class="bi bi-x-lg"></i> Cancelar
-                  </button>
-                </ng-container>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-       <div *ngIf="!isLoading && pedidosPage && pedidosPage.content.length === 0" class="alert alert-info text-center">
-        No se encontraron pedidos.
-      </div>
-
-      <nav *ngIf="!isLoading && pedidosPage && pedidosPage.totalPages > 1">
-        <ul class="pagination pagination-sm justify-content-center">
-          <li class="page-item" [class.disabled]="pedidosPage.number === 0">
-            <a class="page-link" href="javascript:void(0)" (click)="irAPagina(pedidosPage.number - 1)">&laquo;</a>
-          </li>
-          <li class="page-item disabled">
-             <span class="page-link">Pág {{ pedidosPage.number + 1 }} de {{ totalPaginas }}</span>
-          </li>
-          <li class="page-item" [class.disabled]="pedidosPage.number + 1 >= totalPaginas">
-            <a class="page-link" href="javascript:void(0)" (click)="irAPagina(pedidosPage.number + 1)">&raquo;</a>
-          </li>
-        </ul>
-      </nav>
-
-    </div> </div> </div> ```
+    </div>
+  </div>
+</div>

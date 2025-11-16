@@ -23,11 +23,8 @@ public class VentaDTO {
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaModificacion;
 
-    // --- ¡CAMPO AÑADIDO! ---
     // (Opcional) El código del cupón que el cliente quiere usar
     private String codigoCupon; 
-    // No lleva @NotBlank, porque es opcional
-    // ------------------------
 
     // --- Campos de Entrada (Para creación POST) ---
     @NotNull(message = "El ID del cliente es obligatorio")
@@ -37,4 +34,11 @@ public class VentaDTO {
     @Valid 
     private List<DetalleVentaDTO> detalles;
 
+    // --- ¡INICIO DE LA MODIFICACIÓN! ---
+    /**
+     * Campo transitorio para transportar el PDF recién generado al frontend.
+     * No se mapea a la base de datos, solo se usa en la respuesta del POST.
+     */
+    private byte[] comprobantePdf;
+    // --- FIN DE LA MODIFICACIÓN ---
 }

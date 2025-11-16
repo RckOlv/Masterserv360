@@ -133,7 +133,10 @@ export default class RegistroAdminComponent implements OnInit {
         telefono: formValue.telefono,
         tipoDocumentoId: formValue.tipoDocumentoId,
         // 2. Mapeamos el rolId seleccionado
-        roles: [{ id: formValue.rolId, nombreRol: '' }],
+        roles: [{
+          id: formValue.rolId, nombreRol: '',
+          descripcion: ''
+        }],
         estado: formValue.estado
     };
 

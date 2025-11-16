@@ -6,17 +6,34 @@ import { PedidoDTO } from '../../models/pedido.model';
 import { Page } from '../../models/page.model';
 import { mostrarToast } from '../../utils/toast';
 
+// --- Mentor: Imports Agregados ---
+// import { AuthService } from '../../service/auth.service'; // Mentor: ELIMINADO
+import { HttpErrorResponse } from '@angular/common/http';
+// --- Mentor: INICIO DE LA MODIFICACIÓN ---
+// 1. Importar la nueva directiva de permisos
+import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
+// --- Mentor: FIN DE LA MODIFICACIÓN ---
+
 @Component({
   selector: 'app-pedidos-list',
   standalone: true,
-  imports: [CommonModule, RouterModule], // No necesitamos formularios aquí
+  imports: [
+    CommonModule, 
+    RouterModule,
+    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+    // 2. Añadir la directiva a los imports del componente
+    HasPermissionDirective
+    // --- Mentor: FIN DE LA MODIFICACIÓN ---
+  ], 
   templateUrl: './pedidos-list.html',
-  styleUrls: ['./pedidos-list.css']
+  styleUrls: ['./pedidos-list.css'] // Usará el nuevo CSS
 })
 export default class PedidosListComponent implements OnInit {
 
   // Inyección de dependencias
   private pedidoService = inject(PedidoService);
+  // --- Mentor: ELIMINADA la inyección de AuthService ---
+  // private authService = inject(AuthService);
 
   // Estado del componente
   public pedidosPage: Page<PedidoDTO> | null = null;
@@ -24,10 +41,19 @@ export default class PedidosListComponent implements OnInit {
   public pageSize = 10;
   public errorMessage: string | null = null;
   public isLoading = false;
+  
+  // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+  // 3. 'isAdmin' se elimina por completo
+  // public isAdmin = false; 
+  // --- Mentor: FIN DE LA MODIFICACIÓN ---
 
   constructor() {}
 
   ngOnInit(): void {
+    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+    // 4. Esta línea se elimina
+    // this.isAdmin = this.authService.hasRole('ROLE_ADMIN');
+    // --- Mentor: FIN DE LA MODIFICACIÓN ---
     this.cargarPedidos(); // Carga inicial
   }
 
@@ -38,17 +64,14 @@ export default class PedidosListComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
 
-    // TODO: El backend necesita un endpoint /filtrar para pedidos.
-    // Por ahora, llamamos al GET /api/pedidos paginado que asumimos existe.
     this.pedidoService.listarPedidos(this.currentPage, this.pageSize).subscribe({
       next: (page) => {
         this.pedidosPage = page;
         this.isLoading = false;
       },
-      error: (err: any) => {
+      error: (err: HttpErrorResponse) => { 
         console.error('Error al cargar pedidos:', err);
-        this.errorMessage = 'Error al cargar los pedidos. Revise el backend.';
-        if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+        this.handleError(err, 'cargar');
         this.isLoading = false;
       }
     });
@@ -61,16 +84,15 @@ export default class PedidosListComponent implements OnInit {
     if (!id) return;
 
     if (confirm('¿Seguro que deseas marcar este pedido como COMPLETADO? Esta acción ingresará el stock de los productos al inventario.')) {
-      this.isLoading = true;
+      this.isLoading = true; 
       this.pedidoService.marcarCompletado(id).subscribe({
         next: () => {
           mostrarToast('Pedido completado. Stock actualizado.', 'success');
           this.cargarPedidos(); // Recargar la lista
         },
-        error: (err: any) => {
+        error: (err: HttpErrorResponse) => {
           console.error('Error al completar pedido:', err);
-          this.errorMessage = err.error?.message || 'Error al completar el pedido.';
-          if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+          this.handleError(err, 'completar');
           this.isLoading = false;
         }
       });
@@ -84,16 +106,15 @@ export default class PedidosListComponent implements OnInit {
     if (!id) return;
 
     if (confirm('¿Seguro que deseas CANCELAR este pedido?')) {
-      this.isLoading = true;
+      this.isLoading = true; 
       this.pedidoService.marcarCancelado(id).subscribe({
         next: () => {
           mostrarToast('Pedido cancelado.', 'warning');
           this.cargarPedidos(); // Recargar la lista
         },
-        error: (err: any) => {
+        error: (err: HttpErrorResponse) => {
           console.error('Error al cancelar pedido:', err);
-          this.errorMessage = err.error?.message || 'Error al cancelar el pedido.';
-          if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+          this.handleError(err, 'cancelar');
           this.isLoading = false;
         }
       });
@@ -111,5 +132,16 @@ export default class PedidosListComponent implements OnInit {
 
   get totalPaginas(): number {
     return this.pedidosPage ? this.pedidosPage.totalPages : 0;
+  }
+  
+  private handleError(err: HttpErrorResponse, context: string) {
+    if (err.status === 403) {
+      this.errorMessage = 'Acción no permitida: No tiene permisos.';
+    } else if (err.status === 500) {
+      this.errorMessage = 'Ocurrió un error interno en el servidor.';
+    } else {
+      this.errorMessage = err.error?.message || `Error al ${context} el pedido.`;
+    }
+    if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
   }
 }

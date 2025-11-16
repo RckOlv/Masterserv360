@@ -1,16 +1,21 @@
 package com.masterserv.productos.dto.auth;
 
-import lombok.AllArgsConstructor;
+// Mentor: Asumo que usas Lombok (si no, añade getters/setters y el constructor)
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import java.util.List; // Mentor: Importar List
 
 @Data
-@AllArgsConstructor // Útil para crear la respuesta
+@NoArgsConstructor
+@AllArgsConstructor // Mentor: Este constructor acepta todos los campos
 public class AuthResponseDTO {
-    
-    private String token;
-    private String tipo = "Bearer";
 
-    public AuthResponseDTO(String token) {
-        this.token = token;
-    }
+    private String token;
+    
+    // Mentor: Campos añadidos para el frontend
+    private Long usuarioId;
+    private String email;
+    private List<String> roles;
+    private List<String> permisos; 
 }

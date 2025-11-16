@@ -1,0 +1,326 @@
+/* ================================
+   ESTILOS MASTERSERV360 - PUNTO DE VENTA
+   ================================ */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.pos-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Card principal */
+.masterserv-card {
+  background: linear-gradient(180deg, #121212 0%, #1a1a1a 100%);
+  border: 1px solid #9E9E9E;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  overflow: hidden;
+}
+
+.masterserv-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #E41E26, #c4181f);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.masterserv-card-header {
+  background: #121212;
+  color: #FFFFFF;
+  border-bottom: 1px solid #E41E26;
+  padding: 1rem 1.5rem;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.masterserv-card-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(228, 30, 38, 0.1), transparent);
+  animation: headerShine 3s ease-in-out infinite;
+}
+
+/* --- Mentor: INICIO DE LA CORRECCIÓN DEL SCROLL --- */
+.masterserv-card-body {
+  background: #1a1a1a;
+  color: #E0E0E0;
+  padding: 1.5rem;
+  overflow: hidden; 
+}
+.masterserv-card-body.p-0 {
+  padding: 0 !important;
+}
+
+.loading-container,
+.empty-container,
+.table-responsive {
+  flex-grow: 1;
+  overflow-y: auto; 
+  overflow-x: auto; /* <-- CORREGIDO de 'hidden' a 'auto' */
+  min-height: 200px;
+}
+
+.card-body.p-0 .table-responsive {
+  border: none;
+  border-radius: 0;
+}
+/* --- Mentor: FIN DE LA CORRECCIÓN DEL SCROLL --- */
+
+
+.masterserv-title {
+  color: #E41E26;
+  font-weight: 700;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  font-size: 1.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Botones */
+.masterserv-btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.masterserv-btn-success:hover {
+  background: linear-gradient(135deg, #34ce57 0%, #269b42 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+  color: white;
+}
+.masterserv-btn-success:disabled {
+  background: #218838;
+  opacity: 0.6;
+}
+
+.masterserv-btn-primary {
+  background: linear-gradient(135deg, #E41E26 0%, #c4181f 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.masterserv-btn-primary:hover {
+  background: linear-gradient(135deg, #FF2E36 0%, #E41E26 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(228, 30, 38, 0.4);
+  color: white;
+}
+.masterserv-btn-primary:disabled {
+  background: #c4181f;
+  opacity: 0.6;
+}
+
+.masterserv-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #9E9E9E;
+  color: #E0E0E0;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.masterserv-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #E0E0E0;
+  color: white;
+  transform: translateY(-2px);
+}
+.masterserv-btn-secondary:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  opacity: 0.6;
+}
+
+.masterserv-btn-outline-danger {
+  background: transparent;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.masterserv-btn-outline-danger:hover {
+  background: #dc3545;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Filtros */
+.masterserv-filter {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #9E9E9E !important;
+  flex-shrink: 0;
+}
+
+.masterserv-label {
+  color: #FFC107 !important;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Inputs y Selects */
+.masterserv-input {
+  background: #121212;
+  border: 1px solid #9E9E9E;
+  color: #E0E0E0 !important;
+}
+.masterserv-input:focus {
+  background: #121212;
+  border-color: #E41E26;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 0 0.2rem rgba(228, 30, 38, 0.25);
+}
+
+/* Estilos para ng-select */
+:host ::ng-deep .masterserv-input.ng-select .ng-select-container {
+  background: #121212;
+  border: 1px solid #9E9E9E;
+  color: #E0E0E0;
+}
+:host ::ng-deep .masterserv-input.ng-select .ng-input>input {
+  color: #E0E0E0;
+}
+:host ::ng-deep .masterserv-input.ng-select .ng-value-container .ng-value {
+  color: #E0E0E0;
+}
+:host ::ng-deep .masterserv-input.ng-select .ng-placeholder {
+  color: #9E9E9E;
+}
+:host ::ng-deep .masterserv-input.ng-select.ng-select-focused .ng-select-container {
+  border-color: #E41E26;
+  box-shadow: 0 0 0 0.2rem rgba(228, 30, 38, 0.25);
+}
+
+/* Tabla */
+.masterserv-table {
+  background: #121212;
+  color: #E0E0E0 !important;
+  margin-bottom: 0;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.masterserv-table th,
+.masterserv-table td {
+  border: 1px solid #9E9E9E;
+  padding: 0.75rem 0.5rem;
+  white-space: nowrap;
+  vertical-align: middle;
+  color: #E0E0E0 !important;
+}
+
+.masterserv-table-header {
+  background: rgba(228, 30, 38, 0.1) !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.masterserv-table-header th {
+  color: #E41E26 !important;
+  font-weight: 600;
+  border-bottom: 2px solid #9E9E9E;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.masterserv-table-row:hover {
+  background: rgba(228, 30, 38, 0.05);
+}
+
+/* Estilos de Celdas */
+.masterserv-code {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #FFC107 !important;
+}
+.masterserv-name {
+  font-weight: 500;
+  color: #FFFFFF !important;
+}
+.masterserv-price {
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  color: #FFC107 !important;
+}
+.masterserv-stock {
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+/* Badges */
+.masterserv-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35em 0.65em;
+}
+.masterserv-badge-success {
+  background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+  color: white;
+}
+.masterserv-badge-danger {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+}
+
+/* Alertas */
+.masterserv-alert-info {
+  background: rgba(23, 162, 184, 0.1);
+  border: 1px solid #17a2b8;
+  color: #d1ecf1;
+  border-radius: 6px;
+}
+
+/* Spinner */
+.masterserv-spinner {
+  color: #E41E26;
+  border-width: 2px;
+  width: 2rem;
+  height: 2rem;
+}
+
+/* Animaciones */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes headerShine {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+/* --- Mentor: INICIO DE LA MODIFICACIÓN (Arreglo de Texto Largo) --- */
+
+/* Anulamos el 'nowrap' solo para la columna de nombre de producto
+  para permitir que el texto se divida en varias líneas.
+*/
+:host ::ng-deep .masterserv-table th.masterserv-header-producto,
+:host ::ng-deep .masterserv-table td.masterserv-name {
+  white-space: normal; /* Permite que el texto salte a la siguiente línea */
+  word-break: break-word; /* Rompe palabras largas si es necesario */
+  min-width: 250px; /* Le da un ancho mínimo razonable */
+}
+/* --- Mentor: FIN DE LA MODIFICACIÓN --- */

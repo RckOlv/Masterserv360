@@ -1,14 +1,20 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HttpErrorResponse } from '@angular/common/http';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 
 import { ProductoService, Page } from '../../service/producto.service';
 import { CategoriaService } from '../../service/categoria.service';
+import { AuthService } from '../../service/auth.service';
 import { ProductoDTO } from '../../models/producto.model';
 import { ProductoFiltroDTO } from '../../models/producto-filtro.model';
 import { CategoriaDTO } from '../../models/categoria.model';
+import { mostrarToast } from '../../utils/toast';
+
+// --- Mentor: INICIO DE LA MODIFICACIÓN ---
+// 1. Importar la nueva directiva de permisos
+import { HasPermissionDirective } from '../../directives/has-permission.directive';
+// --- Mentor: FIN DE LA MODIFICACIÓN ---
 
 @Component({
   selector: 'app-productos',
@@ -17,7 +23,10 @@ import { CategoriaDTO } from '../../models/categoria.model';
     CommonModule,
     HttpClientModule,
     ReactiveFormsModule,
-    RouterLink
+    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+    // 2. Añadir la directiva a los imports del componente
+    HasPermissionDirective
+    // --- Mentor: FIN DE LA MODIFICACIÓN ---
   ],
   templateUrl: './productos.html',
   styleUrls: ['./productos.css']
@@ -28,6 +37,8 @@ export default class ProductosComponent implements OnInit {
   private productoService = inject(ProductoService);
   private categoriaService = inject(CategoriaService);
   private fb = inject(FormBuilder);
+  // AuthService todavía se inyecta, pero ya no lo usamos para 'isAdmin'
+  private authService = inject(AuthService); 
 
   // Estado del componente
   public productosPage: Page<ProductoDTO> | null = null;
@@ -38,6 +49,11 @@ export default class ProductosComponent implements OnInit {
   public errorMessage: string | null = null;
   public isLoading = false;
   public isLoadingCategorias = false;
+
+  // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+  // 3. 'isAdmin' ya no es necesaria aquí, la directiva lo maneja.
+  // public isAdmin = false; 
+  // --- Mentor: FIN DE LA MODIFICACIÓN ---
 
   // Nuevas propiedades para el modal
   public mostrarModal = false;
@@ -74,6 +90,11 @@ export default class ProductosComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+    // 4. Esta línea ya no es necesaria.
+    // this.isAdmin = this.authService.hasRole('ROLE_ADMIN');
+    // --- Mentor: FIN DE LA MODIFICACIÓN ---
+
     this.cargarCategorias();
     this.cargarProductos();
   }
@@ -89,8 +110,9 @@ export default class ProductosComponent implements OnInit {
         this.categorias = categorias;
         this.isLoadingCategorias = false;
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         console.error('Error al cargar categorías:', err);
+        this.errorMessage = 'Error al cargar filtros de categorías.';
         this.isLoadingCategorias = false;
       }
     });
@@ -110,9 +132,9 @@ export default class ProductosComponent implements OnInit {
         this.isLoading = false;
         console.log('Datos de paginación:', page);
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         console.error('Error al cargar productos:', err);
-        this.errorMessage = 'Error al cargar productos. Intente más tarde.';
+        this.handleError(err, 'cargar'); 
         this.isLoading = false;
       }
     });
@@ -182,12 +204,14 @@ export default class ProductosComponent implements OnInit {
       this.productoService.actualizarProducto(this.productoEditando.id!, productoData)
         .subscribe({
           next: () => {
+            mostrarToast('Producto actualizado con éxito.', 'success');
             this.cerrarModal();
             this.cargarProductos();
           },
-          error: (err) => {
+          error: (err: HttpErrorResponse) => {
             console.error('Error al actualizar producto:', err);
-            this.modalErrorMessage = err.error?.message || 'Error al actualizar el producto.';
+            this.handleError(err, 'actualizar (modal)');
+            this.modalErrorMessage = this.errorMessage;
             this.isSubmitting = false;
           }
         });
@@ -196,12 +220,14 @@ export default class ProductosComponent implements OnInit {
       this.productoService.crearProducto(productoData)
         .subscribe({
           next: () => {
+            mostrarToast('Producto creado con éxito.', 'success');
             this.cerrarModal();
             this.cargarProductos();
           },
-          error: (err) => {
+          error: (err: HttpErrorResponse) => {
             console.error('Error al crear producto:', err);
-            this.modalErrorMessage = err.error?.message || 'Error al crear el producto.';
+            this.handleError(err, 'crear (modal)');
+            this.modalErrorMessage = this.errorMessage;
             this.isSubmitting = false;
           }
         });
@@ -230,12 +256,12 @@ export default class ProductosComponent implements OnInit {
 
       this.productoService.eliminarProducto(id).subscribe({
         next: () => {
-          alert('Producto eliminado exitosamente.');
+          mostrarToast('Producto eliminado exitosamente.', 'success');
           this.cargarProductos();
         },
-        error: (err) => {
+        error: (err: HttpErrorResponse) => {
           console.error('Error al eliminar producto:', err);
-          this.errorMessage = err.error?.message || 'Error al eliminar el producto. Intente más tarde.';
+          this.handleError(err, 'eliminar');
           this.isLoading = false;
         }
       });
@@ -283,16 +309,13 @@ export default class ProductosComponent implements OnInit {
     const totalPages = this.productosPage.totalPages;
     const currentPage = this.productosPage.number;
     
-    // Mostrar máximo 5 páginas alrededor de la actual
     let startPage = Math.max(0, currentPage - 2);
     let endPage = Math.min(totalPages - 1, currentPage + 2);
     
-    // Ajustar si estamos cerca del inicio
     if (currentPage < 3) {
       endPage = Math.min(4, totalPages - 1);
     }
     
-    // Ajustar si estamos cerca del final
     if (currentPage > totalPages - 4) {
       startPage = Math.max(0, totalPages - 5);
     }
@@ -302,6 +325,17 @@ export default class ProductosComponent implements OnInit {
     }
     
     return pages;
+  }
+
+  private handleError(err: HttpErrorResponse, context: string) {
+    if (err.status === 403) {
+      this.errorMessage = 'Acción no permitida: No tiene permisos de Administrador.';
+    } else if (err.status === 500) {
+      this.errorMessage = 'Ocurrió un error interno en el servidor.';
+    } else {
+      this.errorMessage = err.error?.message || `Error al ${context} el producto.`;
+    }
+    if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
   }
 
   // Helper para el formulario

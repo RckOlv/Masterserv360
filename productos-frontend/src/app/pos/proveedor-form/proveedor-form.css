@@ -1,0 +1,169 @@
+/* ================================
+   ESTILOS MASTERSERV360 - PROVEEDOR FORM
+   ================================ */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.proveedor-form-container {
+  width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Card principal */
+.masterserv-card {
+  background: linear-gradient(180deg, #121212 0%, #1a1a1a 100%);
+  border: 1px solid #9E9E9E;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  margin: 0;
+  overflow: hidden;
+}
+
+.masterserv-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #E41E26, #c4181f);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.masterserv-card-header {
+  background: #121212;
+  color: #FFFFFF;
+  border-bottom: 1px solid #E41E26;
+  padding: 1rem 1.5rem;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.masterserv-card-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(228, 30, 38, 0.1), transparent);
+  animation: headerShine 3s ease-in-out infinite;
+}
+
+.masterserv-card-body {
+  background: #1a1a1a;
+  color: #E0E0E0;
+  padding: 1.5rem;
+  overflow: auto;
+}
+
+.masterserv-title {
+  color: #E41E26;
+  font-weight: 700;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  font-size: 1.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Fieldset/Legend style */
+fieldset {
+  border: 1px solid rgba(158, 158, 158, 0.2);
+  padding: 15px;
+  border-radius: 8px;
+}
+legend {
+  width: auto;
+  padding: 0 10px;
+  margin-left: -10px;
+}
+
+/* Botones */
+.masterserv-btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.masterserv-btn-primary {
+  background: linear-gradient(135deg, #E41E26 0%, #c4181f 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.masterserv-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #9E9E9E;
+  color: #E0E0E0;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+/* Labels y Form Inputs */
+.masterserv-label {
+  color: #FFC107 !important;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.input-group-text.masterserv-input {
+  background: #121212;
+  border: 1px solid #9E9E9E;
+  color: #FFC107;
+  font-weight: bold;
+}
+
+/* Alertas */
+.masterserv-alert-danger {
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid #dc3545;
+  color: #f8d7da;
+}
+
+/* Spinner */
+.masterserv-spinner {
+  color: #E41E26;
+  border-width: 2px;
+  width: 2rem;
+  height: 2rem;
+}
+.loading-container {
+  min-height: 200px;
+}
+
+/* Animaciones */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes headerShine {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+/* Form Checkbox */
+.form-check-input {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid #9E9E9E;
+  transition: all 0.1s ease;
+}
+.form-check-input:checked {
+  background-color: #E41E26;
+  border-color: #E41E26;
+}
+.form-check-input:focus {
+  border-color: #E41E26;
+  box-shadow: 0 0 0 0.25rem rgba(228, 30, 38, 0.25);
+}

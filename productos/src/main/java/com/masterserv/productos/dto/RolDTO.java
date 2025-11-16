@@ -1,12 +1,24 @@
 package com.masterserv.productos.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List; // Importar List
 
 @Data
-public class RolDTO extends AuditableDTO {
+@NoArgsConstructor
+@AllArgsConstructor
+public class RolDTO {
+
     private Long id;
+
     private String nombreRol;
+
     private String descripcion;
+
+    // --- Mentor: CAMPO AÑADIDO (Este es el que faltaba) ---
+    private List<PermisoDTO> permisos; 
     
-    // Puedes añadir Set<PermisoDTO> si lo necesitas, pero por ahora lo dejamos simple.
+    // Nota: El backend ya tiene PermisoDTO y PermisoMapper listos.
 }

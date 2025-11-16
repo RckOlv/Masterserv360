@@ -28,6 +28,9 @@ import org.springframework.transaction.annotation.Propagation;
 import java.util.List;
 import java.util.stream.Collectors;
 
+// Mentor: Importamos la excepción para errores 404
+import jakarta.persistence.EntityNotFoundException;
+
 @Service
 public class ProductoService {
 
@@ -43,14 +46,10 @@ public class ProductoService {
     @Autowired
     private CategoriaRepository categoriaRepository; 
 
-    // --- ¡1. INYECTAR EL PUBLICADOR DE EVENTOS! ---
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
-    // --- 2. MÉTODOS CRUD (ADMIN/VENDEDOR) ---
-    // (Estos métodos: filter, findById, create, update, softDelete, findByProveedorId, 
-    // searchByProveedor, findAllPublico, findPublicoByCriteria NO CAMBIAN)
-    // ... (Tu lógica de CRUD y filtros va aquí, sin cambios) ...
+    // ... (Tu lógica de filtros: filter, findById, etc. quedan igual) ...
 
     @Transactional(readOnly = true)
     public Page<ProductoDTO> filter(ProductoFiltroDTO filtro, Pageable pageable) {
@@ -62,29 +61,44 @@ public class ProductoService {
     @Transactional(readOnly = true)
     public ProductoDTO findById(Long id) {
         Producto producto = productoRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Producto no encontrado con ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id)); // Mentor: Mejor usar EntityNotFound
         return productoMapper.toProductoDTO(producto);
     }
 
+    // --- Mentor: ¡MÉTODO 'CREATE' CORREGIDO! ---
     @Transactional
     public ProductoDTO create(ProductoDTO productoDTO) {
+        // 1. Validar código duplicado
         if (productoRepository.existsByCodigo(productoDTO.codigo())) {
             throw new IllegalArgumentException("Ya existe un producto con el código: " + productoDTO.codigo());
         }
+
+        // 2. VALIDAR Y OBTENER LA CATEGORÍA (¡LA LÓGICA QUE FALTABA!)
+        // Buscamos la entidad Categoria. Si no existe, lanzamos un error claro.
+        Categoria categoria = categoriaRepository.findById(productoDTO.categoriaId())
+            .orElseThrow(() -> new EntityNotFoundException("Error al crear producto: La Categoría con ID " + productoDTO.categoriaId() + " no existe."));
+
+        // 3. Mapear el DTO a la entidad
         Producto producto = productoMapper.toProducto(productoDTO);
+        
+        // 4. Asignar la categoría y estado (El servicio es responsable, no el mapper)
+        producto.setCategoria(categoria); // Asignamos la entidad Categoria que SÍ existe
         producto.setEstado("ACTIVO");
+        // (El stockActual se setea a 0 por defecto si no viene en el DTO, lo cual es correcto al crear)
+        
+        // 5. Guardar
         Producto productoGuardado = productoRepository.save(producto);
         return productoMapper.toProductoDTO(productoGuardado);
     }
+    // --- FIN DE LA CORRECCIÓN ---
 
     @Transactional
     public ProductoDTO update(Long id, ProductoDTO productoDTO) {
         Producto productoExistente = productoRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Producto no encontrado con ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id)); // Mentor: Mejor usar EntityNotFound
 
         productoExistente.setNombre(productoDTO.nombre());
         productoExistente.setCodigo(productoDTO.codigo());
-        // ... (resto de tus .set...() para actualizar)
         productoExistente.setDescripcion(productoDTO.descripcion());
         productoExistente.setPrecioCosto(productoDTO.precioCosto());
         productoExistente.setPrecioVenta(productoDTO.precioVenta());
@@ -94,20 +108,13 @@ public class ProductoService {
         productoExistente.setEstado(productoDTO.estado());
 
         if (productoDTO.categoriaId() != null) {
+            // Validamos que la nueva categoría también exista
             Categoria categoria = categoriaRepository.findById(productoDTO.categoriaId())
-                .orElseThrow(() -> new RuntimeException("Categoría no encontrada: " + productoDTO.categoriaId()));
+                    .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada: " + productoDTO.categoriaId()));
             productoExistente.setCategoria(categoria);
         }
 
         Producto productoActualizado = productoRepository.save(productoExistente);
-        
-        // --- ¡NOTA DE MENTOR! ---
-        // Si actualizas el stock aquí, también deberías publicar el evento.
-        // eventPublisher.publishEvent(new StockActualizadoEvent(
-        //     productoActualizado.getId(),
-        //     stockViejo, // Tendrías que guardar el stock anterior
-        //     productoActualizado.getStockActual()
-        // ));
         
         return productoMapper.toProductoDTO(productoActualizado);
     }
@@ -115,7 +122,7 @@ public class ProductoService {
     @Transactional
     public void softDelete(Long id) {
         Producto producto = productoRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Producto no encontrado con ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
         producto.setEstado("INACTIVO");
         productoRepository.save(producto);
     }
@@ -159,33 +166,27 @@ public class ProductoService {
         }
         
         Producto producto = productoRepository.findById(productoId)
-            .orElseThrow(() -> new RuntimeException("Producto no encontrado: ID " + productoId));
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: ID " + productoId));
 
-        // --- ¡INICIO DE LA MODIFICACIÓN! ---
-        int stockAnterior = producto.getStockActual(); // 1. Guardamos el valor anterior
-        // --- FIN DE LA MODIFICACIÓN ---
+        int stockAnterior = producto.getStockActual(); 
 
-        if (stockAnterior < cantidadADescontar) { // Usamos la variable guardada
+        if (stockAnterior < cantidadADescontar) {
             throw new StockInsuficienteException(
                 String.format("Stock insuficiente para '%s' (ID:%d). Disponible: %d, Solicitado: %d",
-                              producto.getNombre(), producto.getId(),
-                              stockAnterior, cantidadADescontar)
+                            producto.getNombre(), producto.getId(),
+                            stockAnterior, cantidadADescontar)
             );
         }
 
-        // --- ¡INICIO DE LA MODIFICACIÓN! ---
-        int stockNuevo = stockAnterior - cantidadADescontar; // 2. Calculamos el nuevo valor
+        int stockNuevo = stockAnterior - cantidadADescontar;
         producto.setStockActual(stockNuevo);
         Producto productoGuardado = productoRepository.save(producto);
 
-        // 3. ¡PUBLICAMOS EL EVENTO!
-        // Le decimos al sistema: "El stock de este producto cambió"
         eventPublisher.publishEvent(new StockActualizadoEvent(
             productoId,
             stockAnterior,
             stockNuevo
         ));
-        // --- FIN DE LA MODIFICACIÓN! ---
         
         return productoGuardado;
     }
@@ -197,22 +198,19 @@ public class ProductoService {
          }
 
          Producto producto = productoRepository.findById(productoId)
-            .orElseThrow(() -> new RuntimeException("Producto no encontrado: ID " + productoId));
+             .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: ID " + productoId));
 
-        // --- ¡INICIO DE LA MODIFICACIÓN! ---
-        int stockAnterior = producto.getStockActual(); // 1. Guardamos el valor anterior
-        int stockNuevo = stockAnterior + cantidadAReponer; // 2. Calculamos el nuevo valor
+        int stockAnterior = producto.getStockActual();
+        int stockNuevo = stockAnterior + cantidadAReponer;
 
         producto.setStockActual(stockNuevo);
         Producto productoGuardado = productoRepository.save(producto);
 
-        // 3. ¡PUBLICAMOS EL EVENTO!
         eventPublisher.publishEvent(new StockActualizadoEvent(
             productoId,
             stockAnterior,
             stockNuevo
         ));
-        // --- FIN DE LA MODIFICACIÓN! ---
 
          return productoGuardado;
     }

@@ -1,0 +1,172 @@
+/* ================================
+   ESTILOS MASTERSERV360 - PROVEEDORES 
+   (Copiado de Pedidos-List.css para consistencia)
+   ================================ */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.proveedores-container { /* Mentor: Nombre cambiado */
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+/* Card principal */
+.masterserv-card {
+  background: linear-gradient(180deg, #121212 0%, #1a1a1a 100%);
+  border: 1px solid #9E9E9E;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.masterserv-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #E41E26, #c4181f);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.masterserv-card-header {
+  background: #121212;
+  color: #FFFFFF;
+  border-bottom: 1px solid #E41E26;
+  padding: 1rem 1.5rem;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.masterserv-card-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(228, 30, 38, 0.1), transparent);
+  animation: headerShine 3s ease-in-out infinite;
+}
+
+.masterserv-card-body {
+  background: #1a1a1a;
+  color: #E0E0E0;
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  margin: 0;
+}
+
+.masterserv-title {
+  color: #E41E26;
+  font-weight: 700;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  font-size: 1.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Botones */
+.masterserv-btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.masterserv-btn-outline-primary, .btn-action {
+  background: transparent;
+  border: 1px solid #E41E26;
+  color: #E41E26;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+/* TABLA */
+.table-responsive {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid #9E9E9E;
+  border-radius: 6px;
+  background: #121212;
+  min-height: 0;
+}
+
+.masterserv-table {
+  background: #121212;
+  color: #E0E0E0 !important;
+  margin-bottom: 0;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.masterserv-table th,
+.masterserv-table td {
+  border: 1px solid #9E9E9E;
+  padding: 0.75rem 0.5rem;
+  vertical-align: middle;
+  color: #E0E0E0 !important;
+}
+
+.masterserv-table-header {
+  background: rgba(228, 30, 38, 0.1) !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.masterserv-table-header th {
+  color: #E41E26 !important;
+  font-weight: 600;
+  border-bottom: 2px solid #9E9E9E;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  padding: 0.75rem 0.5rem;
+}
+
+/* Etiquetas */
+.badge-masterserv-categorias {
+  background-color: #FFC107; /* Amarillo */
+  color: #121212; /* Texto negro */
+  font-weight: 600;
+  font-size: 0.7rem;
+  padding: 0.3em 0.5em;
+  border-radius: 4px;
+}
+
+/* Colores de texto especiales */
+.text-proveedor-info {
+  color: #9E9E9E;
+  font-size: 0.85rem;
+}
+
+/* Spinner */
+.masterserv-spinner {
+  color: #E41E26;
+  border-width: 2px;
+  width: 2rem;
+  height: 2rem;
+}

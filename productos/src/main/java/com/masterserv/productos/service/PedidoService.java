@@ -16,14 +16,13 @@ import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.repository.ProveedorRepository;
 import com.masterserv.productos.repository.UsuarioRepository;
 
-// --- Imports Añadidos ---
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-// --- Fin Imports Añadidos ---
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.hibernate.Hibernate; // Necesario para Lazy Loading (aunque aquí no se use)
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -39,12 +38,19 @@ public class PedidoService {
     private ProveedorRepository proveedorRepository;
     @Autowired
     private UsuarioRepository usuarioRepository;
+    
     @Autowired
     private ProductoRepository productoRepository;
+    
+    // --- Mentor: ¡NUEVA INYECCIÓN! ---
+    @Autowired
+    private ProductoService productoService; 
+    // ---------------------------------
+    
     @Autowired
     private PedidoMapper pedidoMapper;
     @Autowired
-    private MovimientoStockService movimientoStockService; // <-- ¡El servicio de Stock!
+    private MovimientoStockService movimientoStockService; 
 
     @Transactional
     public PedidoDTO create(PedidoDTO pedidoDTO) {
@@ -96,19 +102,17 @@ public class PedidoService {
     }
     
     /**
+     * Mentor: MÉTODO CORREGIDO
      * Marca un pedido como COMPLETADO y actualiza el stock.
-     * --- MÉTODO MODIFICADO ---
-     * Ahora recibe el email del usuario autenticado (Principal)
      */
     @Transactional
     public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
         
         // 1. Buscamos al usuario que está confirmando la operación
-        //    (Asumiendo que tienes un método 'findByEmail' en tu UsuarioRepository)
         Usuario usuarioQueConfirma = usuarioRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("Usuario '" + userEmail + "' no encontrado. No se puede confirmar el pedido."));
 
-        // 2. Usamos el método que trae los detalles (CON @EntityGraph)
+        // 2. Buscamos el pedido
         Pedido pedido = pedidoRepository.findByIdWithDetails(pedidoId)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
         
@@ -117,17 +121,25 @@ public class PedidoService {
         }
 
         // 3. Iterar sobre los detalles y aumentar el stock
-        for (DetallePedido detalle : pedido.getDetalles()) {
+        for (DetallePedido detalle : pedido.getDetalles()) { 
+            
+            Long productoId = detalle.getProducto().getId();
+            int cantidad = detalle.getCantidad();
+            
+            // 3a. ¡CORRECCIÓN CRÍTICA! Llama al servicio que ACTIVA la reposición
+            productoService.reponerStock(productoId, cantidad); 
+
+            // 3b. Registramos el movimiento (LOG)
             MovimientoStockDTO movDto = new MovimientoStockDTO(
-                    detalle.getProducto().getId(),
-                    usuarioQueConfirma.getId(), // <-- ¡CORREGIDO! Usamos el ID del usuario logueado
+                    productoId,
+                    usuarioQueConfirma.getId(), 
                     TipoMovimiento.ENTRADA_PEDIDO,
-                    detalle.getCantidad(),
+                    cantidad,
                     "Recepción de Pedido #" + pedido.getId(),
                     null,
-                    pedido.getId() // Vinculamos el ID del pedido
+                    pedidoId // Vinculamos el ID del pedido
             );
-            // ¡Llamamos al servicio de stock!
+            
             movimientoStockService.registrarMovimiento(movDto);
         }
 
@@ -141,38 +153,29 @@ public class PedidoService {
      */
     @Transactional
     public void marcarPedidoCancelado(Long pedidoId) {
-         // Aquí está BIEN usar findById normal
-         Pedido pedido = pedidoRepository.findById(pedidoId)
-                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-         
-         if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
+        // ... (Tu método queda igual) ...
+        Pedido pedido = pedidoRepository.findById(pedidoId) 
+                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+        
+        if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
             throw new RuntimeException("Solo se pueden cancelar pedidos PENDIENTES");
-         }
-         
+        }
+        
         pedido.setEstado(EstadoPedido.CANCELADO);
         pedidoRepository.save(pedido);
     }
 
     /**
-     * --- ¡NUEVO MÉTODO AÑADIDO! ---
      * Obtiene todos los pedidos de forma paginada.
-     * @param pageable Contiene la información de paginación (page, size, sort)
-     * @return Una página de PedidoDTO
      */
     @Transactional(readOnly = true)
     public Page<PedidoDTO> findAll(Pageable pageable) {
-        // 1. Llamamos al findAll del repositorio. 
-        //    (Asegúrate de implementar la optimización en PedidoRepository)
         Page<Pedido> pedidoPage = pedidoRepository.findAll(pageable);
-        
-        // 2. Usamos .map() para convertir la página de Entidades a DTOs
-        //    Esto es mucho más eficiente que hacer un .stream().collect()
         return pedidoPage.map(pedidoMapper::toPedidoDTO);
     }
 
     @Transactional(readOnly = true)
     public PedidoDTO findById(Long id) {
-        // Esta llamada ya era correcta
         Pedido pedido = pedidoRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado: " + id));
         return pedidoMapper.toPedidoDTO(pedido);
