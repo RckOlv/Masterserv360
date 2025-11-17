@@ -1,43 +1,39 @@
 package com.masterserv.productos.controller;
 
-import com.masterserv.productos.dto.TwilioRequestDTO;
 import com.masterserv.productos.service.ChatbotService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Controlador que actúa como Webhook para Twilio.
- * Es un endpoint PÚBLICO (no requiere JWT) porque es llamado por un servicio externo (Twilio).
- */
+// --- Mentor: INICIO DE LA CORRECCIÓN DE RUTA ---
 @RestController
-@RequestMapping("/api/chatbot")
+@RequestMapping("/api/bot") // Cambiado de "/api/chatbot"
 public class ChatbotController {
+// --- Mentor: FIN DE LA CORRECCIÓN DE RUTA ---
 
     @Autowired
     private ChatbotService chatbotService;
 
     /**
-     * Endpoint que Twilio llamará cada vez que llegue un mensaje de WhatsApp.
-     * Recibe el mensaje, lo procesa en el ChatbotService y devuelve la respuesta.
+     * Webhook público para recibir mensajes de Twilio.
      */
-    @PostMapping(value = "/webhook", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> handleWebhook(@RequestBody TwilioRequestDTO request) {
+    // --- Mentor: INICIO DE LA CORRECCIÓN DE RUTA ---
+    @PostMapping(value = "/whatsapp", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_XML_VALUE) // Cambiado de "/webhook"
+    public ResponseEntity<String> recibirMensajeTwilio(
+            @RequestParam(name = "Body") String body,
+            @RequestParam(name = "From") String from) {     
+    // --- Mentor: FIN DE LA CORRECCIÓN DE RUTA ---
         
         try {
-            // 1. Procesamos el mensaje (buscamos stock, anotamos en lista, etc.)
-            String respuestaBot = chatbotService.procesarMensaje(request);
-
-            // 2. Devolvemos la respuesta
-            // En un caso real con Twilio, devolveríamos un TwiML (XML)
-            // <Response><Message>respuestaBot</Message></Response>
-            // Por ahora (24 días), devolvemos texto plano o un JSON simple.
-            return ResponseEntity.ok(respuestaBot);
-
+            String twiMLResponse = chatbotService.procesarMensajeWebhook(from, body);
+            return ResponseEntity.ok(twiMLResponse);
         } catch (Exception e) {
-            // Si algo falla, le respondemos al usuario que hubo un error
-            return ResponseEntity.ok("Disculpa, tuve un problema interno. Intenta más tarde.");
+            String twiMLError = chatbotService.procesarMensajeWebhook(from, "error_interno");
+            return ResponseEntity.ok(twiMLError);
         }
     }
 }

@@ -62,5 +62,8 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Producto p WHERE p.id = :id")
     Optional<Producto> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("SELECT p FROM Producto p WHERE p.nombre ILIKE %:termino% AND p.estado = 'ACTIVO'")
+    List<Producto> findByNombreILike(@Param("termino") String termino, Pageable pageable);
     
 }

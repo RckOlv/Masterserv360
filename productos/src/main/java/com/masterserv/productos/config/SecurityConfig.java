@@ -37,7 +37,7 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(authz -> authz
                 // 1. Rutas de Autenticación y Chatbot (Públicas)
-                .requestMatchers("/api/auth/**", "/api/chatbot/**", "/error").permitAll()
+                .requestMatchers("/api/auth/**", "/api/bot/whatsapp", "/error").permitAll()
                 
                 // 2. Rutas de Consulta Pública (Catálogo, etc.)
                 .requestMatchers(HttpMethod.GET, "/api/catalogo/productos/**").permitAll() 
