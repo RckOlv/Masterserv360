@@ -6,10 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
-/**
- * DTO para crear, actualizar y mostrar Productos.
- * Usamos un record para inmutabilidad y concisión.
- */
 public record ProductoDTO(
     Long id,
 
@@ -41,18 +37,25 @@ public record ProductoDTO(
     @Min(value = 0, message = "El stock mínimo no puede ser negativo")
     int stockMinimo,
 
+    // --- Mentor: INICIO DE CAMBIOS ---
+    @NotNull(message = "El lote de reposición es obligatorio")
+    @Min(value = 1, message = "El lote de reposición debe ser al menos 1")
+    int loteReposicion,
+    // --- Mentor: FIN DE CAMBIOS ---
+
     String estado,
 
     @NotNull(message = "La categoría es obligatoria")
-    Long categoriaId, // Solo el ID de la categoría
+    Long categoriaId, 
 
-    String categoriaNombre // Campo de solo lectura para mostrar en el frontend
+    String categoriaNombre
 ) {
-    // Constructor customizado para cuando solo queremos mostrar (no crear/actualizar)
-    // El mapper usará este.
+    
+    // Constructor customizado (para mostrar)
     public ProductoDTO(Long id, String codigo, String nombre, String descripcion, 
-                       BigDecimal precioVenta, BigDecimal precioCosto, String imagenUrl, 
-                       int stockActual, int stockMinimo, String estado, Long categoriaId, String categoriaNombre) {
+                         BigDecimal precioVenta, BigDecimal precioCosto, String imagenUrl, 
+                         int stockActual, int stockMinimo, int loteReposicion, // <-- Añadido aquí
+                         String estado, Long categoriaId, String categoriaNombre) {
         this.id = id;
         this.codigo = codigo;
         this.nombre = nombre;
@@ -62,6 +65,7 @@ public record ProductoDTO(
         this.imagenUrl = imagenUrl;
         this.stockActual = stockActual;
         this.stockMinimo = stockMinimo;
+        this.loteReposicion = loteReposicion; // <-- Asignación
         this.estado = estado;
         this.categoriaId = categoriaId;
         this.categoriaNombre = categoriaNombre;
@@ -69,9 +73,10 @@ public record ProductoDTO(
 
     // Constructor para creación/actualización (sin el nombre de categoría)
     public ProductoDTO(Long id, String codigo, String nombre, String descripcion, 
-                       BigDecimal precioVenta, BigDecimal precioCosto, String imagenUrl, 
-                       int stockActual, int stockMinimo, String estado, Long categoriaId) {
+                         BigDecimal precioVenta, BigDecimal precioCosto, String imagenUrl, 
+                         int stockActual, int stockMinimo, int loteReposicion, // <-- Añadido aquí
+                         String estado, Long categoriaId) {
         this(id, codigo, nombre, descripcion, precioVenta, precioCosto, imagenUrl, 
-             stockActual, stockMinimo, estado, categoriaId, null);
+             stockActual, stockMinimo, loteReposicion, estado, categoriaId, null); // <-- Añadido aquí
     }
 }

@@ -1,24 +1,21 @@
 package com.masterserv.productos.entity;
 
 import jakarta.persistence.*;
-// --- ¡CAMBIO CRÍTICO DE LOMBOK! ---
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-// ------------------------------------
 import java.math.BigDecimal; 
+// --- Mentor: Importar para valor por defecto ---
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "productos")
-// --- ¡CAMBIO CRÍTICO! Reemplazamos @Data ---
-// @Data // ¡ELIMINADO!
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-// --------------------------------------------
 public class Producto extends AuditableEntity {
 
     @Id
@@ -27,7 +24,6 @@ public class Producto extends AuditableEntity {
     @Column(name = "id") 
     private Long id; 
 
-    // ... (codigo, nombre, descripcion, precioVenta, precioCosto, etc.) ...
     @Column(name = "codigo", unique = true, length = 50) 
     private String codigo; 
 
@@ -52,15 +48,17 @@ public class Producto extends AuditableEntity {
     @Column(name = "stock_minimo", nullable = false) 
     private int stockMinimo; 
 
+    // --- Mentor: INICIO DE CAMBIOS ---
+    @Column(name = "lote_reposicion", nullable = false)
+    @ColumnDefault("1") // Por defecto, pedirá 1 (puedes cambiarlo a 10 si prefieres)
+    private int loteReposicion;
+    // --- Mentor: FIN DE CAMBIOS ---
+
     @Column(name = "estado", length = 50) 
     private String estado; 
 
-    // --- Relación ---
     @ManyToOne(fetch = FetchType.LAZY) 
     @JoinColumn(name = "categoria_id", nullable = false) 
-    @ToString.Exclude // Para evitar bucles
+    @ToString.Exclude 
     private Categoria categoria;
-    
-    // --- ¡ELIMINADO! ---
-    // El Set<Proveedor> que te pedí añadir era incorrecto. Lo quitamos.
 }
