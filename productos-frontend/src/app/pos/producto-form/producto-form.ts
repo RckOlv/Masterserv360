@@ -1,14 +1,16 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, ActivatedRoute, RouterLink } from '@angular/router'; // ActivatedRoute para leer el ID de la URL
+import { Router, ActivatedRoute, RouterLink } from '@angular/router'; 
 import { HttpClientModule } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http'; // Importar HttpErrorResponse
 
-import { ProductoService } from '../../service/producto.service'; // Ajusta ruta
+import { ProductoService } from '../../service/producto.service'; 
 import { ProductoDTO } from '../../models/producto.model';
-import { CategoriaService } from '../../service/categoria.service'; // Necesitamos las categorías
+import { CategoriaService } from '../../service/categoria.service'; 
 import { CategoriaDTO } from '../../models/categoria.model';
-import { mostrarToast } from '../../utils/toast'; // Tu utilidad de toast
+import { mostrarToast } from '../../utils/toast'; 
+import { HasPermissionDirective } from '../../directives/has-permission.directive'; // Importar Directiva
 
 @Component({
   selector: 'app-producto-form',
@@ -17,55 +19,57 @@ import { mostrarToast } from '../../utils/toast'; // Tu utilidad de toast
     CommonModule,
     ReactiveFormsModule,
     HttpClientModule,
-    RouterLink // Para el botón Cancelar
+    RouterLink,
+    HasPermissionDirective // Añadir Directiva
   ],
   templateUrl: './producto-form.html',
   styleUrls: ['./producto-form.css']
 })
 export default class ProductoFormComponent implements OnInit {
 
-  // Inyección de dependencias
+  // ... (Inyecciones de dependencias - sin cambios) ...
   private fb = inject(FormBuilder);
   private productoService = inject(ProductoService);
   private categoriaService = inject(CategoriaService);
   private router = inject(Router);
-  private route = inject(ActivatedRoute); // Para leer parámetros de la URL
+  private route = inject(ActivatedRoute); 
 
-  // Estado del componente
+  // --- Estado del componente ---
   public productoForm: FormGroup;
-  public categorias: CategoriaDTO[] = []; // Para el <select>
+  public categorias: CategoriaDTO[] = []; 
   public esEdicion = false;
   public productoId: number | null = null;
   public isLoading = false;
-  public pageTitle = 'Nuevo Producto'; // Título dinámico
+  public pageTitle = 'Nuevo Producto'; 
   public errorMessage: string | null = null;
 
   constructor() {
-    // Inicializar el formulario con validadores
+    // --- Mentor: INICIO DE LA MODIFICACIÓN (Añadir Lote de Reposición) ---
+    // 1. Inicializar el formulario con el nuevo campo
     this.productoForm = this.fb.group({
-      id: [null], // Campo oculto para ID en edición
+      id: [null], 
       codigo: ['', [Validators.required, Validators.maxLength(50)]],
       nombre: ['', [Validators.required, Validators.maxLength(255)]],
       descripcion: [''],
       precioVenta: [null, [Validators.required, Validators.min(0)]],
       precioCosto: [null, [Validators.required, Validators.min(0)]],
       imagenUrl: ['', [Validators.maxLength(255)]],
-      // stockActual: [0, [Validators.required, Validators.min(0)]], // No se edita aquí
       stockMinimo: [0, [Validators.required, Validators.min(0)]],
-      estado: ['ACTIVO', Validators.required], // Valor por defecto
+      loteReposicion: [1, [Validators.required, Validators.min(1)]], // <-- AÑADIDO
+      estado: ['ACTIVO', Validators.required], 
       categoriaId: [null, Validators.required]
     });
+    // --- Mentor: FIN DE LA MODIFICACIÓN ---
   }
 
   ngOnInit(): void {
     this.cargarCategorias();
 
-    // Leer el ID de la URL para determinar si es edición
     this.route.paramMap.subscribe(params => {
       const id = params.get('id');
       if (id) {
         this.esEdicion = true;
-        this.productoId = +id; // Convierte string a number
+        this.productoId = +id; 
         this.pageTitle = 'Editar Producto';
         this.cargarProductoParaEditar();
       } else {
@@ -77,7 +81,7 @@ export default class ProductoFormComponent implements OnInit {
 
   /** Carga las categorías para el dropdown */
   cargarCategorias(): void {
-    this.categoriaService.listarCategorias().subscribe({
+    this.categoriaService.listarCategorias().subscribe({ // Asumo que 'listarCategorias' trae todas
       next: (data) => this.categorias = data,
       error: (err: any) => {
         console.error("Error cargando categorías", err);
@@ -93,7 +97,9 @@ export default class ProductoFormComponent implements OnInit {
     this.isLoading = true;
     this.productoService.getProductoById(this.productoId).subscribe({
       next: (producto) => {
-        // Rellenamos el formulario con los datos recibidos
+        
+        // --- Mentor: INICIO DE LA MODIFICACIÓN (Añadir Lote de Reposición) ---
+        // 2. Rellenamos el formulario con el nuevo campo
         this.productoForm.patchValue({
           id: producto.id,
           codigo: producto.codigo,
@@ -102,11 +108,12 @@ export default class ProductoFormComponent implements OnInit {
           precioVenta: producto.precioVenta,
           precioCosto: producto.precioCosto,
           imagenUrl: producto.imagenUrl,
-          // No cargamos stockActual aquí, se maneja por movimientos
           stockMinimo: producto.stockMinimo,
-          estado: producto.estado || 'ACTIVO', // Valor por defecto si es null
+          loteReposicion: producto.loteReposicion || 1, // <-- AÑADIDO
+          estado: producto.estado || 'ACTIVO', 
           categoriaId: producto.categoriaId
         });
+        // --- Mentor: FIN DE LA MODIFICACIÓN ---
         this.isLoading = false;
       },
       error: (err: any) => {
@@ -130,7 +137,11 @@ export default class ProductoFormComponent implements OnInit {
     this.errorMessage = null;
     const productoData = this.productoForm.value as ProductoDTO;
 
-    // Lógica para decidir si crear o actualizar
+    /* * Mentor: No necesitamos cambiar nada aquí.
+     * 'productoData' ya incluye 'loteReposicion' desde el form.
+     * El backend (ProductoMapper) ya está configurado para ignorar
+     * 'stockActual' y aceptar 'loteReposicion'.
+    */
     const obs = this.esEdicion
       ? this.productoService.actualizarProducto(this.productoId!, productoData)
       : this.productoService.crearProducto(productoData);
@@ -139,10 +150,9 @@ export default class ProductoFormComponent implements OnInit {
       next: (productoGuardado) => {
         mostrarToast(`Producto ${this.esEdicion ? 'actualizado' : 'creado'} correctamente`, 'success');
         this.isLoading = false;
-        // Redirigir a la lista de productos
         this.router.navigate(['/pos/productos']);
       },
-      error: (err: any) => {
+      error: (err: HttpErrorResponse) => { // Tipado correcto
         console.error(`Error al ${this.esEdicion ? 'actualizar' : 'crear'} producto:`, err);
         this.errorMessage = err.error?.message || `Error al ${this.esEdicion ? 'actualizar' : 'crear'} el producto.`;
         if (this.errorMessage) {

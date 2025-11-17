@@ -16,15 +16,13 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// --- ¡NUEVOS IMPORTS! ---
-import org.thymeleaf.TemplateEngine; // Para procesar el HTML
-import org.thymeleaf.context.Context;    // Para las variables del HTML
-// -----------------------
+import org.thymeleaf.TemplateEngine; 
+import org.thymeleaf.context.Context; 
 
 import java.util.*;
 
 @Service
-@EnableScheduling // Habilita las tareas programadas
+@EnableScheduling 
 public class ProcesoAutomaticoService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProcesoAutomaticoService.class);
@@ -35,13 +33,11 @@ public class ProcesoAutomaticoService {
     @Autowired
     private CotizacionRepository cotizacionRepository;
     
-    // --- ¡NUEVAS INYECCIONES! ---
     @Autowired
     private EmailService emailService;
     
     @Autowired
-    private TemplateEngine templateEngine; // Inyectado gracias al starter-thymeleaf
-    // ----------------------------
+    private TemplateEngine templateEngine; 
 
     /**
      * TAREA PROGRAMADA (CRON):
@@ -53,7 +49,7 @@ public class ProcesoAutomaticoService {
     public void generarPrePedidosAgrupados() {
         logger.info("--- 🕑 INICIANDO TAREA PROGRAMADA: Generar Pre-Pedidos Agrupados ---");
 
-        // 1. Buscar Faltantes
+        // 1. Buscar Faltantes (RF-21)
         List<Producto> productosFaltantes = productoRepository.findProductosConStockBajo();
 
         if (productosFaltantes.isEmpty()) {
@@ -68,12 +64,9 @@ public class ProcesoAutomaticoService {
         for (Producto producto : productosFaltantes) {
             Set<Proveedor> proveedores = producto.getCategoria().getProveedores();
             for (Proveedor proveedor : proveedores) {
-                // (Opcional: Chequear que el proveedor esté ACTIVO)
-                // if ("ACTIVO".equals(proveedor.getEstado())) {
-                    mapaProveedorProductos
+                mapaProveedorProductos
                         .computeIfAbsent(proveedor, k -> new ArrayList<>())
                         .add(producto);
-                // }
             }
         }
 
@@ -92,9 +85,9 @@ public class ProcesoAutomaticoService {
 
     /**
      * Método helper que crea la Cotizacion Y AHORA envía el email.
+     * UTILIZA LA NUEVA LÓGICA DE LOTE DE REPOSICIÓN.
      */
     private void crearYNotificarCotizacion(Proveedor proveedor, List<Producto> productos) {
-        // Validación: No enviar si el proveedor no tiene email
         if (proveedor.getEmail() == null || proveedor.getEmail().isBlank()) {
             logger.warn("-> 🟡 Proveedor '{}' no tiene email. Omitiendo cotización.", proveedor.getRazonSocial());
             return;
@@ -105,7 +98,7 @@ public class ProcesoAutomaticoService {
             Cotizacion cotizacion = new Cotizacion();
             cotizacion.setProveedor(proveedor);
             cotizacion.setEstado(EstadoCotizacion.PENDIENTE_PROVEEDOR);
-            cotizacion.setToken(UUID.randomUUID().toString()); // ¡El link secreto!
+            cotizacion.setToken(UUID.randomUUID().toString()); 
             
             // 2. Crear los Items (Hijos)
             Set<ItemCotizacion> items = new HashSet<>();
@@ -113,7 +106,13 @@ public class ProcesoAutomaticoService {
                 ItemCotizacion item = new ItemCotizacion();
                 item.setCotizacion(cotizacion);
                 item.setProducto(producto);
-                int cantidadAPedir = producto.getStockMinimo() * 2; // (Tu lógica de cuánto pedir)
+                
+                // --- Mentor: INICIO DE LA MODIFICACIÓN ---
+                // Reemplazamos (producto.getStockMinimo() * 2) 
+                // por el valor flexible que definimos en el Admin.
+                int cantidadAPedir = producto.getLoteReposicion(); 
+                // --- Mentor: FIN DE LA MODIFICACIÓN ---
+                
                 item.setCantidadSolicitada(cantidadAPedir);
                 item.setEstado(EstadoItemCotizacion.PENDIENTE);
                 items.add(item);
@@ -128,21 +127,17 @@ public class ProcesoAutomaticoService {
 
             // --- 4. ¡ENVIAR NOTIFICACIÓN! ---
             
-            // URL para la prueba local (apunta a tu 'ng serve')
             String linkOferta = "http://localhost:4200/oferta/" + cotizacionGuardada.getToken();
 
-            // Creamos el contexto (las variables para la plantilla HTML)
             Context context = new Context();
             context.setVariable("proveedorNombre", proveedor.getRazonSocial());
             context.setVariable("linkOferta", linkOferta);
             context.setVariable("items", cotizacionGuardada.getItems());
 
-            // Procesamos la plantilla HTML (email-oferta.html)
             String cuerpoHtml = templateEngine.process("email-oferta", context);
 
-            // ¡Enviamos el email! (Asíncrono)
             emailService.enviarEmailHtml(
-                proveedor.getEmail(), // El email real del proveedor
+                proveedor.getEmail(),
                 "Masterserv: Solicitud de Cotización #" + cotizacionGuardada.getId(), 
                 cuerpoHtml
             );
@@ -154,8 +149,7 @@ public class ProcesoAutomaticoService {
     }
 
     /**
-     * Este es el EventListener que hicimos para el "stock en tiempo real".
-     * Lo dejamos aquí para la futura lógica de "Lista de Espera" de WhatsApp.
+     * Listener Asíncrono (para futura lógica de WhatsApp).
      */
     @Async
     @EventListener
