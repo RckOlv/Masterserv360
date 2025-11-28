@@ -96,4 +96,15 @@ public class UsuarioController {
         usuarioService.reactivar(id);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * Endpoint específico para POS (Punto de Venta).
+     * Permite a VENDEDORES y ADMINS registrar clientes rápidamente.
+     */
+    @PostMapping("/cliente-rapido")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')") // <--- ¡AQUÍ ESTÁ LA MAGIA!
+    public ResponseEntity<UsuarioDTO> registrarClienteRapido(@Valid @RequestBody UsuarioDTO usuarioDTO) {
+        UsuarioDTO nuevoCliente = usuarioService.crearClienteRapido(usuarioDTO);
+        return new ResponseEntity<>(nuevoCliente, HttpStatus.CREATED);
+    }
 }

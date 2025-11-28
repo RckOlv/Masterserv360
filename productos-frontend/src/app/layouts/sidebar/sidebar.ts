@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core'; 
 import { RouterModule, Router } from '@angular/router'; 
-import { CommonModule, NgIf, NgFor } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { AuthService } from '../../service/auth.service'; 
 
 // --- Mentor: INICIO DE LA MODIFICACIÓN ---
@@ -12,9 +12,7 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   selector: 'app-sidebar',
   standalone: true,
   imports: [
-    RouterModule, 
-    NgIf, 
-    NgFor, 
+    RouterModule,  
     CommonModule,
     // --- Mentor: INICIO DE LA MODIFICACIÓN ---
     // 2. Añadir la directiva a los imports del componente

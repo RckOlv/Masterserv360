@@ -1,15 +1,18 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClientModule, HttpErrorResponse } from '@angular/common/http';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-
-import { ProductoService, Page } from '../../service/producto.service';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { ProductoService } from '../../service/producto.service'; 
 import { CategoriaService } from '../../service/categoria.service';
 import { AuthService } from '../../service/auth.service';
 import { ProductoDTO } from '../../models/producto.model';
 import { ProductoFiltroDTO } from '../../models/producto-filtro.model';
 import { CategoriaDTO } from '../../models/categoria.model';
 import { mostrarToast } from '../../utils/toast';
+
+// IMPORTANTE: Importar la interfaz Page desde el modelo compartido
+import { Page } from '../../models/page.model'; 
 
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
@@ -20,7 +23,9 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
     CommonModule,
     HttpClientModule,
     ReactiveFormsModule,
-    HasPermissionDirective
+    FormsModule, // Necesario si usas ngModel en algún lado, aunque aquí es todo reactive
+    HasPermissionDirective,
+    RouterLink
   ],
   templateUrl: './productos.html',
   styleUrls: ['./productos.css']
@@ -32,21 +37,27 @@ export default class ProductosComponent implements OnInit {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
 
+  // --- Paginación y Datos ---
+  // Inicializamos como null, y se llenará con la respuesta del backend
   public productosPage: Page<ProductoDTO> | null = null;
   public categorias: CategoriaDTO[] = [];
   public filtroForm: FormGroup;
+  
+  // Variables de control de paginación
   public currentPage = 0;
   public pageSize = 10;
+  
+  // --- Estado UI ---
   public errorMessage: string | null = null;
   public isLoading = false;
   public isLoadingCategorias = false;
 
+  // --- Modal ---
   public mostrarModal = false;
   public modalTitle = 'Nuevo Producto';
   public productoEditando: ProductoDTO | null = null;
   public isSubmitting = false;
   public modalErrorMessage: string | null = null;
-
   public productoForm: FormGroup;
 
   constructor() {
@@ -56,7 +67,8 @@ export default class ProductosComponent implements OnInit {
       codigo: [''],
       categoriaId: [null],
       estado: [null],
-      conStock: [null]
+      // Filtro unificado de stock
+      estadoStock: ['TODOS'] 
     });
 
     this.productoForm = this.fb.group({
@@ -66,7 +78,7 @@ export default class ProductosComponent implements OnInit {
       precioVenta: [0, [Validators.required, Validators.min(0)]],
       precioCosto: [0, [Validators.required, Validators.min(0)]],
       stockMinimo: [0, [Validators.required, Validators.min(0)]],
-      loteReposicion: [0, [Validators.required, Validators.min(0)]],   // 👈 AÑADIDO
+      loteReposicion: [0, [Validators.required, Validators.min(0)]],
       categoriaId: [null, [Validators.required]],
       estado: ['ACTIVO', [Validators.required]],
       imagenUrl: ['', [Validators.maxLength(255)]]
@@ -80,7 +92,6 @@ export default class ProductosComponent implements OnInit {
 
   cargarCategorias(): void {
     this.isLoadingCategorias = true;
-
     this.categoriaService.listarCategorias('ACTIVO').subscribe({
       next: (categorias) => {
         this.categorias = categorias;
@@ -98,8 +109,20 @@ export default class ProductosComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
 
-    const filtro = this.filtroForm.value as ProductoFiltroDTO;
+    const formValues = this.filtroForm.value;
+    
+    // Mapeo al DTO del backend
+    const filtro: ProductoFiltroDTO = {
+        nombre: formValues.nombre,
+        codigo: formValues.codigo,
+        categoriaId: formValues.categoriaId,
+        estado: formValues.estado,
+        estadoStock: formValues.estadoStock,
+        conStock: null, 
+        precioMax: null
+    };
 
+    // Llamada al servicio con paginación
     this.productoService.filtrarProductos(filtro, this.currentPage, this.pageSize).subscribe({
       next: (page) => {
         this.productosPage = page;
@@ -112,6 +135,59 @@ export default class ProductosComponent implements OnInit {
       }
     });
   }
+
+  // --- MÉTODOS DE FILTRO Y PAGINACIÓN ---
+
+  aplicarFiltros(): void {
+    this.currentPage = 0; // Al filtrar, siempre volvemos a la primera página
+    this.cargarProductos();
+  }
+
+  limpiarFiltros(): void {
+    this.filtroForm.reset({
+      nombre: '',
+      codigo: '',
+      categoriaId: null,
+      estado: null,
+      estadoStock: 'TODOS'
+    });
+    this.aplicarFiltros();
+  }
+
+  paginaAnterior(): void {
+    if (this.productosPage && !this.productosPage.first) {
+      this.currentPage--;
+      this.cargarProductos();
+    }
+  }
+
+  paginaSiguiente(): void {
+    if (this.productosPage && !this.productosPage.last) {
+      this.currentPage++;
+      this.cargarProductos();
+    }
+  }
+
+  irAPagina(pageNumber: number): void {
+    if (this.productosPage && pageNumber >= 0 && pageNumber < this.productosPage.totalPages) {
+        this.currentPage = pageNumber;
+        this.cargarProductos();
+    }
+  }
+  
+  // Getter para generar el array de números de página [0, 1, 2...]
+  get paginas(): number[] {
+      if (!this.productosPage) return [];
+      const total = this.productosPage.totalPages;
+      const current = this.productosPage.number;
+      const delta = 2; // Cuántas páginas mostrar a los lados de la actual
+      const range = [];
+      for (let i = Math.max(0, current - delta); i <= Math.min(total - 1, current + delta); i++) {
+          range.push(i);
+      }
+      return range;
+  }
+
 
   // ===========================
   //   MÉTODOS DEL MODAL
@@ -129,7 +205,7 @@ export default class ProductosComponent implements OnInit {
       precioVenta: 0,
       precioCosto: 0,
       stockMinimo: 0,
-      loteReposicion: 0,       // 👈 AÑADIDO
+      loteReposicion: 0,
       categoriaId: null,
       estado: 'ACTIVO',
       imagenUrl: ''
@@ -150,7 +226,7 @@ export default class ProductosComponent implements OnInit {
       precioVenta: producto.precioVenta,
       precioCosto: producto.precioCosto,
       stockMinimo: producto.stockMinimo,
-      loteReposicion: producto.loteReposicion,   // 👈 AÑADIDO
+      loteReposicion: producto.loteReposicion,
       categoriaId: producto.categoriaId,
       estado: producto.estado,
       imagenUrl: producto.imagenUrl || ''
@@ -231,57 +307,6 @@ export default class ProductosComponent implements OnInit {
     }
   }
 
-  aplicarFiltros(): void {
-    this.currentPage = 0;
-    this.cargarProductos();
-  }
-
-  limpiarFiltros(): void {
-    this.filtroForm.reset({
-      nombre: '',
-      codigo: '',
-      categoriaId: null,
-      conStock: null
-    });
-    this.aplicarFiltros();
-  }
-
-  irAPagina(pageNumber: number): void {
-    if (pageNumber >= 0 && pageNumber < this.totalPaginas) {
-      this.currentPage = pageNumber;
-      this.cargarProductos();
-    }
-  }
-
-  get totalPaginas(): number {
-    return this.productosPage ? this.productosPage.totalPages : 0;
-  }
-
-  get paginas(): number[] {
-    if (!this.productosPage) return [];
-
-    const pages = [];
-    const totalPages = this.productosPage.totalPages;
-    const currentPage = this.productosPage.number;
-
-    let startPage = Math.max(0, currentPage - 2);
-    let endPage = Math.min(totalPages - 1, currentPage + 2);
-
-    if (currentPage < 3) {
-      endPage = Math.min(4, totalPages - 1);
-    }
-
-    if (currentPage > totalPages - 4) {
-      startPage = Math.max(0, totalPages - 5);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-
-    return pages;
-  }
-
   private handleError(err: HttpErrorResponse, context: string) {
     if (err.status === 403) {
       this.errorMessage = 'Acción no permitida: No tiene permisos.';
@@ -290,7 +315,8 @@ export default class ProductosComponent implements OnInit {
     } else {
       this.errorMessage = err.error?.message || `Error al ${context} el producto.`;
     }
-    if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+    // Solo mostramos toast si no estamos en el modal (el modal tiene su propio mensaje)
+    if (this.errorMessage && !this.mostrarModal) mostrarToast(this.errorMessage, 'danger');
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
@@ -302,9 +328,5 @@ export default class ProductosComponent implements OnInit {
 
   get f() {
     return this.productoForm.controls;
-  }
-
-  get filtroF() {
-    return this.filtroForm.controls;
   }
 }

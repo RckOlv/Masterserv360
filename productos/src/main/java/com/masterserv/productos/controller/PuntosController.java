@@ -1,10 +1,8 @@
 package com.masterserv.productos.controller;
 
-import com.masterserv.productos.dto.CanjePuntosRequestDTO;
 import com.masterserv.productos.dto.CuponDTO;
 import com.masterserv.productos.dto.SaldoPuntosDTO;
 import com.masterserv.productos.service.PuntosService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,12 +20,13 @@ public class PuntosController {
     /**
      * Endpoint para el PORTAL DEL CLIENTE.
      * Obtiene el saldo de puntos actual del cliente logueado.
+     * * CORRECCIÓN: Cambiado de "/saldo" a "/mi-saldo" para coincidir con Angular
      */
-    @GetMapping("/saldo")
-    @PreAuthorize("hasRole('CLIENTE')") // ¡Solo un CLIENTE puede ver su saldo!
+    @GetMapping("/mi-saldo")
+    @PreAuthorize("hasRole('CLIENTE')") 
     public ResponseEntity<SaldoPuntosDTO> getMiSaldo(Principal principal) {
         if (principal == null || principal.getName() == null) {
-            return ResponseEntity.status(401).build(); // No autorizado
+            return ResponseEntity.status(401).build(); 
         }
         String clienteEmail = principal.getName();
         
@@ -37,28 +36,27 @@ public class PuntosController {
 
     /**
      * Endpoint para el PORTAL DEL CLIENTE.
-     * Canjea los puntos del cliente logueado por un nuevo cupón.
+     * Canjea los puntos del cliente logueado por un nuevo cupón (V2).
+     * * CORRECCIÓN 1: Cambiado de "/canjear" a "/canje"
+     * CORRECCIÓN 2: Cambiado @RequestBody por @RequestParam para recibir el ID simple
      */
-    @PostMapping("/canjear")
-    @PreAuthorize("hasRole('CLIENTE')") // ¡Solo un CLIENTE puede canjear sus puntos!
+    @PostMapping("/canje")
+    @PreAuthorize("hasRole('CLIENTE')")
     public ResponseEntity<CuponDTO> canjearMisPuntos(
-            @Valid @RequestBody CanjePuntosRequestDTO canjeRequest,
+            @RequestParam Long recompensaId, // <-- Recibimos el ID directo de la URL (?recompensaId=1)
             Principal principal) {
         
         if (principal == null || principal.getName() == null) {
-            return ResponseEntity.status(401).build(); // No autorizado
+            return ResponseEntity.status(401).build();
         }
         String clienteEmail = principal.getName();
 
-        // El PuntosService ya maneja las excepciones (saldo insuficiente, etc.)
-        // que nuestro GlobalExceptionHandler convertirá en un error 400.
+        // Llamamos al servicio pasando el ID de recompensa
         CuponDTO cuponGenerado = puntosService.canjearPuntos(
             clienteEmail, 
-            canjeRequest.getPuntosACanjear()
+            recompensaId
         );
         
         return ResponseEntity.ok(cuponGenerado);
     }
-
-    // (Aquí irían otros endpoints que necesites, ej. para el Admin)
 }

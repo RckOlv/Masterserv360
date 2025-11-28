@@ -1,5 +1,4 @@
-// Esta es la interfaz para ENVIAR el canje
-// (Coincide con tu CanjePuntosRequestDTO.java)
+// src/app/models/canje-puntos-request.model.ts
 export interface CanjePuntosRequestDTO {
-  puntosACanjear: number;
+  recompensaId: number;
 }

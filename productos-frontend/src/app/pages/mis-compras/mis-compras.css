@@ -1,0 +1,122 @@
+.compras-container {
+    padding: 2rem 0;
+}
+
+/* --- TARJETA DE COMPRA --- */
+.compra-card {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    overflow: hidden;
+}
+
+.compra-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+    border-color: #dc3545;
+}
+
+.card-header {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid #333;
+    padding: 1rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.card-footer {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid #333;
+    padding: 1rem;
+}
+
+/* --- TIPOGRAFÍA --- */
+.text-label {
+    color: #aaa;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.text-value {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* --- BADGES --- */
+.badge-estado {
+    padding: 0.5em 0.8em;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.2);
+    color: #20c997;
+    border: 1px solid rgba(25, 135, 84, 0.3);
+}
+
+.bg-danger-subtle {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: #ff6b6b;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+/* --- MODAL OSCURO --- */
+.modal-content-dark {
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+    color: #fff;
+}
+
+.modal-header-dark {
+    border-bottom: 1px solid #333;
+}
+
+/* Tabla dentro del modal */
+.table-dark-custom {
+    background-color: #252525;
+    color: #e0e0e0;
+    margin-bottom: 0;
+}
+
+.table-dark-custom th {
+    color: #dc3545;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    border-bottom: 2px solid #444;
+    background-color: #2c2c2c;
+}
+
+.table-dark-custom td {
+    border-bottom: 1px solid #333;
+    vertical-align: middle;
+}
+
+/* --- PAGINADOR DE MATERIAL (DARK) --- */
+::ng-deep .mat-mdc-paginator {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0 !important;
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+::ng-deep .mat-mdc-icon-button {
+    color: #e0e0e0 !important;
+}
+::ng-deep .mat-mdc-icon-button[disabled] {
+    color: #555 !important;
+}
+::ng-deep .mat-mdc-select-value {
+    color: #e0e0e0 !important;
+}
+::ng-deep .mat-mdc-select-arrow {
+    color: #e0e0e0 !important;
+}

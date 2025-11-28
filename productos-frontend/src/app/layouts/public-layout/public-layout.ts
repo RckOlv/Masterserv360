@@ -4,7 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../service/auth.service';
 import { PuntosService } from '../../service/puntos.service';
 import { CatalogoService } from '../../service/catalogo.service'; // <-- ¡IMPORTAR SERVICIO DE CATÁLOGO!
-import { SaldoPuntosDTO } from '../../models/saldo-puntos.model';
+import { SaldoPuntos } from '../../models/saldo-puntos.model';
 import { Observable, BehaviorSubject, switchMap, of, catchError, map } from 'rxjs';
 
 @Component({

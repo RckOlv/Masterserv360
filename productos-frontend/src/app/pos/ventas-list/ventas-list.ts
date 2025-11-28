@@ -1,13 +1,12 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms'; 
+import { FormBuilder, FormGroup, ReactiveFormsModule, FormsModule } from '@angular/forms'; 
 
 // --- Servicios y Modelos ---
 import { VentaService } from '../../service/venta.service';
 import { UsuarioService } from '../../service/usuario.service';
 import { RolService } from '../../service/rol.service'; 
-// import { AuthService } from '../../service/auth.service'; // Mentor: ELIMINADO
 import { Page } from '../../models/page.model';
 import { VentaDTO, EstadoVenta } from '../../models/venta.model';
 import { VentaFiltroDTO } from '../../models/venta-filtro.model';
@@ -17,16 +16,12 @@ import { UsuarioFiltroDTO } from '../../models/usuario-filtro.model';
 // --- RxJS y ng-select ---
 import { NgSelectModule } from '@ng-select/ng-select';
 import { forkJoin, Observable, Subject, of } from 'rxjs';
-import { catchError, debounceTime, distinctUntilChanged, filter, map, switchMap, tap, take } from 'rxjs/operators';
+import { catchError, debounceTime, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
 
 // --- Utils ---
 import { mostrarToast } from '../../utils/toast';
 import { HttpErrorResponse } from '@angular/common/http';
-
-// --- Mentor: INICIO DE LA MODIFICACIÓN ---
-// 1. Importar la nueva directiva de permisos
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
-// --- Mentor: FIN DE LA MODIFICACIÓN ---
 
 @Component({
   selector: 'app-ventas-list',
@@ -35,11 +30,9 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
     CommonModule, 
     RouterLink, 
     ReactiveFormsModule, 
+    FormsModule, 
     NgSelectModule,
-    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
-    // 2. Añadir la directiva a los imports del componente
     HasPermissionDirective
-    // --- Mentor: FIN DE LA MODIFICACIÓN ---
   ],
   templateUrl: './ventas-list.html',
   styleUrls: ['./ventas-list.css']
@@ -50,7 +43,6 @@ export default class VentasListComponent implements OnInit {
   private ventaService = inject(VentaService);
   private usuarioService = inject(UsuarioService);
   private rolService = inject(RolService);
-  // private authService = inject(AuthService); // Mentor: ELIMINADO
   private fb = inject(FormBuilder);
 
   // --- Estado del Componente ---
@@ -60,13 +52,12 @@ export default class VentasListComponent implements OnInit {
   public errorMessage: string | null = null;
   public cancelingVentaId: number | null = null;
   
-  // --- Mentor: INICIO DE LA MODIFICACIÓN ---
-  // 3. 'isAdmin' se elimina por completo
-  // public isAdmin: boolean = false; 
-  // --- Mentor: FIN DE LA MODIFICACIÓN ---
-
   // --- Formulario de Filtros ---
   public filtroForm: FormGroup;
+  
+  // Variable para el ngModel del HTML
+  public filtros: { clienteId: number | null } = { clienteId: null };
+
   public vendedores: UsuarioDTO[] = [];
   public estadosVenta: EstadoVenta[] = ['COMPLETADA', 'CANCELADA'];
 
@@ -94,20 +85,21 @@ export default class VentasListComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
-    // 4. Esta línea se elimina
-    // this.isAdmin = this.authService.hasRole('ROLE_ADMIN'); 
-    // --- Mentor: FIN DE LA MODIFICACIÓN ---
-
     this.obtenerIdsRolesYCargarVendedores();
     this.initClienteSearch();
+  }
+
+  /** Método llamado cuando cambia el ng-select del HTML */
+  onFiltroChange(): void {
+    this.filtroForm.patchValue({ clienteId: this.filtros.clienteId });
+    this.aplicarFiltros(true);
   }
 
   /** Obtiene IDs de Rol, carga Vendedores y luego la tabla */
   obtenerIdsRolesYCargarVendedores(): void {
     this.isLoadingFilters = true;
     this.filtroForm.get('clienteId')?.disable(); 
-    this.filtroForm.get('vendedorId')?.disable(); // Siempre deshabilitado al inicio
+    this.filtroForm.get('vendedorId')?.disable(); 
  
     forkJoin({
       clienteId: this.rolService.getClienteRoleId(),
@@ -125,11 +117,7 @@ export default class VentasListComponent implements OnInit {
         this.filtroForm.get('clienteId')?.enable();
         
         this.aplicarFiltros(true);
-
-        // Esta lógica es correcta, el filtro de vendedor se habilita 
-        // solo si se cargan los vendedores.
         this.cargarListaVendedores();
-        
       },
       error: (err) => {
         console.error("Error obteniendo IDs de roles:", err);
@@ -138,15 +126,25 @@ export default class VentasListComponent implements OnInit {
     });
   }
 
-  /** Carga solo la lista de Vendedores (usando el ID obtenido) */
+  /** Carga solo la lista de Vendedores */
   cargarListaVendedores(): void {
-    // Si no tenemos el ID del rol Vendedor, no podemos cargar la lista.
     if (this.vendedorRoleId === null) {
       this.isLoadingFilters = false;
       return;
     }
 
-    const emptyUserPage: Page<UsuarioDTO> = { content: [], totalPages: 0, totalElements: 0, size: 0, number: 0 };
+    // CORRECCIÓN: Agregamos las propiedades faltantes (first, last, empty)
+    const emptyUserPage: Page<UsuarioDTO> = { 
+        content: [], 
+        totalPages: 0, 
+        totalElements: 0, 
+        size: 0, 
+        number: 0,
+        first: true,   // <--- Faltaba esto
+        last: true,    // <--- Faltaba esto
+        empty: true    // <--- Faltaba esto
+    };
+
     const filtroVendedor: UsuarioFiltroDTO = { rolId: this.vendedorRoleId, estado: 'ACTIVO' };
 
     this.usuarioService.filtrarUsuarios(filtroVendedor, 0, 1000).pipe(
@@ -156,7 +154,6 @@ export default class VentasListComponent implements OnInit {
       })
     ).subscribe(page => {
         this.vendedores = page.content;
-        // Habilitamos el dropdown (la directiva *appHasPermission lo mostrará u ocultará)
         this.filtroForm.get('vendedorId')?.enable(); 
         this.isLoadingFilters = false;
     });
@@ -221,10 +218,13 @@ export default class VentasListComponent implements OnInit {
       fechaHasta: null,
       estado: null
     });
+    
+    this.filtros.clienteId = null; // Limpiar modelo HTML
+
     this.aplicarFiltros(true);
   }
 
-  // --- Métodos de Paginación y Cancelar (sin cambios) ---
+  // --- Métodos de Paginación y Cancelar ---
   paginaAnterior(): void {
     if (this.ventasPage && this.ventasPage.number > 0) {
       this.currentPage--;
@@ -295,11 +295,11 @@ export default class VentasListComponent implements OnInit {
     });
   }
 
-  /** Helper para errores críticos */
   private handleCriticalError(message: string): void {
       this.errorMessage = message;
       if(this.errorMessage) mostrarToast(this.errorMessage, 'danger');
       this.isLoading = false;
       this.isLoadingFilters = false;
   }
+
 }

@@ -1,60 +1,57 @@
 <div class="container-fluid my-4">
   <div class="row">
 
-    <div class="col-lg-3">
-      <div class="filters-sidebar shadow-sm p-3 rounded" style="top: 20px;">
+    <div class="col-lg-3 mb-4">
+      <div class="filters-sidebar p-4">
         
         <form [formGroup]="filtroForm" (ngSubmit)="onFiltrar(0)">
           
-          <div class="mb-3">
-            <h5 class="mb-3">Categorías</h5>
-            <div class="list-group category-list">
-              <a (click)="filtrarPorCategoria(null)" 
-                 class="list-group-item list-group-item-action"
-                 [class.active]="selectedCategoriaId === null"
-                 style="cursor: pointer;">
-                Ver Todas
-              </a>
-              <a *ngFor="let cat of categorias" 
-                 (click)="filtrarPorCategoria(cat.id)"
-                 class="list-group-item list-group-item-action"
-                 [class.active]="selectedCategoriaId === cat.id"
-                 style="cursor: pointer;">
+          <div class="mb-4">
+            <h5><i class="bi bi-tags-fill me-2"></i>Categorías</h5>
+            <div class="list-group category-list custom-scrollbar">
+              <button type="button"
+                   (click)="filtrarPorCategoria(null)" 
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                   [class.active]="selectedCategoriaId === null">
+                Todas
+                <i class="bi bi-chevron-right small" *ngIf="selectedCategoriaId === null"></i>
+              </button>
+              <button type="button"
+                   *ngFor="let cat of categorias" 
+                   (click)="filtrarPorCategoria(cat.id)"
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                   [class.active]="selectedCategoriaId === cat.id">
                 {{ cat.nombre }}
-              </a>
+                <i class="bi bi-chevron-right small" *ngIf="selectedCategoriaId === cat.id"></i>
+              </button>
             </div>
           </div>
           
-          <hr>
-
-          <div class="mb-3">
-            <h5 class="mb-3">Precio (ARS)</h5>
-            <div class="d-flex align-items-center">
+          <div class="mb-4">
+            <h5><i class="bi bi-currency-dollar me-2"></i>Precio</h5>
+            <div class="d-flex align-items-center gap-2">
               <input type="number" class="form-control" placeholder="Mín" 
                      formControlName="precioMin" min="0">
-              <span class="mx-2">-</span>
+              <span class="text-muted">-</span>
               <input type="number" class="form-control" placeholder="Máx" 
                      formControlName="precioMax" min="0">
             </div>
           </div>
 
-          <hr>
-
-          <div class="form-check mb-3">
+          <div class="form-check form-switch mb-4">
             <input class="form-check-input" type="checkbox" id="soloConStock" 
-                   formControlName="soloConStock">
-            <label class="form-check-label" for="soloConStock">
-              Mostrar solo productos con stock
+                   formControlName="soloConStock" role="switch">
+            <label class="form-check-label text-light" for="soloConStock">
+              Solo en Stock
             </label>
           </div>
 
-          <hr>
           <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-primary">
-              <i class="bi bi-search me-2"></i>Aplicar Filtros
+            <button type="submit" class="btn btn-danger fw-bold">
+              <i class="bi bi-funnel-fill me-2"></i>Filtrar
             </button>
             <button type="button" class="btn btn-outline-secondary" (click)="limpiarFiltros()">
-              Limpiar Filtros
+              <i class="bi bi-eraser me-2"></i>Limpiar
             </button>
           </div>
 
@@ -65,65 +62,79 @@
     <div class="col-lg-9">
       
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <span class="text-muted" *ngIf="page && page.totalElements > 0">
-          Mostrando {{ page.content.length }} de {{ page.totalElements }} productos
+        <span class="text-white-50" *ngIf="page">
+          <i class="bi bi-box-seam me-1"></i>
+          Mostrando <strong class="text-white">{{ page.content.length }}</strong> de <strong class="text-white">{{ page.totalElements }}</strong> resultados
         </span>
-        <span *ngIf="!page || page.totalElements === 0">
-          No se encontraron productos.
-        </span>
-        <mat-paginator *ngIf="page && page.totalElements > 0"
-                       [length]="page.totalElements"
-                       [pageSize]="page.size"
-                       [pageSizeOptions]="[12, 24, 48]"
-                       [pageIndex]="page.number"
-                       (page)="handlePageEvent($event)"
-                       aria-label="Seleccionar página">
-        </mat-paginator>
       </div>
 
       <div *ngIf="isLoading" class="text-center my-5 py-5">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-          <span class="visually-hidden">Cargando productos...</span>
+        <div class="spinner-border text-danger" style="width: 3rem; height: 3rem;" role="status">
+          <span class="visually-hidden">Cargando...</span>
         </div>
+      </div>
+
+      <div *ngIf="!isLoading && page && page.totalElements === 0" class="text-center py-5">
+        <i class="bi bi-search display-1 text-muted mb-3"></i>
+        <h3 class="text-white">No encontramos productos</h3>
+        <p class="text-muted">Intenta con otros filtros o busca por otro nombre.</p>
+        <button class="btn btn-outline-light mt-2" (click)="limpiarFiltros()">Ver todo el catálogo</button>
       </div>
 
       <div *ngIf="!isLoading && page && page.totalElements > 0" 
            class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
         
         <div class="col" *ngFor="let producto of page.content">
-          <div class="card h-100 shadow-sm border-0 product-card">
+          <div class="product-card shadow-sm">
             
-            <img [src]="producto.imagenUrl || 'https://via.placeholder.com/300x200'" 
-                 class="card-img-top" 
-                 alt="{{ producto.nombre }}">
-
-            <div class="card-body card-content-standard">
-              <h5 class="card-title text-truncate">{{ producto.nombre }}</h5>
-              <span class="badge bg-primary-subtle text-primary-emphasis mb-2">
-                {{ producto.nombreCategoria }}
-              </span>
-              <h4 class="card-text text-success mb-0">
-                {{ producto.precioVenta | currency:'ARS':'symbol':'1.2-2' }}
-              </h4>
+            <div style="position: relative; overflow: hidden; background-color: #2c2c2c; height: 220px; display: flex; align-items: center; justify-content: center;">
+               
+               <img *ngIf="producto.imagenUrl" 
+                    [src]="producto.imagenUrl" 
+                    class="card-img-top" 
+                    alt="{{ producto.nombre }}"
+                    style="object-fit: cover; height: 100%; width: 100%;"
+                    (error)="producto.imagenUrl = null"> <img *ngIf="!producto.imagenUrl"
+                    src="/images/no-image.png" 
+                    class="card-img-top" 
+                    alt="Sin imagen disponible"
+                    style="object-fit: contain; height: 100%; width: 100%; padding: 40px; opacity: 0.3;">
+                 
+               <span *ngIf="producto.stockActual === 0" class="position-absolute top-0 end-0 badge bg-danger m-2 shadow">AGOTADO</span>
             </div>
 
-            <div class="card-body card-content-hover">
-              <h5 class="card-title text-truncate">{{ producto.nombre }}</h5>
-              <p class="card-text text-muted small flex-grow-1">
-                {{ producto.descripcion | slice:0:100 }}...
+            <div class="card-content-standard">
+              <div class="mb-2">
+                  <span class="badge bg-secondary mb-2">{{ producto.nombreCategoria }}</span>
+                  <h5 class="card-title text-truncate" title="{{ producto.nombre }}">{{ producto.nombre }}</h5>
+                  <small class="text-muted d-block">{{ producto.codigo }}</small>
+              </div>
+              <h4 class="card-price mb-0">{{ producto.precioVenta | currency:'ARS':'symbol':'1.0-0' }}</h4>
+            </div>
+
+            <div class="card-content-hover">
+              <h5 class="text-white mb-3 fw-bold">{{ producto.nombre }}</h5>
+              
+              <p class="description-text">
+                {{ producto.descripcion ? (producto.descripcion | slice:0:100) + (producto.descripcion.length > 100 ? '...' : '') : 'Sin descripción detallada.' }}
               </p>
               
-              <div *ngIf="producto.stockActual > 0; else sinStock">
-                <p class="text-muted small mb-2">Disponibles: {{ producto.stockActual }}</p>
-                <button class="btn btn-danger w-100">
-                  <i class="bi bi-heart me-2"></i>Añadir a Favoritos
+              <div *ngIf="producto.stockActual > 0; else sinStockTemplate" class="w-100">
+                <div class="d-flex justify-content-center text-success small mb-3 fw-bold">
+                    <i class="bi bi-check-circle-fill me-1"></i> Disponible ({{ producto.stockActual }})
+                </div>
+                
+                <button class="btn btn-danger w-100 fw-bold rounded-pill">
+                  <i class="bi bi-cart-plus me-2"></i>Consultar
                 </button>
               </div>
-              <ng-template #sinStock>
-                <p class="text-danger small mb-2">Agotado</p>
-                <button class="btn btn-secondary w-100" disabled>
-                  Sin Stock
-                </button>
+              
+              <ng-template #sinStockTemplate>
+                <div class="text-danger mb-3">
+                    <i class="bi bi-x-circle-fill display-4"></i>
+                    <p class="mt-2 fw-bold">Momentáneamente Agotado</p>
+                </div>
+                <button class="btn btn-outline-secondary w-100 rounded-pill" disabled>No disponible</button>
               </ng-template>
             </div>
             
@@ -131,7 +142,7 @@
         </div>
       </div>
 
-      <div class="d-flex justify-content-center mt-4" *ngIf="page && page.totalElements > 0 && page.totalPages > 1">
+      <div class="d-flex justify-content-center mt-5" *ngIf="page && page.totalElements > 0">
         <mat-paginator [length]="page.totalElements"
                        [pageSize]="page.size"
                        [pageSizeOptions]="[12, 24, 48]"

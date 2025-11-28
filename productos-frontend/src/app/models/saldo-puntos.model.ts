@@ -1,7 +1,16 @@
-// Esta es la interfaz para LEER el saldo
-// (Coincide con tu SaldoPuntosDTO.java)
-export interface SaldoPuntosDTO {
+export interface Recompensa {
+  id: number;
+  descripcion: string;
+  puntosRequeridos: number;
+  tipoDescuento: 'PORCENTAJE' | 'FIJO';
+  valor: number;
+  categoriaNombre?: string;
+}
+
+export interface SaldoPuntos {
   saldoPuntos: number;
   valorMonetario: number;
-  equivalenciaActual: string; // ej: "1 Punto = $1.50 ARS"
+  equivalenciaActual: string;
+  // Aquí agregamos la lista que viene del backend
+  recompensasDisponibles: Recompensa[];
 }

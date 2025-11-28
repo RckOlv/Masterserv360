@@ -5,6 +5,8 @@ import lombok.*;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(name = "categorias")
 @Getter
@@ -28,6 +30,7 @@ public class Categoria extends AuditableEntity {
     private String estado;
 
     @ManyToMany(mappedBy = "categorias", fetch = FetchType.LAZY)
+    @JsonIgnore
     private Set<Proveedor> proveedores = new HashSet<>();
 
     // ✅ equals() y hashCode() basados solo en id

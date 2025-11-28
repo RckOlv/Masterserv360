@@ -1,61 +1,190 @@
-/* --- Estilos para la barra lateral de filtros --- */
+/* --- CONTENEDOR PRINCIPAL --- */
+.container-fluid {
+    color: #e0e0e0;
+}
+
+/* --- SIDEBAR DE FILTROS --- */
 .filters-sidebar {
-  position: sticky; /* ¡Se pega al scrollear! */
-  top: 20px;
+    position: sticky;
+    top: 80px; /* Un poco más abajo por la navbar */
+    background-color: #1e1e1e; /* Fondo oscuro */
+    border: 1px solid #333;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
+
+.filters-sidebar h5 {
+    color: #fff;
+    font-weight: 700;
+    border-bottom: 2px solid #E41E26; /* Línea roja */
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+/* Lista de Categorías */
 .category-list {
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid #eee;
-  padding: 10px;
-  border-radius: 0.375rem;
-}
-.category-list .form-check {
-  padding-top: 5px;
-  padding-bottom: 5px;
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #333;
+    border-radius: 8px;
+    background-color: #252525;
 }
 
-/* --- La Tarjeta de Producto (Contenedor) --- */
+/* Estilo de barra de desplazamiento fina */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #555;
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background-color: #252525;
+}
+
+.list-group-item {
+    background-color: #252525;
+    color: #bbb;
+    border: none;
+    border-bottom: 1px solid #333;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.list-group-item:hover {
+    background-color: #333;
+    color: #fff;
+    padding-left: 20px; /* Efecto de desplazamiento */
+}
+
+.list-group-item.active {
+    background-color: #E41E26;
+    color: #fff;
+    border-color: #E41E26;
+    font-weight: 600;
+}
+
+/* Inputs del Filtro */
+.form-control {
+    background-color: #2c2c2c;
+    border: 1px solid #444;
+    color: #fff;
+}
+
+.form-control:focus {
+    background-color: #333;
+    border-color: #E41E26;
+    box-shadow: 0 0 0 0.2rem rgba(228, 30, 38, 0.25);
+    color: #fff;
+}
+
+/* --- TARJETA DE PRODUCTO (CARD) --- */
 .product-card {
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    position: relative; /* Clave para el posicionamiento absoluto del hover */
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
+
 .product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(228, 30, 38, 0.15) !important;
+    border-color: #E41E26;
 }
 
-/* --- Contenido Estándar (Visible) --- */
-.card-content-standard {
-  transition: opacity 0.3s ease-in-out;
-}
-
-/* --- Contenido Hover (Oculto) --- */
-.card-content-hover {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.98); 
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-  display: flex;
-  flex-direction: column;
-  padding: 1.25rem;
-}
-
-/* --- ¡La Magia! --- */
-.product-card:hover .card-content-standard {
-  opacity: 0;
-}
-.product-card:hover .card-content-hover {
-  opacity: 1;
-}
-
-/* --- Estilos de la Imagen --- */
+/* Imagen */
 .card-img-top {
-  height: 220px;
-  object-fit: cover;
+    height: 220px;
+    object-fit: cover; /* Mantiene proporción y recorta si sobra */
+    border-bottom: 1px solid #333;
+    transition: transform 0.5s ease;
+    background-color: #fff; /* Fondo blanco para imágenes transparentes */
+}
+
+/* Zoom a la imagen al pasar el mouse */
+.product-card:hover .card-img-top {
+    transform: scale(1.05);
+}
+
+/* --- ESTADO NORMAL (VISIBLE SIEMPRE) --- */
+.card-content-standard {
+    padding: 1rem;
+    background-color: #1e1e1e;
+    transition: opacity 0.3s ease;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-title {
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.2rem;
+}
+
+.card-price {
+    color: #28a745; /* Verde dinero */
+    font-weight: 800;
+    font-size: 1.3rem;
+    margin-top: auto; /* Empuja el precio al fondo */
+}
+
+/* --- ESTADO HOVER (OCULTO POR DEFECTO) --- */
+.card-content-hover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(20, 20, 20, 0.96); /* Casi opaco */
+    opacity: 0; /* Invisible */
+    transition: opacity 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 1.5rem;
+    text-align: center;
+    z-index: 10;
+}
+
+/* Al hacer hover en la tarjeta, mostramos el contenido oculto */
+.product-card:hover .card-content-hover {
+    opacity: 1;
+}
+
+.description-text {
+    color: #ccc;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.4;
+}
+
+/* --- PAGINADOR ANGULAR MATERIAL (CORRECCIÓN DARK) --- */
+::ng-deep .mat-mdc-paginator {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0 !important;
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+::ng-deep .mat-mdc-paginator-container {
+    justify-content: center !important;
+}
+::ng-deep .mat-mdc-icon-button {
+    color: #e0e0e0 !important;
+}
+::ng-deep .mat-mdc-icon-button[disabled] {
+    color: #555 !important;
+}
+::ng-deep .mat-mdc-select-value {
+    color: #e0e0e0 !important;
+}
+::ng-deep .mat-mdc-select-arrow {
+    color: #e0e0e0 !important;
 }

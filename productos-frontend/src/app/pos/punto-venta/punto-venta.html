@@ -111,72 +111,202 @@
     </div> 
     
     <div class="col-lg-5">
-      <div class="card masterserv-card shadow-sm sticky-top" style="top: 1rem;">
-       <div class="card-header masterserv-card-header">
-         <h5 class="masterserv-title mb-0"><i class="bi bi-person-check me-2"></i>Cliente y Total</h5>
-       </div>
-       <div class="card-body masterserv-card-body" [formGroup]="clienteForm">
-         <div class="mb-3">
-           <label for="clienteSelect" class="form-label masterserv-label">Cliente <span class="text-danger">*</span></label>
-           <ng-select
-             id="clienteSelect"
-             class="masterserv-input"
-             formControlName="clienteId"
-             [items]="(clientes$ | async) ?? []"
-             [typeahead]="clienteSearch$"
-             bindLabel="nombre"
-             bindValue="id"
-             placeholder="Buscar cliente por Nombre, Email o DNI..."
-             [loading]="isLoadingClientes"
-             [ngClass]="{ 'is-invalid': clienteForm.get('clienteId')?.invalid && clienteForm.get('clienteId')?.touched }">
-           
-             <ng-template ng-option-tmp let-item="item">
-               <div>{{item.nombre}} {{item.apellido}}</div>
-               <small class="text-muted">{{item.email}} - Doc: {{item.documento}}</small>
-             </ng-template>
+      <div class="card masterserv-card shadow-lg sticky-top border-danger" style="top: 1rem; background-color: #1e1e1e;">
+        
+        <div class="card-header bg-danger text-white">
+          <h5 class="mb-0 fw-bold"><i class="bi bi-person-check-fill me-2"></i>Cliente y Total</h5>
+        </div>
+        
+        <div class="card-body masterserv-card-body text-white" [formGroup]="clienteForm">
+          
+          <div class="mb-4">
+            <label for="clienteSelect" class="form-label text-danger small fw-bold text-uppercase">Cliente *</label>
+            
+            <div class="d-flex gap-2">
+              <ng-select
+                id="clienteSelect"
+                class="masterserv-select-dark custom-dark-select flex-grow-1" 
+                formControlName="clienteId"
+                [items]="(clientes$ | async) ?? []"
+                [typeahead]="clienteSearch$"
+                bindLabel="nombre"
+                bindValue="id"
+                placeholder="Buscar cliente por nombre o DNI..."
+                [loading]="isLoadingClientes">
+                
+                <ng-template ng-option-tmp let-item="item">
+                  <div class="text-white">{{item.nombre}} {{item.apellido}}</div>
+                  <small class="text-muted">{{item.email}} - Doc: {{item.documento}}</small>
+                </ng-template>
+  
+                <ng-template ng-label-tmp let-item="item">
+                  <span class="text-white fw-bold">
+                    {{item.nombre}} {{item.apellido}} 
+                    <small class="text-white-50 ms-2 fw-normal">(DNI: {{item.documento}})</small>
+                  </span>
+                </ng-template>
+              </ng-select>
 
-             <ng-template ng-label-tmp let-item="item">
-               <span>{{item.nombre}} {{item.apellido}} (Doc: {{item.documento}})</span>
-             </ng-template>
-             <ng-template ng-notfound-tmp let-searchTerm="searchTerm">
-               <div class="ng-option-disabled">No se encontraron clientes</div>
-             </ng-template>
-           </ng-select>
-           <div *ngIf="clienteForm.get('clienteId')?.invalid && clienteForm.get('clienteId')?.touched"
-                class="invalid-feedback d-block">
-             Debe seleccionar un cliente.
-           </div>
-         </div>
+              <button class="btn btn-outline-success" type="button" (click)="abrirModalCliente()" title="Registrar Nuevo Cliente">
+                <i class="bi bi-person-plus-fill"></i>
+              </button>
+            </div>
+            
+            <div *ngIf="clienteForm.get('clienteId')?.invalid && clienteForm.get('clienteId')?.touched"
+                 class="text-danger small mt-1">
+              <i class="bi bi-exclamation-circle"></i> Debe seleccionar un cliente.
+            </div>
+          </div>
 
-         <div class="mb-3">
-          <label for="codigoCupon" class="form-label masterserv-label">Código de Cupón (Opcional)</label>
-          <input type="text" 
-                 id="codigoCupon" 
-                 class="form-control masterserv-input" 
-                 formControlName="codigoCupon"
-                 placeholder="Ej: CANJE-1-ABCD">
-         </div>
-         <div class="text-end border-top border-metal pt-3 mt-3" *ngIf="carrito && carrito.items && carrito.items.length > 0">
-           <p class="mb-1 text-metal">Items: {{ carrito.cantidadItems }}</p>
-           <h3 class="mb-0 fw-bold masterserv-price">TOTAL: {{ carrito.totalCarrito | currency:'ARS':'symbol':'1.2-2' }}</h3>
-         </div>
+          <hr class="border-secondary">
 
-       </div>
-       <div class="card-footer d-flex justify-content-between">
-         <button class="btn masterserv-btn-secondary"
-                 (click)="vaciarCarrito()"
-                 [disabled]="isLoadingCarrito || isFinalizandoVenta || !carrito?.items?.length">
-           <i class="bi bi-cart-x"></i> Vaciar
-         </button>
-         <button class="btn masterserv-btn-success btn-lg"
-                 (click)="finalizarVenta()"
-                 [disabled]="isLoadingCarrito || isFinalizandoVenta || clienteForm.invalid || !carrito?.items?.length">
-           <span *ngIf="!isFinalizandoVenta"><i class="bi bi-check-lg"></i> Finalizar Venta</span>
-           <span *ngIf="isFinalizandoVenta" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-           <span *ngIf="isFinalizandoVenta"> Procesando...</span>
-         </button>
-       </div>
+          <div class="mb-4">
+            <label class="form-label text-danger small fw-bold text-uppercase">Código de Cupón (Opcional)</label>
+            <div class="input-group">
+              <input type="text" 
+                     class="form-control masterserv-input-dark" 
+                     formControlName="codigoCupon"
+                     placeholder="Ej: CANJE-8-123A"
+                     [readonly]="cuponAplicado"
+                     (keyup.enter)="aplicarCupon()">
+              
+              <button *ngIf="!cuponAplicado" 
+                      class="btn btn-outline-light" 
+                      type="button" 
+                      (click)="aplicarCupon()"
+                      [disabled]="isValidandoCupon">
+                {{ isValidandoCupon ? '...' : 'Aplicar' }}
+              </button>
+              
+              <button *ngIf="cuponAplicado" 
+                      class="btn btn-danger" 
+                      type="button" 
+                      (click)="quitarCupon()">
+                <i class="bi bi-trash-fill"></i>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="cuponAplicado" class="alert alert-success border-0 py-2 px-3 small mb-3 d-flex align-items-center shadow-sm" style="background-color: #d1e7dd; color: #0f5132;">
+            <i class="bi bi-tag-fill me-2 fs-5"></i>
+            <div>
+              <strong>¡Cupón Aplicado!</strong><br>
+              <span *ngIf="cuponAplicado.tipoDescuento === 'PORCENTAJE'">Descuento del {{ cuponAplicado.valor }}%</span>
+              <span *ngIf="cuponAplicado.tipoDescuento === 'FIJO'">Descuento fijo de ${{ cuponAplicado.valor }}</span>
+            </div>
+          </div>
+
+          <div class="p-3 rounded" style="background-color: #2c2c2c;" *ngIf="carrito && carrito.items && carrito.items.length > 0">
+            
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted">Subtotal:</span>
+              <span class="fw-bold text-white">{{ carrito.totalCarrito | currency:'ARS':'symbol':'1.2-2' }}</span>
+            </div>
+
+            <div class="d-flex justify-content-between mb-2 text-success" *ngIf="montoDescuento > 0">
+              <span>Descuento:</span>
+              <span class="fw-bold">- {{ montoDescuento | currency:'ARS':'symbol':'1.2-2' }}</span>
+            </div>
+
+            <hr class="border-secondary my-2">
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <span class="h5 mb-0 text-white opacity-75">TOTAL:</span>
+              <span class="h2 mb-0 text-danger fw-bold">{{ totalFinal | currency:'ARS':'symbol':'1.2-2' }}</span>
+            </div>
+            <p class="text-end text-muted small mb-0 mt-1">Items: {{ carrito.cantidadItems }}</p>
+
+          </div>
+
+        </div>
+        
+        <div class="card-footer bg-transparent border-top border-secondary d-grid gap-2 p-3">
+          
+          <button class="btn btn-outline-danger"
+                  (click)="vaciarCarrito()"
+                  [disabled]="isLoadingCarrito || isFinalizandoVenta || !carrito?.items?.length">
+            <i class="bi bi-trash me-2"></i> Vaciar Carrito
+          </button>
+          
+          <button class="btn btn-success btn-lg fw-bold shadow"
+                  (click)="finalizarVenta()"
+                  [disabled]="isLoadingCarrito || isFinalizandoVenta || clienteForm.invalid || !carrito?.items?.length">
+            <span *ngIf="!isFinalizandoVenta"><i class="bi bi-check-circle-fill me-2"></i> CONFIRMAR VENTA</span>
+            <span *ngIf="isFinalizandoVenta" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          </button>
+        </div>
+
       </div>
     </div> 
   </div> 
 </div>
+
+<div class="modal fade" id="modalNuevoCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="background-color: #1e1e1e; border: 1px solid #dc3545; color: white;">
+        
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-danger fw-bold">
+            <i class="bi bi-person-plus me-2"></i>Nuevo Cliente
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        
+        <div class="modal-body">
+          <form [formGroup]="nuevoClienteForm">
+            
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="small text-white">Nombre *</label>
+                <input type="text" class="form-control masterserv-input-dark" formControlName="nombre">
+              </div>
+              <div class="col-6">
+                <label class="small text-white">Apellido *</label>
+                <input type="text" class="form-control masterserv-input-dark" formControlName="apellido">
+              </div>
+            </div>
+  
+            <div class="row g-2 mt-2">
+                <div class="col-4">
+                    <label class="small text-white">Tipo *</label>
+                    <select class="form-control masterserv-input-dark" formControlName="tipoDocumentoBusqueda">
+                        <option value="DNI">DNI</option>
+                        <option value="CUIT">CUIT</option>
+                        <option value="CUIL">CUIL</option>
+                        <option value="PAS">PASAPORTE</option>
+                    </select>
+                </div>
+                <div class="col-8">
+                    <label class="small text-white">Número *</label>
+                    <input type="text" class="form-control masterserv-input-dark" formControlName="documento">
+                </div>
+            </div>
+  
+            <div class="mt-2">
+              <label class="small text-white">Email *</label>
+              <input type="email" class="form-control masterserv-input-dark" formControlName="email">
+            </div>
+            
+            <div class="mt-2">
+              <label class="small text-white">Teléfono *</label>
+              <input type="text" class="form-control masterserv-input-dark" formControlName="telefono">
+            </div>
+            
+            <div class="mt-3 p-2 rounded" style="background-color: #2c2c2c; font-size: 0.8rem; color: #aaa;">
+                <i class="bi bi-info-circle me-1"></i> Se asignará la contraseña <strong>123456</strong> por defecto.
+            </div>
+  
+          </form>
+        </div>
+        
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-success" (click)="guardarNuevoCliente()" [disabled]="nuevoClienteForm.invalid || isGuardandoCliente">
+            <span *ngIf="isGuardandoCliente" class="spinner-border spinner-border-sm me-1"></span>
+            Guardar Cliente
+          </button>
+        </div>
+  
+      </div>
+    </div>
+  </div>

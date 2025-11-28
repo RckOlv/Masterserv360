@@ -29,7 +29,6 @@ public class ReglaPuntosDTO extends AuditableDTO {
     @Positive(message = "Los puntos ganados deben ser positivos")
     private Integer puntosGanados;
 
-    @NotNull(message = "La equivalencia de puntos no puede ser nula")
     @Positive(message = "La equivalencia de puntos debe ser positiva")
     private BigDecimal equivalenciaPuntos;
 

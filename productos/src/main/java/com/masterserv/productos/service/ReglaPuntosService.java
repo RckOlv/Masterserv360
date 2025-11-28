@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+// --- Mentor: Importar BigDecimal ---
+import java.math.BigDecimal;
 
 @Service
 public class ReglaPuntosService {
@@ -22,49 +24,43 @@ public class ReglaPuntosService {
     @Autowired
     private ReglaPuntosMapper reglaPuntosMapper;
 
-    /**
-     * Obtiene la regla activa actual. Es el método más importante para la lógica de asignación de puntos.
-     */
     @Transactional(readOnly = true)
     public Optional<ReglaPuntos> getReglaActiva() {
-        // Asumimos que solo existe o debe existir una regla en estado ACTIVA
         return reglaPuntosRepository.findByEstadoRegla(ESTADO_ACTIVO);
     }
 
-    /**
-     * Obtiene todas las reglas (para el historial de configuración).
-     */
     @Transactional(readOnly = true)
     public List<ReglaPuntosDTO> findAll() {
         return reglaPuntosMapper.toReglaPuntosDTOList(reglaPuntosRepository.findAll());
     }
     
-    /**
-     * Crea o actualiza la regla de puntos.
-     * Si ya existe una regla activa, la desactiva y crea la nueva como ACTIVA.
-     */
     @Transactional
     public ReglaPuntosDTO createOrUpdateRegla(ReglaPuntosDTO nuevaReglaDTO) {
         
         // 1. Desactivar la regla anterior si existe
         reglaPuntosRepository.findByEstadoRegla(ESTADO_ACTIVO).ifPresent(reglaAnterior -> {
             reglaAnterior.setEstadoRegla("CADUCADA");
-            reglaPuntosRepository.save(reglaAnterior); // Guardar el estado anterior
+            reglaPuntosRepository.save(reglaAnterior);
         });
         
         // 2. Crear la nueva regla
         ReglaPuntos nuevaRegla = reglaPuntosMapper.toReglaPuntos(nuevaReglaDTO);
-        nuevaRegla.setEstadoRegla(ESTADO_ACTIVO); // Marcar la nueva como ACTIVA
+        nuevaRegla.setEstadoRegla(ESTADO_ACTIVO); 
         
-        // Asignar 0 al ID si es una creación nueva
+        // --- Mentor: CORRECCIÓN (Evitar error de Base de Datos) ---
+        // Como la BD tiene 'equivalencia_puntos NOT NULL', si viene null del frontend,
+        // le ponemos 1.0 por defecto para que no explote.
+        if (nuevaRegla.getEquivalenciaPuntos() == null) {
+            nuevaRegla.setEquivalenciaPuntos(new BigDecimal("1.00"));
+        }
+        // --- Mentor: FIN CORRECCIÓN ---
+        
         if (nuevaRegla.getId() != null && nuevaRegla.getId() != 0) {
-            nuevaRegla.setId(null); // Forzar la creación de un nuevo registro
+            nuevaRegla.setId(null); 
         }
 
         ReglaPuntos reglaGuardada = reglaPuntosRepository.save(nuevaRegla);
 
         return reglaPuntosMapper.toReglaPuntosDTO(reglaGuardada);
     }
-
-
 }

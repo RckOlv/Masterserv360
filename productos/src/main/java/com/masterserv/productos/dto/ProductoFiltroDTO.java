@@ -15,4 +15,5 @@ public class ProductoFiltroDTO {
     private BigDecimal precioMax;
     private Boolean conStock; // true = con stock, false = sin stock
     private String estado;
+    private String estadoStock;
 }

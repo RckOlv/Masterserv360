@@ -1,9 +1,11 @@
-// src/app/models/producto-filtro.model.ts
 export interface ProductoFiltroDTO {
-  nombre?: string;
-  codigo?: string;
-  categoriaId?: number;
-  precioMax?: number;
-  conStock?: boolean;
-  estado?: string;
+  nombre?: string | null;
+  codigo?: string | null;
+  categoriaId?: number | null;
+  precioMax?: number | null;
+  conStock?: boolean | null;
+  estado?: string | null;
+  
+  // Nuevo campo para el filtro unificado
+  estadoStock?: string | null; 
 }

@@ -47,4 +47,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long>, JpaSpec
     
     @Query("SELECT COUNT(u) FROM Usuario u JOIN u.roles r WHERE r.nombreRol = 'ROLE_ADMIN' AND u.estado = 'ACTIVO'")
     long countActiveAdmins();
+
+	boolean existsByDocumento(String documento);
 }

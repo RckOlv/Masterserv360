@@ -1,11 +1,11 @@
 <ng-container *ngIf="isLoggedIn$ | async as isLoggedIn">
   
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+  <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
     <div class="container-fluid">
       
-      <a class="navbar-brand fw-bold" 
+      <a class="navbar-brand" 
          [routerLink]="(userRole$ | async) === 'CLIENTE' ? '/portal/catalogo' : '/pos/dashboard'">
-        <i class="bi bi-tools me-2"></i>
+        <i class="bi bi-gear-wide-connected me-2"></i>
         Masterserv360
       </a>
       
@@ -21,44 +21,59 @@
           
           <ng-container *ngIf="(userRole$ | async) === 'CLIENTE'">
             <li class="nav-item">
-              <a class="nav-link" routerLink="/portal/catalogo" routerLinkActive="active">Catálogo</a>
+              <a class="nav-link" routerLink="/portal/catalogo" routerLinkActive="active">
+                <i class="bi bi-grid-fill me-1"></i> Catálogo
+              </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" routerLink="/portal/mis-compras" routerLinkActive="active">Mis Compras</a>
+              <a class="nav-link" routerLink="/portal/mis-compras" routerLinkActive="active">
+                <i class="bi bi-bag-check-fill me-1"></i> Mis Compras
+              </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" routerLink="/portal/mis-puntos" routerLinkActive="active">Mis Puntos</a>
+              <a class="nav-link" routerLink="/portal/mis-puntos" routerLinkActive="active">
+                <i class="bi bi-star-fill me-1"></i> Mis Puntos
+              </a>
             </li>
           </ng-container>
 
           <ng-container *ngIf="(userRole$ | async) === 'ADMIN' || (userRole$ | async) === 'VENDEDOR'">
             <li class="nav-item">
-              <a class="nav-link" routerLink="/pos/dashboard" routerLinkActive="active">Dashboard</a>
+              <a class="nav-link" routerLink="/pos/dashboard" routerLinkActive="active">
+                <i class="bi bi-speedometer2 me-1"></i> Dashboard
+              </a>
             </li>
           </ng-container>
         </ul>
 
-        <form class="d-flex mx-auto" *ngIf="(userRole$ | async) === 'CLIENTE'" (ngSubmit)="onBuscar(searchInput.value)">
-          <input #searchInput class="form-control me-2" type="search" 
-                 placeholder="Buscar repuesto por nombre..." 
-                 aria-label="Buscar" style="width: 300px;">
-          <button class="btn btn-outline-primary" type="submit">Buscar</button>
+        <form class="d-flex mx-auto mb-2 mb-lg-0" *ngIf="(userRole$ | async) === 'CLIENTE'" (ngSubmit)="onBuscar(searchInput.value)">
+          <div class="input-group">
+            <input #searchInput class="form-control form-control-search" type="search" 
+                   placeholder="Buscar repuesto..." 
+                   aria-label="Buscar" style="width: 250px;">
+            <button class="btn btn-outline-danger" type="submit">
+              <i class="bi bi-search"></i>
+            </button>
+          </div>
         </form>
+
         <ul class="navbar-nav ms-auto">
           <li *ngIf="!isLoggedIn" class="nav-item">
-            <a class="btn btn-primary" routerLink="/login">Iniciar Sesión</a>
+            <a class="btn btn-danger btn-sm mt-1" routerLink="/login">Iniciar Sesión</a>
           </li>
 
           <li *ngIf="isLoggedIn" class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" 
+            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarUserDropdown" 
                role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="bi bi-person-circle me-2"></i>
+              <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px;">
+                <i class="bi bi-person-fill"></i>
+              </div>
               {{ userEmail$ | async }}
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
               <ng-container *ngIf="(userRole$ | async) === 'CLIENTE'">
-                <li class="dropdown-header text-primary">
-                  <i class="bi bi-star-fill me-2"></i>
+                <li class="dropdown-header text-danger fw-bold">
+                  <i class="bi bi-trophy-fill me-1"></i>
                   {{ saldoPuntos$ | async | number }} Puntos
                 </li>
                 <li><a class="dropdown-item" routerLink="/portal/mi-perfil">Mi Perfil</a></li>
@@ -79,6 +94,6 @@
   </nav>
 </ng-container>
 
-<main class="container-fluid mt-4">
+<main class="container-fluid mt-4 px-4">
   <router-outlet></router-outlet>
 </main>

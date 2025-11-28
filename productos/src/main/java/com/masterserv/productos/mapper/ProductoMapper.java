@@ -56,8 +56,9 @@ public interface ProductoMapper {
     // ============================
     //    PORTAL PÚBLICO (CLIENTE)
     // ============================
-    @Mapping(source = "categoria.nombre", target = "nombreCategoria")
+    @Mappings({
+        @Mapping(source = "categoria.nombre", target = "nombreCategoria"),
+        @Mapping(source = "codigo", target = "codigo") // <--- ASEGURATE DE QUE ESTÉ
+    })
     ProductoPublicoDTO toProductoPublicoDTO(Producto producto);
-
-    List<ProductoPublicoDTO> toProductoPublicoDTOList(List<Producto> productos);
 }

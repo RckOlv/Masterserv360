@@ -2,30 +2,24 @@ package com.masterserv.productos.repository;
 
 import com.masterserv.productos.entity.ListaEspera;
 import com.masterserv.productos.entity.Producto;
-import com.masterserv.productos.entity.Usuario;
+import com.masterserv.productos.enums.EstadoListaEspera;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface ListaEsperaRepository extends JpaRepository<ListaEspera, Long> {
 
     /**
-     * Busca a todos los usuarios que están esperando un producto específico.
-     * Clave para el servicio de notificación.
+     * Busca todos los registros de lista de espera para un producto específico
+     * filtrando por el estado (ej: solo los PENDIENTE).
      */
-    List<ListaEspera> findByProducto(Producto producto);
+    List<ListaEspera> findByProductoAndEstado(Producto producto, EstadoListaEspera estado);
 
     /**
-     * Busca a todos los usuarios que están esperando un producto y cuyo estado es "ACTIVA".
+     * Verifica si un usuario ya está en espera para un producto con cierto estado.
+     * Útil para evitar duplicados antes de guardar.
      */
-    List<ListaEspera> findByProductoAndEstado(Producto producto, String estado);
-
-    /**
-     * Verifica si un usuario ya está en la lista de espera de un producto.
-     * Evita que el usuario se inscriba dos veces.
-     */
-    Optional<ListaEspera> findByUsuarioAndProducto(Usuario usuario, Producto producto);
+    boolean existsByUsuarioIdAndProductoIdAndEstado(Long usuarioId, Long productoId, EstadoListaEspera estado);
 }

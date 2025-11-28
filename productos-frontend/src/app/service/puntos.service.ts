@@ -1,36 +1,28 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { SaldoPuntosDTO } from '../models/saldo-puntos.model';
-import { CanjePuntosRequestDTO } from '../models/canje-puntos-request.model';
-import { CuponDTO } from '../models/cupon.model';
-
-// Asumo que tu URL base está centralizada, si no, ponla aquí
-const API_URL = 'http://localhost:8080/api/puntos'; 
+import { SaldoPuntos } from '../models/saldo-puntos.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PuntosService {
 
-  private http = inject(HttpClient);
+  // Asegúrate que esta URL coincida con tu backend
+  private apiUrl = 'http://localhost:8080/api/puntos';
 
-  /**
-   * Llama al backend (GET /api/puntos/mi-saldo)
-   * para obtener el saldo de puntos del cliente autenticado.
-   */
-  getMiSaldo(): Observable<SaldoPuntosDTO> {
-    return this.http.get<SaldoPuntosDTO>(`${API_URL}/saldo`);
+  constructor(private http: HttpClient) { }
+
+  getMiSaldo(): Observable<SaldoPuntos> {
+    return this.http.get<SaldoPuntos>(`${this.apiUrl}/mi-saldo`);
   }
 
   /**
-   * Llama al backend (POST /api/puntos/canjear)
-   * para canjear puntos por un cupón.
+   * Canjea puntos por una recompensa específica.
+   * Se envía el ID como parámetro: POST /api/puntos/canje?recompensaId=1
    */
-  canjearPuntos(puntos: number): Observable<CuponDTO> {
-    const request: CanjePuntosRequestDTO = {
-      puntosACanjear: puntos
-    };
-    return this.http.post<CuponDTO>(`${API_URL}/canjear`, request);
+  canjearPuntos(recompensaId: number): Observable<any> {
+    const params = new HttpParams().set('recompensaId', recompensaId.toString());
+    return this.http.post<any>(`${this.apiUrl}/canje`, null, { params });
   }
 }

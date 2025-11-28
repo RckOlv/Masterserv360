@@ -1,72 +1,105 @@
 package com.masterserv.productos.service;
 
+import com.masterserv.productos.dto.CuponDTO;
 import com.masterserv.productos.entity.Cupon;
 import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.entity.Venta;
 import com.masterserv.productos.enums.EstadoCupon;
+import com.masterserv.productos.enums.TipoDescuento;
 import com.masterserv.productos.exceptions.CuponNoValidoException;
+import com.masterserv.productos.mapper.CuponMapper;
 import com.masterserv.productos.repository.CuponRepository;
+import com.masterserv.productos.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Service
 public class CuponService {
 
     @Autowired
     private CuponRepository cuponRepository;
+    
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private CuponMapper cuponMapper;
 
     /**
-     * Valida y aplica un cupón a una Venta.
-     * Este método se llama DESDE VentaService, por lo que se une a su transacción.
-     * Si este método falla (ej. CuponNoValidoException), toda la Venta hará rollback.
-     *
-     * @param codigoCupon El código del cupón.
-     * @param venta La entidad Venta (aún no guardada) a la que se aplicará.
-     * @param cliente El Usuario (cliente) que realiza la compra.
-     * @return El Cupón validado y listo para ser guardado.
+     * Genera un cupón MANUALMENTE (sin restar puntos).
+     * Útil para atención al cliente, sorteos o regalos del administrador.
      */
-    @Transactional(propagation = Propagation.MANDATORY) // Se une a la transacción de VentaService
-    public Cupon validarYAplicarCupon(String codigoCupon, Venta venta, Usuario cliente) {
+    @Transactional
+    public CuponDTO crearCuponManual(Long usuarioId, BigDecimal valor, TipoDescuento tipo, int diasValidez, String motivo) {
+        
+        // 1. Buscar al cliente
+        Usuario cliente = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado para asignar el cupón manual."));
+
+        // 2. Crear la entidad Cupón
+        Cupon cupon = new Cupon();
+        cupon.setCliente(cliente);
+        cupon.setValor(valor);
+        cupon.setTipoDescuento(tipo); // Enum: PORCENTAJE o FIJO
+        cupon.setEstado(EstadoCupon.VIGENTE);
+        cupon.setFechaVencimiento(LocalDate.now().plusDays(diasValidez));
+        
+        // Los cupones manuales no suelen tener categoría específica (sirven para todo)
+        cupon.setCategoria(null); 
+        
+        // 3. Generar código único (Prefijo 'ADM' para identificar que fue manual)
+        String codigo = "ADM-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        cupon.setCodigo(codigo);
+
+        // 4. Guardar y devolver DTO
+        Cupon cuponGuardado = cuponRepository.save(cupon);
+        return cuponMapper.toCuponDTO(cuponGuardado);
+    }
+
+    // --- MÉTODOS EXISTENTES (USADOS EN VENTAS) ---
+
+    /**
+     * Valida si un cupón es legítimo, vigente y pertenece al cliente.
+     * NO cambia el estado del cupón, solo lo valida.
+     */
+    @Transactional(readOnly = true) 
+    public Cupon validarCupon(String codigoCupon, Usuario cliente) {
         
         // 1. Buscar el cupón
         Cupon cupon = cuponRepository.findByCodigo(codigoCupon)
-            .orElseThrow(() -> new CuponNoValidoException("El cupón '" + codigoCupon + "' no existe."));
+                .orElseThrow(() -> new CuponNoValidoException("El cupón '" + codigoCupon + "' no existe."));
 
         // 2. Validar Estado
-        if (cupon.getEstado() != EstadoCupon.VIGENTE) { // Usando tu Enum 'VIGENTE'
+        if (cupon.getEstado() != EstadoCupon.VIGENTE) {
             throw new CuponNoValidoException("El cupón '" + codigoCupon + "' ya fue " + cupon.getEstado() + ".");
         }
 
         // 3. Validar Fecha de Vencimiento
         if (cupon.getFechaVencimiento().isBefore(LocalDate.now())) {
-            cupon.setEstado(EstadoCupon.VENCIDO); // Lo marcamos como vencido
-            cuponRepository.save(cupon);
             throw new CuponNoValidoException("El cupón '" + codigoCupon + "' ha vencido.");
         }
 
-        // 4. ¡Validación de Seguridad CRÍTICA!
+        // 4. ¡Validación de Seguridad! (Que el cupón sea de ESTE cliente)
         if (!cupon.getCliente().getId().equals(cliente.getId())) {
             throw new CuponNoValidoException("Este cupón no pertenece a este cliente.");
         }
 
-        // --- ¡Éxito! Aplicamos el cupón ---
-        
-        // 5. "Quemar" el cupón para que no se vuelva a usar
-        cupon.setEstado(EstadoCupon.USADO);
-        cupon.setVenta(venta); // Vinculamos el cupón a esta venta
-
-        // 6. Vincular la Venta al Cupón (si tienes la relación bidireccional)
-        venta.setCupon(cupon); // (Añade este campo @OneToOne en tu entidad Venta)
-
-        // Nota: No necesitamos 'cuponRepository.save(cupon)' aquí.
-        // Como la Venta es la dueña de la transacción, al guardar la Venta
-        // (o al hacer commit), JPA guardará los cambios en la entidad 'cupon'
-        // que está gestionando (managed).
-        
         return cupon;
+    }
+
+    /**
+     * "Quema" el cupón (lo marca como USADO) y lo asocia a la Venta.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void marcarCuponComoUsado(Cupon cupon, Venta venta) {
+        cupon.setEstado(EstadoCupon.USADO);
+        cupon.setVenta(venta);
+        // Al estar en una transacción, Hibernate guarda esto automáticamente al final.
     }
 }

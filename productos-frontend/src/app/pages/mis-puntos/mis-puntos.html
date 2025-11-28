@@ -1,108 +1,62 @@
-<div class="container my-4">
-  <div class="row">
-    <div class="col-lg-8 offset-lg-2">
+<div class="container mt-5">
+  
+  <div class="text-center mb-5">
+    <h1 class="fw-bold text-white">Mis Puntos</h1>
+    <div class="card bg-primary text-white shadow-lg d-inline-block px-5 py-3 mt-3" style="border-radius: 15px;">
+      <h2 class="display-4 fw-bold mb-0 text-white">
+        {{ saldo?.saldoPuntos || 0 }} <span class="fs-4 text-white-50">pts</span>
+      </h2>
+      <small class="text-white-50">Saldo disponible para canjes</small>
+    </div>
+  </div>
 
-      <h2 class="mb-3 text-masterserv">Mi Saldo de Puntos</h2>
+  <h3 class="mb-4 border-bottom pb-2 text-white">🎁 Recompensas Disponibles</h3>
 
-      <div *ngIf="isLoadingSaldo" class="text-center p-5">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-          <span class="visually-hidden">Cargando...</span>
-        </div>
-        <p class="mt-3">Cargando tu saldo...</p>
-      </div>
-      
-      <ng-container *appHasPermission="'PUNTOS_READ'">
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Cargando...</span>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && (!saldo?.recompensasDisponibles || saldo?.recompensasDisponibles?.length === 0)" 
+       class="alert alert-info text-center">
+    No hay recompensas disponibles para canjear en este momento.
+  </div>
+
+  <div class="row row-cols-1 row-cols-md-3 g-4" *ngIf="!loading && saldo?.recompensasDisponibles">
+    
+    <div class="col" *ngFor="let reward of saldo!.recompensasDisponibles">
+      <div class="card h-100 shadow-sm border-0 hover-effect" style="background-color: #1e1e1e; border: 1px solid #333;">
         
-        <div *ngIf="!isLoadingSaldo && saldo">
-
-          <div class="card card-masterserv mb-4 shadow">
-            <div class="card-body">
-              <div class="row align-items-center">
-                <div class="col-md-6">
-                  <p class="text-metal mb-1">Puntos Disponibles</p>
-                  <h1 class="display-4 fw-bold text-accent mb-0">
-                    {{ saldo.saldoPuntos }}
-                  </h1>
-                </div>
-                <div class="col-md-6 text-md-end">
-                  <p class="text-metal mb-1">Equivalente en Descuento (ARS)</p>
-                  <h3 class="text-white mb-0">
-                    {{ saldo.valorMonetario | currency:'ARS':'symbol':'1.2-2' }}
-                  </h3>
-                  <small class="text-metal">*{{ saldo.equivalenciaActual }}</small>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="card card-masterserv shadow mb-4" *appHasPermission="'PUNTOS_CANJE'">
-            <div class="card-header">
-              Canjear mis Puntos
-            </div>
-            <div class="card-body">
-              
-              <div *ngIf="saldo.saldoPuntos === 0" class="alert alert-info">
-                Actualmente no tienes puntos suficientes para realizar un canje. ¡Sigue comprando para sumar!
-              </div>
-
-              <form [formGroup]="canjeForm" (ngSubmit)="onCanjear()">
-                <p>Ingresa la cantidad de puntos que deseas canjear por un cupón de descuento:</p>
-                
-                <div class="row g-2">
-                  <div class="col-sm-8">
-                    <label for="puntosACanjear" class="form-label visually-hidden">Puntos a canjear</label>
-                    <input type="number" 
-                            class="form-control form-control-lg" 
-                            id="puntosACanjear" 
-                            formControlName="puntosACanjear"
-                            [class.is-invalid]="canjeForm.get('puntosACanjear')?.invalid && canjeForm.get('puntosACanjear')?.touched">
-                    
-                    <div *ngIf="canjeForm.get('puntosACanjear')?.invalid && canjeForm.get('puntosACanjear')?.touched"
-                          class="invalid-feedback d-block">
-                      <small *ngIf="canjeForm.get('puntosACanjear')?.errors?.['required']">
-                        Campo requerido.
-                      </small>
-                      <small *ngIf="canjeForm.get('puntosACanjear')?.errors?.['min']">
-                        Debe ser al menos 1 punto.
-                      </small>
-                      <small *ngIf="canjeForm.get('puntosACanjear')?.errors?.['max']">
-                        No puedes canjear más de {{ saldo.saldoPuntos }} puntos.
-                      </small>
-                    </div>
-                  </div>
-                  
-                  <div class="col-sm-4 d-grid">
-                    <button type="submit" class="btn btn-masterserv-accent btn-lg" [disabled]="canjeForm.invalid || isSubmitting">
-                      <span *ngIf="!isSubmitting">Canjear Ahora</span>
-                      <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm" role="status"></span>
-                    </button>
-                  </div>
-                </div>
-
-              </form>
-            </div>
-          </div>
-
-          <div *ngIf="cuponGenerado" class="alert alert-success shadow text-center p-4">
-            <h4 class="alert-heading">¡Cupón Generado!</h4>
-            <p>Presenta este código en tu próxima compra para obtener tu descuento:</p>
-            <h3 class="fw-bold text-dark bg-light p-3 rounded border border-2 border-dark d-inline-block">
-              {{ cuponGenerado.codigo }}
-            </h3>
-            <p class="mb-0 mt-3">
-              Valor del cupón: <strong>{{ cuponGenerado.descuento | currency:'ARS':'symbol':'1.2-2' }}</strong>
-              <br>
-              <small>Válido hasta: {{ cuponGenerado.fechaVencimiento | date:'dd/MM/yyyy' }}</small>
-            </p>
-          </div>
-
+        <div class="card-header bg-transparent border-bottom-0 pt-4 text-center">
+            <span class="badge bg-warning text-dark mb-2">{{ reward.tipoDescuento }}</span>
+            <h4 class="card-title fw-bold text-primary">{{ reward.descripcion }}</h4>
         </div>
-        </ng-container>
-      
-      <div *ngIf="!isLoadingSaldo && !saldo" class="alert alert-danger text-center mt-4">
-        <i class="bi bi-shield-lock me-2"></i>No tienes los permisos necesarios para acceder a la información de puntos.
-      </div>
 
-    </div>
-  </div>
+        <div class="card-body text-center">
+          <h1 class="display-6 fw-bold my-2 text-white">{{ reward.puntosRequeridos }}</h1>
+          
+          <span class="text-white-50 text-uppercase small fw-bold">Puntos</span>
+        </div>
+
+        <div class="card-footer bg-transparent border-top-0 pb-4 px-4">
+          <button 
+            class="btn btn-outline-primary w-100 py-2 fw-bold" 
+            [disabled]="(saldo?.saldoPuntos || 0) < reward.puntosRequeridos"
+            (click)="confirmarCanje(reward)">
+            
+            <span *ngIf="(saldo?.saldoPuntos || 0) >= reward.puntosRequeridos">
+              <i class="bi bi-gift-fill me-2"></i> Canjear
+            </span>
+            <span *ngIf="(saldo?.saldoPuntos || 0) < reward.puntosRequeridos">
+              Faltan {{ reward.puntosRequeridos - (saldo?.saldoPuntos || 0) }} pts
+            </span>
+            
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
 </div>

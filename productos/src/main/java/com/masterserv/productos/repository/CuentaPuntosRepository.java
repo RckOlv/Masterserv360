@@ -23,4 +23,7 @@ public interface CuentaPuntosRepository extends JpaRepository<CuentaPuntos, Long
 
     // Nos permite encontrar la cuenta directamente desde el email del Principal (Spring Security)
     Optional<CuentaPuntos> findByCliente_Email(String clienteEmail);
+
+
+    boolean existsByClienteId(Long clienteId);
 }

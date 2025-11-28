@@ -11,25 +11,21 @@
   <div class="row" *ngIf="!isLoading">
 
     <div class="col-lg-6" *appHasPermission="'ROLES_MANAGE'">
-      <div class="card masterserv-card shadow-sm">
+      <div class="card masterserv-card shadow-sm mb-3">
         <div class="card-header masterserv-card-header">
-          <h5 class="masterserv-subtitle mb-0">Establecer Nueva Regla Activa</h5>
+          <h5 class="masterserv-subtitle mb-0">Configurar Regla de Puntos (Ganancia)</h5>
         </div>
         <div class="card-body masterserv-card-body">
-          <form [formGroup]="reglaForm" (ngSubmit)="onSubmit()">
+          <form [formGroup]="reglaForm" (ngSubmit)="onSubmitRegla()">
             
             <div class="row g-3">
-              <p class="form-text text-metal col-12">
-                Defina cuántos puntos (P) se ganan por cada (X) monto gastado (ARS), y cuál es el valor de canje de 1 Punto.
-              </p>
-
               <div class="col-12">
                 <label for="descripcion" class="form-label masterserv-label">Descripción de la Regla <span class="text-danger">*</span></label>
                 <input type="text" id="descripcion" class="form-control masterserv-input"
                        placeholder="Ej: Promoción Día del Padre 2025"
                        formControlName="descripcion"
-                       [ngClass]="{ 'is-invalid': reglaForm.get('descripcion')?.invalid && reglaForm.get('descripcion')?.touched }">
-                <div *ngIf="reglaForm.get('descripcion')?.invalid && reglaForm.get('descripcion')?.touched" class="invalid-feedback d-block">
+                       [ngClass]="{ 'is-invalid': fRegla['descripcion'].invalid && fRegla['descripcion'].touched }">
+                <div *ngIf="fRegla['descripcion'].invalid && fRegla['descripcion'].touched" class="invalid-feedback d-block">
                   La descripción es obligatoria.
                 </div>
               </div>
@@ -39,9 +35,9 @@
                   <span class="input-group-text masterserv-input">$</span>
                   <input type="number" id="montoGasto" class="form-control masterserv-input"
                          formControlName="montoGasto" min="1" step="50"
-                         [ngClass]="{ 'is-invalid': reglaForm.get('montoGasto')?.invalid && reglaForm.get('montoGasto')?.touched }">
+                         [ngClass]="{ 'is-invalid': fRegla['montoGasto'].invalid && fRegla['montoGasto'].touched }">
                 </div>
-                 <div *ngIf="reglaForm.get('montoGasto')?.invalid && reglaForm.get('montoGasto')?.touched" class="invalid-feedback d-block">
+                 <div *ngIf="fRegla['montoGasto'].invalid && fRegla['montoGasto'].touched" class="invalid-feedback d-block">
                    El monto debe ser positivo.
                  </div>
               </div>
@@ -51,25 +47,12 @@
                  <div class="input-group">
                    <input type="number" id="puntosGanados" class="form-control masterserv-input"
                           formControlName="puntosGanados" min="1"
-                          [ngClass]="{ 'is-invalid': reglaForm.get('puntosGanados')?.invalid && reglaForm.get('puntosGanados')?.touched }">
+                          [ngClass]="{ 'is-invalid': fRegla['puntosGanados'].invalid && fRegla['puntosGanados'].touched }">
                    <span class="input-group-text masterserv-input"><i class="bi bi-star-fill"></i></span>
                  </div>
-                 <div *ngIf="reglaForm.get('puntosGanados')?.invalid && reglaForm.get('puntosGanados')?.touched" class="invalid-feedback d-block">
+                 <div *ngIf="fRegla['puntosGanados'].invalid && fRegla['puntosGanados'].touched" class="invalid-feedback d-block">
                    Los puntos deben ser al menos 1.
                  </div>
-              </div>
-
-              <div class="col-sm-6">
-                <label for="equivalenciaPuntos" class="form-label masterserv-label">1 Punto = (ARS) <span class="text-danger">*</span></label>
-                <div class="input-group">
-                  <span class="input-group-text masterserv-input">$</span>
-                  <input type="number" id="equivalenciaPuntos" class="form-control masterserv-input"
-                         formControlName="equivalenciaPuntos" min="0.01" step="0.1"
-                         [ngClass]="{ 'is-invalid': reglaForm.get('equivalenciaPuntos')?.invalid && reglaForm.get('equivalenciaPuntos')?.touched }">
-                </div>
-                <div *ngIf="reglaForm.get('equivalenciaPuntos')?.invalid && reglaForm.get('equivalenciaPuntos')?.touched" class="invalid-feedback d-block">
-                  La equivalencia debe ser positiva.
-                </div>
               </div>
               
               <div class="col-sm-6">
@@ -77,12 +60,21 @@
                   <div class="input-group">
                      <input type="number" id="caducidadPuntosMeses" class="form-control masterserv-input"
                             formControlName="caducidadPuntosMeses" min="1"
-                            [ngClass]="{ 'is-invalid': reglaForm.get('caducidadPuntosMeses')?.invalid && reglaForm.get('caducidadPuntosMeses')?.touched }">
+                            [ngClass]="{ 'is-invalid': fRegla['caducidadPuntosMeses'].invalid && fRegla['caducidadPuntosMeses'].touched }">
                      <span class="input-group-text masterserv-input"><i class="bi bi-calendar-x"></i></span>
                   </div>
-                  <div *ngIf="reglaForm.get('caducidadPuntosMeses')?.invalid && reglaForm.get('caducidadPuntosMeses')?.touched" class="invalid-feedback d-block">
+                  <div *ngIf="fRegla['caducidadPuntosMeses'].invalid && fRegla['caducidadPuntosMeses'].touched" class="invalid-feedback d-block">
                      La caducidad debe ser al menos 1 mes.
                   </div>
+              </div>
+
+               <div class="col-sm-6">
+                <label for="equivalenciaPuntos" class="form-label masterserv-label">1 Punto = (ARS) (Informativo)</label>
+                <div class="input-group">
+                  <span class="input-group-text masterserv-input">$</span>
+                  <input type="number" id="equivalenciaPuntos" class="form-control masterserv-input"
+                         formControlName="equivalenciaPuntos" min="0.01" step="0.1">
+                </div>
               </div>
             </div>
 
@@ -98,31 +90,82 @@
     </div> 
     
     <div class="col-lg-6">
+      
       <div class="card masterserv-card shadow-sm mb-3">
-        <div class="card-header masterserv-card-header-success"> <h5 class="masterserv-subtitle mb-0">Regla Activa Actualmente</h5>
+        <div class="card-header masterserv-card-header-success">
+          <h5 class="masterserv-subtitle mb-0">Regla Activa Actualmente</h5>
         </div>
         <div class="card-body masterserv-card-body">
           <div *ngIf="!reglaActiva" class="alert masterserv-alert-info text-center">
             No hay ninguna regla activa configurada.
           </div>
-          <div *ngIf="reglaActiva">
+          
+          <div *ngIf="reglaActiva as regla">
             <h5 class="text-center masterserv-name mb-3">
-              {{ reglaActiva.descripcion }}
+              {{ regla.descripcion }}
             </h5>
             <h3 class="text-center text-success-light mb-3">
-              {{ reglaActiva.puntosGanados }} Puntos
+              {{ regla.puntosGanados }} Puntos
               <i class="bi bi-arrow-right-short"></i>
-              {{ reglaActiva.montoGasto | currency:'ARS':'symbol':'1.0-0' }}
+              {{ regla.montoGasto | currency:'ARS':'symbol':'1.0-0' }}
             </h3>
             
-            <p class="text-center h5 mb-3 text-metal">
-              (1 Punto = {{ reglaActiva.equivalenciaPuntos | currency:'ARS':'symbol':'1.2-2' }})
+            <p class="text-center h5 mb-3 text-metal" *ngIf="regla.equivalenciaPuntos">
+              (1 Punto = {{ regla.equivalenciaPuntos | currency:'ARS':'symbol':'1.2-2' }})
             </p>
             <p class="text-metal">
-              <strong>Vigente desde:</strong> {{ reglaActiva.fechaInicioVigencia | date:'dd/MM/yyyy HH:mm' }}
+              <strong>Vigente desde:</strong> {{ regla.fechaInicioVigencia | date:'dd/MM/yyyy HH:mm' }}
               <br>
-              <strong>Caducidad de puntos:</strong> {{ reglaActiva.caducidadPuntosMeses }} meses.
+              <strong>Caducidad de puntos:</strong> {{ regla.caducidadPuntosMeses }} meses.
             </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card masterserv-card shadow-sm mb-3" *appHasPermission="'ROLES_MANAGE'">
+        <div class="card-header masterserv-card-header-success d-flex justify-content-between align-items-center">
+          <h5 class="masterserv-subtitle mb-0">Recompensas de Canje (V2)</h5>
+          <button class="btn btn-sm btn-outline-light" (click)="abrirModalNuevaRecompensa()" [disabled]="!reglaActiva">
+            <i class="bi bi-plus-lg"></i> Nueva Recompensa
+          </button>
+        </div>
+        <div class="card-body masterserv-card-body">
+          <div *ngIf="!reglaActiva" class="alert masterserv-alert-info text-center">
+            Crea una Regla de Puntos a la izquierda para poder añadir recompensas.
+          </div>
+          
+          <div *ngIf="reglaActiva as regla">
+          
+            <ul class="list-group list-group-flush" *ngIf="regla.recompensas && regla.recompensas.length > 0">
+              <li *ngFor="let rec of regla.recompensas" class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong class="d-block masterserv-name">{{ rec.descripcion }}</strong>
+                    <span class="text-metal">
+                      Costo: {{ rec.puntosRequeridos }} Pts.
+                    </span>
+                    <span class="badge masterserv-badge bg-dark ms-2">
+                      {{ rec.tipoDescuento === tipoDescuentoEnum.FIJO ? (rec.valor | currency:'ARS') : (rec.valor + '% OFF') }}
+                    </span>
+                    <span *ngIf="rec.categoriaNombre" class="badge masterserv-badge masterserv-badge-warning ms-1">
+                      {{ rec.categoriaNombre }}
+                    </span>
+                  </div>
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn masterserv-btn-outline-primary" (click)="abrirModalEditarRecompensa(rec)">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn masterserv-btn-outline-danger" (click)="eliminarRecompensa(rec.id!)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </li>
+            </ul>
+            
+            <div *ngIf="!regla.recompensas || regla.recompensas.length === 0" class="text-center text-metal">
+              No hay recompensas creadas para esta regla.
+            </div>
           </div>
         </div>
       </div>
@@ -147,7 +190,7 @@
                    {{ regla.fechaInicioVigencia | date:'dd/MM/yy' }}
                  </small>
                </div>
-               <small class="text-info d-block">
+               <small class="text-info d-block" *ngIf="regla.equivalenciaPuntos">
                  (1 Pt = {{ regla.equivalenciaPuntos | currency:'ARS':'symbol':'1.2-2' }})
                </small>
              </li>
@@ -157,4 +200,93 @@
 
     </div> 
   </div> 
+</div>
+
+
+<div class="modal fade" id="recompensaModal" tabindex="-1" aria-labelledby="recompensaModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="recompensaModalLabel">{{ esEdicionRecompensa ? 'Editar' : 'Nueva' }} Recompensa</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="cerrarModalRecompensa()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        
+        <div *ngIf="modalErrorMessage" class="alert masterserv-alert-danger">
+          {{ modalErrorMessage }}
+        </div>
+        
+        <form [formGroup]="recompensaForm" id="ngRecompensaForm" (ngSubmit)="guardarRecompensa()">
+          
+          <div class="mb-3">
+            <label for="recDescripcion" class="form-label masterserv-label">Descripción <span class="text-danger">*</span></label>
+            <input type="text" id="recDescripcion" class="form-control masterserv-input" 
+                   formControlName="descripcion" placeholder="Ej: 20% OFF en Neumáticos"
+                   [ngClass]="{ 'is-invalid': fRec['descripcion'].invalid && fRec['descripcion'].touched }">
+            <div *ngIf="fRec['descripcion'].invalid && fRec['descripcion'].touched" class="invalid-feedback">
+              Obligatorio.
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="recPuntos" class="form-label masterserv-label">Costo (Puntos) <span class="text-danger">*</span></label>
+              <input type="number" id="recPuntos" class="form-control masterserv-input" 
+                     formControlName="puntosRequeridos"
+                     [ngClass]="{ 'is-invalid': fRec['puntosRequeridos'].invalid && fRec['puntosRequeridos'].touched }">
+              <div *ngIf="fRec['puntosRequeridos'].invalid && fRec['puntosRequeridos'].touched" class="invalid-feedback">
+                <div *ngIf="fRec['puntosRequeridos'].errors?.['required']">Obligatorio.</div>
+                <div *ngIf="fRec['puntosRequeridos'].errors?.['min']">Debe ser > 0.</div>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="recTipo" class="form-label masterserv-label">Tipo Descuento <span class="text-danger">*</span></label>
+              <select id="recTipo" class="form-select masterserv-input" formControlName="tipoDescuento">
+                <option [ngValue]="tipoDescuentoEnum.FIJO">Monto Fijo (ARS)</option>
+                <option [ngValue]="tipoDescuentoEnum.PORCENTAJE">Porcentaje (%)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="recValor" class="form-label masterserv-label">Valor <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text masterserv-input">
+                  {{ fRec['tipoDescuento'].value === tipoDescuentoEnum.FIJO ? '$' : '%' }}
+                </span>
+                <input type="number" id="recValor" class="form-control masterserv-input" 
+                       formControlName="valor"
+                       [ngClass]="{ 'is-invalid': fRec['valor'].invalid && fRec['valor'].touched }">
+              </div>
+              <div *ngIf="fRec['valor'].invalid && fRec['valor'].touched" class="invalid-feedback d-block">
+                 <div *ngIf="fRec['valor'].errors?.['required']">Obligatorio.</div>
+                 <div *ngIf="fRec['valor'].errors?.['min']">Debe ser > 0.</div>
+              </div>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label for="recCategoria" class="form-label masterserv-label">Aplicar a Categoría (Opcional)</label>
+              <select id="recCategoria" class="form-select masterserv-input" 
+                      formControlName="categoriaId">
+                      <option [ngValue]="null">Toda la compra</option>
+                <option *ngFor="let cat of categorias" [value]="cat.id">{{ cat.nombre }}</option>
+              </select>
+              <small class="text-metal" *ngIf="fRec['tipoDescuento'].value === tipoDescuentoEnum.FIJO">
+                (Los montos fijos siempre aplican al total)
+              </small>
+            </div>
+            </div>
+          
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn masterserv-btn-secondary" (click)="cerrarModalRecompensa()" [disabled]="isSubmittingRecompensa">Cancelar</button>
+        <button type="submit" form="ngRecompensaForm" class="btn masterserv-btn-primary" [disabled]="recompensaForm.invalid || isSubmittingRecompensa">
+          <span *ngIf="!isSubmittingRecompensa">{{ esEdicionRecompensa ? 'Actualizar' : 'Crear' }} Recompensa</span>
+          <span *ngIf="isSubmittingRecompensa" class="spinner-border spinner-border-sm" role="status"></span>
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

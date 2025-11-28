@@ -1,0 +1,168 @@
+:host {
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+.ventas-container {
+    padding: 1rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Tarjeta Principal (Fondo oscuro con borde rojo sutil) */
+.masterserv-card {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    border-radius: 8px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.masterserv-card-header {
+    background-color: #121212;
+    border-bottom: 2px solid #dc3545; /* Rojo Masterserv */
+    padding: 1rem;
+}
+
+.masterserv-title {
+    color: #e0e0e0;
+    margin: 0;
+    font-weight: 600;
+}
+
+.masterserv-card-body {
+    background-color: #1e1e1e;
+    padding: 1rem;
+    flex-grow: 1;
+    overflow: hidden; /* Para que la tabla tenga su propio scroll */
+}
+
+/* Filtros */
+.masterserv-filter {
+    background-color: #252525;
+    border: 1px solid #444 !important;
+}
+
+.masterserv-label {
+    color: #ffc107; /* Amarillo para labels */
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
+
+.masterserv-input {
+    background-color: #2c2c2c;
+    border: 1px solid #555;
+    color: #fff;
+}
+
+.masterserv-input:focus {
+    background-color: #333;
+    color: #fff;
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Tabla */
+.table-responsive {
+    overflow: auto;
+}
+
+.masterserv-table {
+    color: #e0e0e0;
+}
+
+.masterserv-table thead th {
+    background-color: #252525;
+    color: #dc3545;
+    border-bottom: 2px solid #555;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+.masterserv-table tbody td {
+    border-bottom: 1px solid #333;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.masterserv-table-row:hover td {
+    background-color: #2a2a2a;
+    color: #fff;
+}
+
+.masterserv-code {
+    font-family: 'Courier New', monospace;
+    color: #ffc107;
+}
+
+.masterserv-price {
+    font-weight: bold;
+    color: #28a745; /* Verde dinero */
+}
+
+/* Badges */
+.masterserv-badge {
+    font-size: 0.75em;
+    padding: 0.4em 0.6em;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.masterserv-badge-success { background-color: #198754; color: white; }
+.masterserv-badge-danger { background-color: #dc3545; color: white; }
+.masterserv-badge-warning { background-color: #ffc107; color: black; }
+
+/* Botones */
+.masterserv-btn-primary {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+.masterserv-btn-primary:hover {
+    background-color: #bb2d3b;
+    border-color: #b02a37;
+}
+
+.btn-action {
+    padding: 0.25rem 0.5rem;
+}
+
+/* NG-SELECT DARK MODE (Copiado del POS para consistencia) */
+:host ::ng-deep .ng-select.masterserv-select-dark .ng-select-container {
+    background-color: #2c2c2c !important;
+    color: #ffffff !important;
+    border: 1px solid #555 !important;
+    min-height: 31px; /* Ajuste para sm */
+}
+
+:host ::ng-deep .ng-select.masterserv-select-dark .ng-select-container .ng-value-container .ng-value {
+    color: #ffffff !important;
+}
+
+:host ::ng-deep .ng-select.masterserv-select-dark .ng-select-container .ng-value-container .ng-input > input {
+    color: #ffffff !important;
+}
+
+:host ::ng-deep .ng-dropdown-panel {
+    background-color: #2c2c2c !important;
+    border: 1px solid #555 !important;
+}
+
+:host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option {
+    background-color: #2c2c2c !important;
+    color: #e0e0e0 !important;
+}
+
+:host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option:hover,
+:host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option.ng-option-marked {
+    background-color: #dc3545 !important;
+    color: #ffffff !important;
+}

@@ -1,16 +1,16 @@
 package com.masterserv.productos.service;
 
 import com.masterserv.productos.dto.CuponDTO;
+import com.masterserv.productos.dto.RecompensaDTO;
 import com.masterserv.productos.dto.SaldoPuntosDTO;
 import com.masterserv.productos.entity.*;
 import com.masterserv.productos.enums.EstadoCupon;
 import com.masterserv.productos.enums.EstadoVenta;
+import com.masterserv.productos.enums.TipoDescuento;
 import com.masterserv.productos.enums.TipoMovimientoPuntos;
 import com.masterserv.productos.mapper.CuponMapper;
-import com.masterserv.productos.repository.CuentaPuntosRepository;
-import com.masterserv.productos.repository.CuponRepository;
-import com.masterserv.productos.repository.MovimientoPuntosRepository;
-import com.masterserv.productos.repository.UsuarioRepository;
+import com.masterserv.productos.mapper.RecompensaMapper;
+import com.masterserv.productos.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -20,8 +20,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class PuntosService {
@@ -38,6 +41,10 @@ public class PuntosService {
     private UsuarioRepository usuarioRepository; 
     @Autowired
     private CuponMapper cuponMapper; 
+    @Autowired 
+    private RecompensaRepository recompensaRepository;
+    @Autowired 
+    private RecompensaMapper recompensaMapper;
 
     /**
      * Lógica principal para asignar puntos después de una venta.
@@ -48,7 +55,7 @@ public class PuntosService {
         Optional<ReglaPuntos> reglaOpt = reglaPuntosService.getReglaActiva();
         if (reglaOpt.isEmpty()) {
             System.err.println("WARN: No se asignaron puntos para la Venta #" + venta.getId() + 
-                               ". Motivo: No hay regla de puntos ACTIVA configurada.");
+                                ". Motivo: No hay regla de puntos ACTIVA configurada.");
             return; 
         }
         ReglaPuntos regla = reglaOpt.get();
@@ -64,22 +71,28 @@ public class PuntosService {
                     nuevaCuenta.setSaldoPuntos(0);
                     return cuentaPuntosRepository.save(nuevaCuenta);
                 });
+        
         int puntosGanados = calcularPuntos(venta.getTotalVenta(), regla);
+        
         if (puntosGanados <= 0) {
             return;
         }
+        
         MovimientoPuntos movimiento = new MovimientoPuntos();
         movimiento.setPuntos(puntosGanados);
         movimiento.setTipoMovimiento(TipoMovimientoPuntos.GANADO);
         movimiento.setDescripcion("Puntos ganados por Venta #" + venta.getId());
         movimiento.setCuentaPuntos(cuenta);
         movimiento.setVenta(venta);
+        
         if (regla.getCaducidadPuntosMeses() != null && regla.getCaducidadPuntosMeses() > 0) {
             movimiento.setFechaCaducidadPuntos(
                 LocalDateTime.now().plusMonths(regla.getCaducidadPuntosMeses())
             );
         }
+        
         cuenta.setSaldoPuntos(cuenta.getSaldoPuntos() + puntosGanados);
+        
         cuentaPuntosRepository.save(cuenta);
         movimientoPuntosRepository.save(movimiento);
     }
@@ -104,81 +117,90 @@ public class PuntosService {
             System.err.println("WARN: Se intentó revertir puntos de una venta no cancelada. Venta #" + venta.getId());
             return;
         }
+        
         boolean yaRevertido = movimientoPuntosRepository.existsByVentaAndTipoMovimiento(
             venta, TipoMovimientoPuntos.REVERSION
         );
+        
         if (yaRevertido) {
             System.out.println("INFO: Los puntos para la Venta #" + venta.getId() + " ya habían sido revertidos.");
             return;
         }
+        
         Optional<MovimientoPuntos> movOriginalOpt = movimientoPuntosRepository.findByVentaAndTipoMovimiento(
             venta, TipoMovimientoPuntos.GANADO
         );
+        
         if (movOriginalOpt.isEmpty()) {
             System.out.println("INFO: La Venta #" + venta.getId() + " no generó puntos. No se revierte nada.");
             return;
         }
+        
         MovimientoPuntos movOriginal = movOriginalOpt.get();
         CuentaPuntos cuenta = movOriginal.getCuentaPuntos();
         int puntosARevertir = movOriginal.getPuntos();
+        
         MovimientoPuntos movReversion = new MovimientoPuntos();
         movReversion.setPuntos(-puntosARevertir);
         movReversion.setTipoMovimiento(TipoMovimientoPuntos.REVERSION);
         movReversion.setDescripcion("Reversión por cancelación Venta #" + venta.getId());
         movReversion.setCuentaPuntos(cuenta);
         movReversion.setVenta(venta); 
+        
         cuenta.setSaldoPuntos(cuenta.getSaldoPuntos() - puntosARevertir);
+        
         cuentaPuntosRepository.save(cuenta);
         movimientoPuntosRepository.save(movReversion);
+        
         System.out.println("INFO: Revertidos " + puntosARevertir + " puntos de la Venta #" + venta.getId());
     }
 
     /**
-     * Canjea puntos de un cliente por un Cupón de descuento.
+     * Canjea puntos de un cliente por una Recompensa específica (que se convierte en Cupón).
      */
     @Transactional(propagation = Propagation.REQUIRED)
-    public CuponDTO canjearPuntos(String clienteEmail, int puntosACanjear) {
+    public CuponDTO canjearPuntos(String clienteEmail, Long recompensaId) {
         
-        ReglaPuntos regla = reglaPuntosService.getReglaActiva()
-                .orElseThrow(() -> new RuntimeException("No hay regla de puntos activa. El canje no está disponible."));
+        // 1. Validar la recompensa
+        Recompensa recompensa = recompensaRepository.findById(recompensaId)
+                .orElseThrow(() -> new RuntimeException("La recompensa seleccionada no existe."));
         
-        if (regla.getEquivalenciaPuntos() == null || regla.getEquivalenciaPuntos().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("La regla activa no tiene una 'equivalenciaPuntos' válida.");
-        }
-        
+        int puntosRequeridos = recompensa.getPuntosRequeridos();
+
+        // 2. Validar la cuenta y el saldo
         CuentaPuntos cuenta = cuentaPuntosRepository.findByCliente_Email(clienteEmail)
                 .orElseThrow(() -> new RuntimeException("No se encontró una cuenta de puntos para el cliente: " + clienteEmail));
         
-        // --- ¡INICIO DE LA MODIFICACIÓN! ---
-        // Cambiamos RuntimeException por una excepción más específica (de negocio)
-        if (cuenta.getSaldoPuntos() < puntosACanjear) {
+        if (cuenta.getSaldoPuntos() < puntosRequeridos) {
             throw new IllegalArgumentException(String.format(
-                "Saldo insuficiente. Saldo actual: %d puntos, Puntos solicitados: %d puntos.",
-                cuenta.getSaldoPuntos(), puntosACanjear
+                "Saldo insuficiente. Saldo actual: %d puntos, Puntos requeridos: %d puntos.",
+                cuenta.getSaldoPuntos(), puntosRequeridos
             ));
         }
-        // --- FIN DE LA MODIFICACIÓN ---
         
-        BigDecimal montoDescuento = regla.getEquivalenciaPuntos().multiply(new BigDecimal(puntosACanjear));
-        montoDescuento = montoDescuento.setScale(2, RoundingMode.HALF_UP);
-        
+        // 3. Crear el Movimiento (restar puntos)
         MovimientoPuntos movimiento = new MovimientoPuntos();
-        movimiento.setPuntos(-puntosACanjear);
+        movimiento.setPuntos(-puntosRequeridos);
         movimiento.setTipoMovimiento(TipoMovimientoPuntos.CANJEADO);
         movimiento.setDescripcion(String.format(
-            "Canje de %d puntos por cupón de $%.2f", puntosACanjear, montoDescuento
+            "Canje por recompensa: %s", recompensa.getDescripcion()
         ));
         movimiento.setCuentaPuntos(cuenta);
         
-        cuenta.setSaldoPuntos(cuenta.getSaldoPuntos() - puntosACanjear);
+        // 4. Actualizar el saldo de la cuenta
+        cuenta.setSaldoPuntos(cuenta.getSaldoPuntos() - puntosRequeridos);
         
+        // 5. Crear el Cupón basado en la Recompensa
         Cupon cupon = new Cupon();
         cupon.setCliente(cuenta.getCliente());
         cupon.setCodigo(generarCodigoCupon(cuenta.getCliente().getId()));
-        cupon.setDescuento(montoDescuento);
+        cupon.setValor(recompensa.getValor());
+        cupon.setTipoDescuento(recompensa.getTipoDescuento());
+        cupon.setCategoria(recompensa.getCategoria()); // Asigna la categoría (o null)
         cupon.setEstado(EstadoCupon.VIGENTE);
         cupon.setFechaVencimiento(LocalDate.now().plusDays(90)); // 90 días de validez
         
+        // 6. Guardar todo
         cuentaPuntosRepository.save(cuenta);
         movimientoPuntosRepository.save(movimiento);
         Cupon cuponGuardado = cuponRepository.save(cupon);
@@ -197,38 +219,61 @@ public class PuntosService {
     
     /**
      * Obtiene el saldo de puntos y su equivalencia en dinero para un cliente específico.
+     * También incluye la lista de recompensas disponibles de la regla activa.
      */
     @Transactional(readOnly = true) 
     public SaldoPuntosDTO getSaldoByEmail(String clienteEmail) {
         SaldoPuntosDTO saldoDTO = new SaldoPuntosDTO();
+        
+        // 1. Buscar la cuenta de puntos
         Optional<CuentaPuntos> cuentaOpt = cuentaPuntosRepository.findByCliente_Email(clienteEmail);
         
         if (cuentaOpt.isEmpty()) {
             saldoDTO.setSaldoPuntos(0);
             saldoDTO.setValorMonetario(BigDecimal.ZERO);
             saldoDTO.setEquivalenciaActual("N/A");
+            saldoDTO.setRecompensasDisponibles(new ArrayList<>()); // Lista vacía
             return saldoDTO;
         }
         
         CuentaPuntos cuenta = cuentaOpt.get();
         saldoDTO.setSaldoPuntos(cuenta.getSaldoPuntos());
         
+        // 2. Buscar la regla activa
         Optional<ReglaPuntos> reglaOpt = reglaPuntosService.getReglaActiva();
         
-        if (reglaOpt.isEmpty() || reglaOpt.get().getEquivalenciaPuntos() == null || reglaOpt.get().getEquivalenciaPuntos().compareTo(BigDecimal.ZERO) <= 0) {
+        if (reglaOpt.isEmpty()) {
             saldoDTO.setValorMonetario(BigDecimal.ZERO);
             saldoDTO.setEquivalenciaActual("Equivalencia no disponible");
+            saldoDTO.setRecompensasDisponibles(new ArrayList<>());
             return saldoDTO;
         }
         
         ReglaPuntos regla = reglaOpt.get();
-        BigDecimal valorMonetario = regla.getEquivalenciaPuntos()
-                                         .multiply(new BigDecimal(cuenta.getSaldoPuntos()));
-        valorMonetario = valorMonetario.setScale(2, RoundingMode.HALF_UP);
-        saldoDTO.setValorMonetario(valorMonetario);
         
-        String equivalenciaStr = String.format("1 Punto = $%.2f ARS", regla.getEquivalenciaPuntos());
-        saldoDTO.setEquivalenciaActual(equivalenciaStr);
+        // 3. Calcular valor monetario (informativo) usando la equivalencia (si existe)
+        if (regla.getEquivalenciaPuntos() != null && regla.getEquivalenciaPuntos().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal valorMonetario = regla.getEquivalenciaPuntos()
+                                            .multiply(new BigDecimal(cuenta.getSaldoPuntos()));
+            valorMonetario = valorMonetario.setScale(2, RoundingMode.HALF_UP);
+            saldoDTO.setValorMonetario(valorMonetario);
+            
+            String equivalenciaStr = String.format("1 Punto = $%.2f ARS", regla.getEquivalenciaPuntos());
+            saldoDTO.setEquivalenciaActual(equivalenciaStr);
+        } else {
+             saldoDTO.setValorMonetario(BigDecimal.ZERO);
+             saldoDTO.setEquivalenciaActual("Ver catálogo de canjes");
+        }
+
+        // 4. Cargar y convertir las recompensas disponibles
+        if (regla.getRecompensas() != null && !regla.getRecompensas().isEmpty()) {
+            List<RecompensaDTO> recompensasDTO = regla.getRecompensas().stream()
+                .map(recompensaMapper::toDto)
+                .collect(Collectors.toList());
+            saldoDTO.setRecompensasDisponibles(recompensasDTO);
+        } else {
+            saldoDTO.setRecompensasDisponibles(new ArrayList<>());
+        }
 
         return saldoDTO;
     }

@@ -1,16 +1,12 @@
-import { DetalleVentaDTO } from "./detalle-venta.model"; // Importa el DTO del detalle
+import { DetalleVentaDTO } from "./detalle-venta.model"; 
 
-// Coincide con el Enum EstadoVenta del backend
-export type EstadoVenta = 'COMPLETADA' | 'CANCELADA' | 'PENDIENTE'; // Ajusta si tienes otros estados
+export type EstadoVenta = 'COMPLETADA' | 'CANCELADA' | 'PENDIENTE'; 
 
 export interface VentasPorDiaDTO {
-  fecha: string; // El backend envía LocalDate, Angular lo recibe como string
+  fecha: string; 
   total: number;
 }
 
-/**
- * DTO para el gráfico de productos top (TopProductoDTO del backend)
- */
 export interface TopProductoDTO {
   productoId: number;
   nombre: string;
@@ -20,18 +16,22 @@ export interface TopProductoDTO {
 export interface VentaDTO {
   // --- Campos para ENVIAR al backend (POST) ---
   clienteId: number;
-  // vendedorId NO se envía, se obtiene del token en backend
-  detalles: DetalleVentaDTO[]; // Array de detalles (solo con productoId y cantidad)
+  detalles: DetalleVentaDTO[]; 
 
   // --- Campos que vienen del backend (GET) ---
   id?: number;
-  fechaVenta?: string; // Angular maneja LocalDateTime como string
+  fechaVenta?: string; 
   estado?: EstadoVenta;
-  totalVenta?: number;
-  clienteNombre?: string; // Nombre/Apellido del cliente
-  vendedorNombre?: string; // Nombre/Apellido del vendedor
+  totalVenta?: number; // El total FINAL (con descuento aplicado)
+  
+  clienteNombre?: string; 
+  vendedorNombre?: string; 
   fechaCreacion?: string;
   fechaModificacion?: string;
   comprobantePdf?: string;
+  
   codigoCupon?: string | null;
+
+  // --- MENTOR: CAMPO NUEVO AGREGADO ---
+  montoDescuento?: number; // <--- ESTO ES LO QUE FALTABA
 }

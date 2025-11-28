@@ -64,5 +64,8 @@ export class UsuarioService {
      return this.http.patch<any>(`${this.apiUrl}/${id}/reactivar`, {});
   }
 
-  // cambiarRol ya no es necesario, se maneja en 'actualizarUsuarioAdmin'
+  crearClienteRapido(usuario: any): Observable<UsuarioDTO> {
+    // Llama al endpoint específico que permite acceso a vendedores
+    return this.http.post<UsuarioDTO>(`${this.apiUrl}/cliente-rapido`, usuario);
+  }
 }

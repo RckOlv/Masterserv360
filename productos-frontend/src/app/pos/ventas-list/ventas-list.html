@@ -1,172 +1,172 @@
-<div class="container-fluid my-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4><i class="bi bi-receipt"></i> Historial de Ventas</h4>
-    <a *appHasPermission="'VENTAS_CREATE'" routerLink="/pos/punto-venta" class="btn btn-primary">
-      <i class="bi bi-plus-lg"></i> Nueva Venta
-    </a>
-  </div>
+<div class="ventas-container">
+  <div class="card masterserv-card">
+    
+    <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
+      <h4 class="masterserv-title">
+        <i class="bi bi-receipt me-2"></i>Ventas
+      </h4>
+      <a routerLink="/pos/punto-venta" *appHasPermission="'VENTAS_CREATE'" class="btn masterserv-btn-primary">
+        <i class="bi bi-plus-lg me-1"></i> Nueva Venta
+      </a>
+    </div>
 
-  <div class="card card-masterserv shadow-sm mb-3">
-    <div class="card-body bg-dark-custom p-3 rounded-2">
-      <form [formGroup]="filtroForm" (ngSubmit)="aplicarFiltros(true)">
+    <div class="card-body masterserv-card-body d-flex flex-column">
+      
+      <form [formGroup]="filtroForm" (ngSubmit)="aplicarFiltros(true)" class="masterserv-filter p-3 mb-3 rounded border">
         <div class="row g-2 align-items-end">
           
           <div class="col-md-3">
-            <label for="filtroCliente" class="form-label form-label-sm">Cliente</label>
-            <ng-select
-              id="filtroCliente"
-              formControlName="clienteId"
+            <label class="form-label text-white-50 small fw-bold">Cliente</label>
+            
+            <ng-select 
               [items]="(clientes$ | async) ?? []"
-              [typeahead]="clienteSearch$"
               bindLabel="nombre"
               bindValue="id"
               placeholder="Buscar cliente..."
+              [typeahead]="clienteSearch$"
               [loading]="isLoadingClientes"
-              [clearable]="true">
-
+              [(ngModel)]="filtros.clienteId" 
+              [ngModelOptions]="{standalone: true}"
+              (change)="onFiltroChange()"
+              class="masterserv-select-dark"
+              notFoundText="No se encontraron clientes">
+              
               <ng-template ng-option-tmp let-item="item">
-                <div>{{ item.nombre }} {{ item.apellido }}</div>
-                <small class="text-muted">{{ item.email }} - Doc: {{ item.documento }}</small>
+                <div class="text-white fw-bold">{{ item.nombre }} {{ item.apellido }}</div>
+                <small class="text-white-50">
+                   <i class="bi bi-envelope"></i> {{ item.email }} | Doc: {{ item.documento }}
+                </small>
               </ng-template>
-
-              <ng-template ng-notfound-tmp let-searchTerm="searchTerm">
-                <div class="ng-option-disabled">No se encontraron clientes</div>
+  
+              <ng-template ng-label-tmp let-item="item">
+                <span class="text-white fw-bold">
+                  {{ item.nombre }} {{ item.apellido }}
+                </span>
               </ng-template>
-
             </ng-select>
           </div>
 
-          <div *appHasPermission="'VENTAS_READ_ALL'" class="col-md-3">
-            <label for="filtroVendedor" class="form-label form-label-sm">Vendedor</label>
-            <select id="filtroVendedor" class="form-select form-select-sm" formControlName="vendedorId" [disabled]="isLoadingFilters">
+          <div class="col-md-2" *appHasPermission="'VENTAS_READ_ALL'">
+            <label class="form-label text-white-50 small fw-bold">Vendedor</label>
+            <select class="form-select form-select-sm masterserv-input" formControlName="vendedorId">
               <option [ngValue]="null">Todos</option>
-              <option *ngFor="let vendedor of vendedores" [value]="vendedor.id">
-                {{ vendedor.nombre }} {{ vendedor.apellido }}
+              <option *ngFor="let v of vendedores" [value]="v.id">
+                {{ v.nombre }} {{ v.apellido }}
               </option>
             </select>
           </div>
 
           <div class="col-md-2">
-            <label for="filtroFechaDesde" class="form-label form-label-sm">Fecha Desde</label>
-            <input type="date" id="filtroFechaDesde" class="form-control form-control-sm" formControlName="fechaDesde">
+            <label class="form-label text-white-50 small fw-bold">Fecha Desde</label>
+            <input type="date" class="form-control form-control-sm masterserv-input" formControlName="fechaDesde">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label text-white-50 small fw-bold">Fecha Hasta</label>
+            <input type="date" class="form-control form-control-sm masterserv-input" formControlName="fechaHasta">
           </div>
 
           <div class="col-md-2">
-            <label for="filtroFechaHasta" class="form-label form-label-sm">Fecha Hasta</label>
-            <input type="date" id="filtroFechaHasta" class="form-control form-control-sm" formControlName="fechaHasta">
-          </div>
-
-          <div class="col-md-2">
-            <label for="filtroEstado" class="form-label form-label-sm">Estado</label>
-            <select id="filtroEstado" class="form-select form-select-sm" formControlName="estado">
+            <label class="form-label text-white-50 small fw-bold">Estado</label>
+            <select class="form-select form-select-sm masterserv-input" formControlName="estado">
               <option [ngValue]="null">Todos</option>
-              <option *ngFor="let est of estadosVenta" [value]="est">{{ est }}</option>
+              <option *ngFor="let e of estadosVenta" [value]="e">{{ e }}</option>
             </select>
           </div>
-
-          <div class="col-12 col-md-auto ms-md-auto mt-2 mt-md-0">
-            <button type="submit" class="btn btn-primary btn-sm me-2" [disabled]="isLoadingFilters || isLoading">
-              <i class="bi bi-search"></i> Buscar
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" (click)="limpiarFiltros()" [disabled]="isLoadingFilters || isLoading">
-              <i class="bi bi-eraser"></i> Limpiar
-            </button>
+          
+          <div class="col-md-1 d-flex">
+            <div class="d-grid gap-1 w-100">
+              <button type="submit" class="btn masterserv-btn-primary btn-sm" title="Buscar">
+                <i class="bi bi-search"></i>
+              </button>
+              <button type="button" class="btn masterserv-btn-secondary btn-sm" (click)="limpiarFiltros()" title="Limpiar">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
           </div>
+
         </div>
       </form>
 
-      <div *ngIf="isLoadingFilters" class="text-center text-muted small mt-2">
+      <div *ngIf="isLoadingFilters" class="text-center text-white-50 small mt-2">
         <div class="spinner-border spinner-border-sm" role="status"></div>
         Cargando filtros...
       </div>
 
-    </div>
-  </div>
+      <div class="content-main flex-grow-1 d-flex flex-column">
+        
+        <div *ngIf="isLoading" class="loading-container flex-grow-1 d-flex align-items-center justify-content-center">
+          <div class="spinner-border masterserv-spinner" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+        </div>
 
-  <div *ngIf="isLoading" class="text-center my-5">
-    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-      <span class="visually-hidden">Cargando ventas...</span>
-    </div>
-  </div>
+        <div *ngIf="errorMessage && !isLoading" class="alert masterserv-alert-danger mb-3">
+          <i class="bi bi-exclamation-triangle me-2"></i>{{ errorMessage }}
+        </div>
 
-  <div *ngIf="errorMessage && !isLoading" class="alert alert-danger">
-    {{ errorMessage }}
-  </div>
-
-  <div *ngIf="!isLoading && ventasPage">
-
-    <div *ngIf="!ventasPage.content || ventasPage.content.length === 0" class="alert alert-secondary text-center">
-      <i class="bi bi-info-circle me-2"></i>
-      No se encontraron ventas para los filtros aplicados.
-    </div>
-
-    <div class="card card-masterserv shadow-sm" *ngIf="ventasPage.content && ventasPage.content.length > 0">
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-masterserv table-hover table-sm align-middle mb-0">
-            <thead>
+        <div *ngIf="!isLoading && ventasPage && ventasPage.content.length > 0" class="table-responsive flex-grow-1">
+          <table class="table table-hover table-sm align-middle masterserv-table">
+            <thead class="masterserv-table-header">
               <tr>
-                <th>ID Venta</th>
+                <th class="ps-3">ID Venta</th>
                 <th>Fecha</th>
                 <th>Cliente</th>
                 <th>Vendedor</th>
                 <th class="text-end">Total</th>
                 <th class="text-center">Estado</th>
-                <th class="text-center">Acciones</th>
+                <th class="text-center pe-3">Acciones</th>
               </tr>
             </thead>
-
             <tbody>
-              <tr *ngFor="let venta of ventasPage.content">
-                <td>#{{ venta.id }}</td>
-                <td>{{ venta.fechaVenta | date:'dd/MM/yyyy HH:mm' }}</td>
-                <td class="fw-bold">{{ venta.clienteNombre || 'N/A' }}</td>
-                <td>{{ venta.vendedorNombre || 'N/A' }}</td>
-                <td class="text-end fw-bold">{{ venta.totalVenta | currency:'ARS':'symbol':'1.2-2' }}</td>
-
+              <tr *ngFor="let venta of ventasPage.content" class="masterserv-table-row">
+                <td class="ps-3 masterserv-code fw-bold">#{{ venta.id }}</td>
+                <td class="text-white">{{ venta.fechaVenta | date:'dd/MM/yyyy HH:mm' }}</td>
+                
+                <td class="text-white fw-bold">
+                    {{ venta.clienteNombre || 'N/A' }}
+                </td>
+                
+                <td class="text-white-50">
+                    {{ venta.vendedorNombre || 'Web/Sistema' }}
+                </td>
+                
+                <td class="text-end masterserv-price fw-bold">
+                  {{ venta.totalVenta | currency:'ARS':'symbol':'1.2-2' }}
+                </td>
+                
                 <td class="text-center">
-                  <span class="badge"
-                    [ngClass]="{
-                      'bg-success': venta.estado === 'COMPLETADA',
-                      'bg-danger': venta.estado === 'CANCELADA',
-                      'bg-warning': venta.estado === 'PENDIENTE'
-                    }">
+                  <span class="badge masterserv-badge" 
+                        [ngClass]="{
+                          'masterserv-badge-success': venta.estado === 'COMPLETADA',
+                          'masterserv-badge-danger': venta.estado === 'CANCELADA',
+                          'masterserv-badge-warning': venta.estado === 'PENDIENTE'
+                        }">
                     {{ venta.estado }}
                   </span>
                 </td>
 
-                <td class="text-center">
-                  <div class="btn-group btn-group-sm" role="group">
-
-                    <button class="btn btn-outline-info"
-                            [routerLink]="['/pos/ventas', venta.id]"
-                            title="Ver Detalle"
-                            (click)="$event.stopPropagation()">
+                <td class="text-center pe-3">
+                  <div class="btn-group btn-group-sm">
+                    
+                    <a [routerLink]="['/pos/ventas', venta.id]" class="btn masterserv-btn-outline-info btn-action" title="Ver Detalle">
                       <i class="bi bi-eye"></i>
-                    </button>
-
-                    <button *ngIf="venta.estado === 'COMPLETADA'"
-                            class="btn btn-outline-primary"
-                            (click)="descargarComprobante(venta.id, $event)"
+                    </a>
+                    
+                    <button *ngIf="venta.estado === 'COMPLETADA'" 
+                            class="btn masterserv-btn-outline-primary btn-action" 
+                            (click)="descargarComprobante(venta.id, $event)" 
                             title="Descargar Comprobante">
                       <i class="bi bi-download"></i>
                     </button>
 
-                    <!-- FIX aplicado acá -->
                     <ng-container *appHasPermission="'VENTAS_CANCELAR'">
-                      <button *ngIf="venta.estado === 'COMPLETADA'"
-                              class="btn btn-outline-warning"
-                              (click)="onCancelarVenta(venta)"
+                      <button *ngIf="venta.estado === 'COMPLETADA'" 
+                              class="btn masterserv-btn-outline-warning btn-action" 
+                              (click)="onCancelarVenta(venta)" 
                               [disabled]="cancelingVentaId === venta.id"
                               title="Cancelar Venta">
-
-                        <span *ngIf="cancelingVentaId === venta.id"
-                              class="spinner-border spinner-border-sm"
-                              role="status"
-                              aria-hidden="true"></span>
-
-                        <i *ngIf="cancelingVentaId !== venta.id"
-                           class="bi bi-x-circle"></i>
+                         <i *ngIf="cancelingVentaId !== venta.id" class="bi bi-x-circle"></i>
+                         <span *ngIf="cancelingVentaId === venta.id" class="spinner-border spinner-border-sm"></span>
                       </button>
                     </ng-container>
 
@@ -174,31 +174,33 @@
                 </td>
               </tr>
             </tbody>
-
           </table>
         </div>
+
+        <div *ngIf="!isLoading && (!ventasPage || ventasPage.content.length === 0)" class="empty-container flex-grow-1 d-flex align-items-center justify-content-center">
+          <div class="alert masterserv-alert-info text-center">
+            <i class="bi bi-info-circle me-2"></i> No se encontraron ventas con los filtros seleccionados.
+          </div>
+        </div>
+
+        <div class="card-footer bg-transparent border-top border-secondary d-flex justify-content-between align-items-center py-2" 
+             *ngIf="!isLoading && ventasPage && ventasPage.totalPages > 1">
+          
+          <button class="btn masterserv-btn-secondary btn-sm" (click)="paginaAnterior()" [disabled]="ventasPage.first">
+            <i class="bi bi-chevron-left"></i> Anterior
+          </button>
+
+          <span class="text-white-50 small">
+            Página <strong class="text-white">{{ ventasPage.number + 1 }}</strong> de <strong class="text-white">{{ ventasPage.totalPages }}</strong>
+            <span class="d-none d-md-inline"> (Total: {{ ventasPage.totalElements }} ventas)</span>
+          </span>
+
+          <button class="btn masterserv-btn-secondary btn-sm" (click)="paginaSiguiente()" [disabled]="ventasPage.last">
+            Siguiente <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+
       </div>
-
-      <div class="card-footer d-flex justify-content-between align-items-center"
-           *ngIf="ventasPage.totalPages > 1">
-        <button class="btn btn-outline-secondary btn-sm"
-                (click)="paginaAnterior()"
-                [disabled]="ventasPage.number === 0 || isLoading">
-          <i class="bi bi-chevron-left"></i> Anterior
-        </button>
-
-        <span>
-          Página {{ ventasPage.number + 1 }} de {{ ventasPage.totalPages }}
-          <small class="text-muted ms-2">(Total: {{ ventasPage.totalElements }} ventas)</small>
-        </span>
-
-        <button class="btn btn-outline-secondary btn-sm"
-                (click)="paginaSiguiente()"
-                [disabled]="(ventasPage.number + 1) >= ventasPage.totalPages || isLoading">
-          Siguiente <i class="bi bi-chevron-right"></i>
-        </button>
-      </div>
-
     </div>
   </div>
 </div>

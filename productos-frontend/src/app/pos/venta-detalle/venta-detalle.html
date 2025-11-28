@@ -1,55 +1,55 @@
 <div class="detalle-container">
   
-  <div class="card masterserv-card shadow-sm">
+  <div class="card masterserv-card shadow-lg border-danger" style="background-color: #1e1e1e;">
     
-    <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
-      <h4 class="masterserv-title mb-0">
+    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+      <h4 class="mb-0 fw-bold">
         <i class="bi bi-receipt-cutoff me-2"></i>
         <span *ngIf="venta">Detalle de Venta #{{ venta.id }}</span>
-        <span *ngIf="!venta">Cargando detalle...</span>
+        <span *ngIf="!venta">Cargando...</span>
       </h4>
-      <a routerLink="/pos/ventas-historial" class="btn masterserv-btn-secondary btn-sm">
+      <a routerLink="/pos/ventas-historial" class="btn btn-outline-light btn-sm">
         <i class="bi bi-arrow-left me-1"></i> Volver al Historial
       </a>
     </div>
 
-    <div class="card-body masterserv-card-body">
+    <div class="card-body text-white">
 
-      <div *ngIf="isLoading" class="loading-container flex-grow-1 d-flex align-items-center justify-content-center">
-        <div class="spinner-border masterserv-spinner" role="status">
+      <div *ngIf="isLoading" class="text-center py-5">
+        <div class="spinner-border text-danger" role="status">
           <span class="visually-hidden">Cargando...</span>
         </div>
       </div>
 
-      <div *ngIf="errorMessage && !isLoading" class="alert masterserv-alert-danger">
+      <div *ngIf="errorMessage && !isLoading" class="alert alert-danger">
         <i class="bi bi-exclamation-triangle me-2"></i>{{ errorMessage }}
       </div>
       
       <div *ngIf="!isLoading && venta && !errorMessage">
 
-        <div class="masterserv-filter p-3 mb-4">
-          <h5 class="masterserv-label border-bottom pb-2 mb-3">Información General</h5>
+        <div class="p-3 mb-4 rounded" style="background-color: #2c2c2c; border: 1px solid #444;">
+          <h5 class="text-danger border-bottom border-secondary pb-2 mb-3 text-uppercase">Información General</h5>
           <div class="row">
             <div class="col-md-6">
               <p class="mb-2">
-                <strong class="masterserv-label-sm">Fecha:</strong>
-                <span class="ms-2 masterserv-data">{{ venta.fechaVenta | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+                <strong class="text-white-50 text-uppercase small">Fecha:</strong>
+                <span class="ms-2 fw-bold text-white">{{ venta.fechaVenta | date:'dd/MM/yyyy HH:mm:ss' }}</span>
               </p>
               <p class="mb-0">
-                <strong class="masterserv-label-sm">Cliente:</strong>
-                <span class="ms-2 masterserv-data">{{ venta.clienteNombre || 'N/A' }}</span>
+                <strong class="text-white-50 text-uppercase small">Cliente:</strong>
+                <span class="ms-2 fw-bold text-white">{{ venta.clienteNombre || 'N/A' }}</span>
               </p>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6 text-md-end">
               <p class="mb-2">
-                <strong class="masterserv-label-sm">Vendedor:</strong>
-                <span class="ms-2 masterserv-data">{{ venta.vendedorNombre || 'N/A' }}</span>
+                <strong class="text-white-50 text-uppercase small">Vendedor:</strong>
+                <span class="ms-2 text-white">{{ venta.vendedorNombre || 'N/A' }}</span>
               </p>
               <p class="mb-0">
-                <strong class="masterserv-label-sm">Estado:</strong>
-                <span class="badge ms-2 masterserv-badge" [ngClass]="{
-                  'masterserv-badge-success': venta.estado === 'COMPLETADA',
-                  'masterserv-badge-danger': venta.estado === 'CANCELADA'
+                <strong class="text-white-50 text-uppercase small">Estado:</strong>
+                <span class="badge ms-2" [ngClass]="{
+                  'bg-success': venta.estado === 'COMPLETADA',
+                  'bg-danger': venta.estado === 'CANCELADA'
                 }">
                   {{ venta.estado }}
                 </span>
@@ -58,42 +58,63 @@
           </div>
         </div>
 
-        <h5 class="masterserv-label border-bottom pb-2 mb-3">Detalles de Productos</h5>
+        <h5 class="text-danger border-bottom border-secondary pb-2 mb-3 text-uppercase">Detalles de Productos</h5>
         
-        <div *ngIf="!venta.detalles || venta.detalles.length === 0" class="alert masterserv-alert-info text-center">
-          Esta venta no tiene productos asociados (puede ser un error).
+        <div *ngIf="!venta.detalles || venta.detalles.length === 0" class="alert alert-info text-center">
+          Esta venta no tiene productos asociados.
         </div>
 
-        <div class="table-responsive" *ngIf="venta.detalles && venta.detalles.length > 0">
-          <table class="table table-sm align-middle masterserv-table">
-            <thead class="masterserv-table-header">
-              <tr>
+        <div class="table-responsive mb-4" *ngIf="venta.detalles && venta.detalles.length > 0">
+          <table class="table table-dark table-hover align-middle mb-0" style="background-color: #2c2c2c;">
+            <thead>
+              <tr class="text-danger text-uppercase small">
                 <th class="ps-3">Producto</th>
                 <th class="text-center">Código</th>
-                <th class="text-end">Precio Unit. (Venta)</th>
+                <th class="text-end">Precio Unit.</th>
                 <th class="text-center">Cantidad</th>
                 <th class="text-end pe-3">Subtotal</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let detalle of venta.detalles" class="masterserv-table-row">
-                  <td class="masterserv-name ps-3">{{ detalle.productoNombre || 'N/A' }}</td>
-                  <td class="masterserv-code text-center">{{ detalle.productoCodigo || 'N/A' }}</td>
-                  <td class="masterserv-price text-end">{{ detalle.precioUnitario | currency:'ARS':'symbol':'1.2-2' }}</td>
-                  <td class="masterserv-stock text-center">{{ detalle.cantidad }}</td>
-                  <td class="masterserv-price text-end pe-3">{{ detalle.subtotal | currency:'ARS':'symbol':'1.2-2' }}</td>
+              <tr *ngFor="let detalle of venta.detalles">
+                  <td class="ps-3 fw-bold">{{ detalle.productoNombre || 'N/A' }}</td>
+                  <td class="text-center text-white-50 small">{{ detalle.productoCodigo || 'N/A' }}</td>
+                  <td class="text-end">{{ detalle.precioUnitario | currency:'ARS':'symbol':'1.2-2' }}</td>
+                  <td class="text-center">{{ detalle.cantidad }}</td>
+                  <td class="text-end pe-3 text-warning">{{ detalle.subtotal | currency:'ARS':'symbol':'1.2-2' }}</td>
               </tr>
             </tbody>
-            <tfoot class="masterserv-table-footer">
-              <tr>
-                <td colspan="4" class="text-end fs-5 fw-bold">TOTAL VENTA:</td>
-                <td class="text-end fs-5 fw-bold pe-3">
-                  {{ venta.totalVenta | currency:'ARS':'symbol':'1.2-2' }}
-                </td>
-              </tr>
-            </tfoot>
           </table>
         </div>
+
+        <div class="row justify-content-end">
+          <div class="col-md-5 col-lg-4">
+            <div class="p-3 rounded shadow-sm" style="background-color: #2c2c2c; border: 1px solid #dc3545;">
+              
+              <div class="d-flex justify-content-between mb-2">
+                <span class="text-white-50">Subtotal:</span>
+                <span class="fw-bold">{{ ((venta.totalVenta || 0) + (venta.montoDescuento || 0)) | currency:'ARS':'symbol':'1.2-2' }}</span>
+              </div>
+
+              <div class="d-flex justify-content-between mb-2 text-success" *ngIf="venta.montoDescuento && venta.montoDescuento > 0">
+                <span>
+                  <i class="bi bi-tag-fill me-1"></i> 
+                  Descuento <small *ngIf="venta.codigoCupon">({{ venta.codigoCupon }})</small>:
+                </span>
+                <span class="fw-bold">- {{ venta.montoDescuento | currency:'ARS':'symbol':'1.2-2' }}</span>
+              </div>
+
+              <hr class="border-secondary my-2">
+
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="h5 mb-0 text-white">TOTAL:</span>
+                <span class="h2 mb-0 text-danger fw-bold">{{ (venta.totalVenta || 0) | currency:'ARS':'symbol':'1.2-2' }}</span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>

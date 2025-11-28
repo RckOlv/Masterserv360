@@ -1,10 +1,10 @@
-// Esta es la interfaz para LEER el catálogo
 export interface ProductoPublicoDTO {
   id: number;
   nombre: string;
+  codigo: string;
   descripcion: string;
   precioVenta: number;
   stockActual: number;
+  imagenUrl?: string | null; 
   nombreCategoria: string;
-  imagenUrl: string;
 }
