@@ -2,12 +2,11 @@ package com.masterserv.productos.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List; // <--- IMPORTANTE
 
-// --- ¡IMPORTA LAS VALIDACIONES! ---
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-// ------------------------------------
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -37,4 +36,8 @@ public class ReglaPuntosDTO extends AuditableDTO {
     private Integer caducidadPuntosMeses;
 
     private LocalDateTime fechaInicioVigencia;
+
+    // --- MENTOR: CORRECCIÓN CRÍTICA ---
+    // Usamos el DTO, no la Entidad. Esto obliga a MapStruct a usar RecompensaMapper.
+    private List<RecompensaDTO> recompensas; 
 }

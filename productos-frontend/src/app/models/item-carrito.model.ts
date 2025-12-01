@@ -9,4 +9,5 @@ export interface ItemCarritoDTO {
   cantidad: number;
   subtotal: number; // Calculado (precio * cantidad)
   stockDisponible: number; // Stock actual del producto
+  productoCategoriaId: number;
 }

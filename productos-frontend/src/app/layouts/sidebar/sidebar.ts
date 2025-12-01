@@ -1,12 +1,9 @@
-import { Component, inject } from '@angular/core'; 
+import { Component, OnInit, inject } from '@angular/core'; 
 import { RouterModule, Router } from '@angular/router'; 
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../service/auth.service'; 
-
-// --- Mentor: INICIO DE LA MODIFICACIÓN ---
-// 1. Importar la nueva directiva de permisos
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
-// --- Mentor: FIN DE LA MODIFICACIÓN ---
+import { BehaviorSubject } from 'rxjs';
 
 @Component({
   selector: 'app-sidebar',
@@ -14,34 +11,59 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   imports: [
     RouterModule,  
     CommonModule,
-    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
-    // 2. Añadir la directiva a los imports del componente
     HasPermissionDirective
-    // --- Mentor: FIN DE LA MODIFICACIÓN ---
   ], 
   templateUrl: './sidebar.html',
   styleUrls: ['./sidebar.css']
 })
-export class SidebarComponent {
-  sidebarToggled = false;
-
-  // --- ¡INYECCIÓN DE SERVICIOS! ---
-  private authService = inject(AuthService); // Se mantiene para el logout
-  private router = inject(Router);
+export class SidebarComponent implements OnInit {
   
-  // --- Mentor: INICIO DE LA MODIFICACIÓN ---
-  // 3. 'isAdmin' se elimina por completo
-  // public isAdmin = this.authService.hasRole('ROLE_ADMIN');
-  // --- Mentor: FIN DE LA MODIFICACIÓN ---
+  private authService = inject(AuthService);
+  private router = inject(Router);
 
-  toggleSidebar() {
-    this.sidebarToggled = !this.sidebarToggled;
+  // Datos del Usuario
+  public userName$ = new BehaviorSubject<string>('Usuario');
+  public userRoleLabel$ = new BehaviorSubject<string>('');
+
+  // MENTOR: Estado del menú de usuario (Perfil/Logout)
+  public isUserMenuOpen = false;
+
+  // Estado de las secciones del menú principal
+  public sections: { [key: string]: boolean } = {
+    general: true,
+    inventario: false,
+    compras: false,
+    admin: false
+  };
+  
+  ngOnInit(): void {
+    const token = this.authService.getDecodedToken();
+    if (token) {
+        const nombreDisplay = (token.nombre && token.apellido) 
+            ? `${token.nombre} ${token.apellido}` 
+            : token.sub;
+        this.userName$.next(nombreDisplay);
+
+        if (token.roles && token.roles.length > 0) {
+            const role = token.roles[0];
+            if (role === 'ROLE_ADMIN') this.userRoleLabel$.next('Administrador');
+            else if (role === 'ROLE_VENDEDOR') this.userRoleLabel$.next('Vendedor');
+            else this.userRoleLabel$.next('Usuario');
+        }
+    }
   }
 
-  // --- ¡NUEVO MÉTODO DE LOGOUT! ---
+  toggleSection(sectionName: string): void {
+    this.sections[sectionName] = !this.sections[sectionName];
+  }
+
+  // MENTOR: Nuevo método para alternar el menú de perfil
+  toggleUserMenu(): void {
+    this.isUserMenuOpen = !this.isUserMenuOpen;
+  }
+
   logout(): void {
     this.authService.logout();
-    // (El authService.logout() ya redirige a /login)
     this.router.navigate(['/login']); 
   }
 }

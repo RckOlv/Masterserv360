@@ -18,4 +18,5 @@ public class ProductoPublicoDTO {
     private Integer stockActual;
     private String imagenUrl;
     private String nombreCategoria;
+    private int stockMinimo;
 }

@@ -5,11 +5,13 @@ export interface RecompensaDTO {
   descripcion: string;
   puntosRequeridos: number;
   tipoDescuento: TipoDescuento;
-  valor: number; // (Será 500 para $500, o 20 para 20%)
+  valor: number; 
   
-  reglaPuntosId?: number; // Lo necesitamos para crear/actualizar
-  categoriaId?: number | null; // Opcional: ID de la categoría
-  
-  // Solo lectura (para mostrar en la tabla)
+  // --- MENTOR: AGREGADO ---
+  stock: number;
+  // ------------------------
+
+  reglaPuntosId?: number; 
+  categoriaId?: number | null; 
   categoriaNombre?: string; 
 }

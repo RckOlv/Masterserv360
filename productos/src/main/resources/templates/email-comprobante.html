@@ -20,6 +20,10 @@
 
             <div class="total">
                 Total de la compra: <span th:text="${totalVenta}">$0.00</span>
+                <p th:if="${hayDescuento}" style="color: green;">
+                Descuento aplicado: -<span th:text="${montoDescuento}"></span> 
+                <span th:if="${codigoCupon != ''}" th:text="'(' + ${codigoCupon} + ')'"></span>
+            </p>
             </div>
 
             <p style="margin-top: 25px;">

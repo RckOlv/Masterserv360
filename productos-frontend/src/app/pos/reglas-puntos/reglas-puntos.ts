@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { distinctUntilChanged } from 'rxjs/operators'; // <-- Importado
+import { distinctUntilChanged } from 'rxjs/operators'; 
 
 // Modelos y Servicios
 import { ReglaPuntosService } from '../../service/regla-puntos.service';
@@ -58,8 +58,11 @@ export default class ReglasPuntosComponent implements OnInit {
   public esEdicionRecompensa = false;
   public recompensaEditandoId: number | null = null;
 
+  // --- MENTOR: Variable visual para los Radio Buttons ---
+  public aplicarA: 'TODO' | 'CATEGORIA' = 'TODO'; 
+
   constructor() {
-    // Formulario para "Ganar Puntos" (V2 - sin equivalencia)
+    // Formulario para "Ganar Puntos"
     this.reglaForm = this.fb.group({
       descripcion: ['', [Validators.required, Validators.maxLength(100)]],
       montoGasto: [1000, [Validators.required, Validators.min(1)]],
@@ -72,9 +75,13 @@ export default class ReglasPuntosComponent implements OnInit {
     this.recompensaForm = this.fb.group({
       descripcion: ['', [Validators.required, Validators.maxLength(100)]],
       puntosRequeridos: [null, [Validators.required, Validators.min(1)]],
+      
+      // --- MENTOR: AGREGADO STOCK ---
+      stock: [null, [Validators.required, Validators.min(0)]], 
+      // -----------------------------
+
       tipoDescuento: [TipoDescuento.FIJO, [Validators.required]],
       valor: [null, [Validators.required, Validators.min(1)]],
-      // Se inicia deshabilitado (lógica V2 para [disabled])
       categoriaId: [{ value: null, disabled: true }] 
     });
   }
@@ -88,17 +95,17 @@ export default class ReglasPuntosComponent implements OnInit {
       this.recompensaModal = new bootstrap.Modal(modalElement);
     }
     
-    // Lógica V2 para manejar el [disabled] del dropdown de categorías
+    // Lógica para habilitar/deshabilitar según TipoDescuento
     this.recompensaForm.get('tipoDescuento')?.valueChanges
-      .pipe(
-        distinctUntilChanged() 
-      )
+      .pipe(distinctUntilChanged())
       .subscribe(tipo => {
         const categoriaControl = this.recompensaForm.get('categoriaId');
         
         if (tipo === TipoDescuento.PORCENTAJE) {
           categoriaControl?.enable();
         } else {
+          // Si es FIJO, siempre es TODO
+          this.aplicarA = 'TODO';
           categoriaControl?.disable();
           categoriaControl?.setValue(null);
         }
@@ -108,7 +115,7 @@ export default class ReglasPuntosComponent implements OnInit {
   cargarCategorias(): void {
      this.categoriaService.listarCategorias('ACTIVO').subscribe({
        next: (data) => this.categorias = data,
-       error: () => mostrarToast('No se pudieron cargar las categorías para el formulario de recompensas.', 'danger')
+       error: () => mostrarToast('No se pudieron cargar las categorías.', 'danger')
      });
   }
 
@@ -125,7 +132,7 @@ export default class ReglasPuntosComponent implements OnInit {
             descripcion: data.descripcion,
             montoGasto: data.montoGasto,
             puntosGanados: data.puntosGanados,
-            equivalenciaPuntos: data.equivalenciaPuntos || 1, // (Mantenemos el valor informativo)
+            equivalenciaPuntos: data.equivalenciaPuntos || 1,
             caducidadPuntosMeses: data.caducidadPuntosMeses
           });
         }
@@ -171,9 +178,9 @@ export default class ReglasPuntosComponent implements OnInit {
       descripcion: formValue.descripcion,
       montoGasto: formValue.montoGasto,
       puntosGanados: formValue.puntosGanados,
-      equivalenciaPuntos: formValue.equivalenciaPuntos, // (Enviamos el valor informativo)
+      equivalenciaPuntos: formValue.equivalenciaPuntos, 
       caducidadPuntosMeses: formValue.caducidadPuntosMeses,
-      recompensas: this.reglaActiva?.recompensas || [] // Mantenemos las recompensas existentes
+      recompensas: this.reglaActiva?.recompensas || [] 
     };
     
     this.reglaPuntosService.crearNuevaReglaActiva(nuevaReglaDTO).subscribe({
@@ -187,14 +194,13 @@ export default class ReglasPuntosComponent implements OnInit {
           equivalenciaPuntos: 1,
           caducidadPuntosMeses: 12
         });
-        this.cargarDatos(); // Recargamos todo
+        this.cargarDatos(); 
       },
       error: (err: HttpErrorResponse) => { 
         console.error("Error al crear regla:", err);
         this.isSubmitting = false;
         
         let mensaje = "No se pudo crear la nueva regla. Verifique los datos.";
-
         if (err.status === 400 && err.error?.errors && Array.isArray(err.error.errors)) {
           mensaje = err.error.errors.map((e: any) => e.defaultMessage).join('; ');
         } else if (err.error?.message) {
@@ -213,11 +219,16 @@ export default class ReglasPuntosComponent implements OnInit {
     this.esEdicionRecompensa = false;
     this.recompensaEditandoId = null;
     this.modalErrorMessage = null;
+    
+    // MENTOR: Reset visual a "TODO"
+    this.aplicarA = 'TODO';
+
     this.recompensaForm.reset({
+      stock: 10, // Valor por defecto sugerido
       tipoDescuento: TipoDescuento.FIJO,
       categoriaId: null
     });
-    this.recompensaForm.get('categoriaId')?.disable(); // Aseguramos estado inicial
+    this.recompensaForm.get('categoriaId')?.disable(); 
     this.recompensaModal.show();
   }
 
@@ -225,15 +236,24 @@ export default class ReglasPuntosComponent implements OnInit {
     this.esEdicionRecompensa = true;
     this.recompensaEditandoId = recompensa.id!;
     this.modalErrorMessage = null;
+
+    // --- MENTOR: DEDUCIR VISUALMENTE ---
+    if (recompensa.categoriaId) {
+        this.aplicarA = 'CATEGORIA';
+    } else {
+        this.aplicarA = 'TODO';
+    }
+
     this.recompensaForm.patchValue({
       descripcion: recompensa.descripcion,
       puntosRequeridos: recompensa.puntosRequeridos,
+      stock: recompensa.stock, // MENTOR: Cargar Stock
       tipoDescuento: recompensa.tipoDescuento,
       valor: recompensa.valor,
       categoriaId: recompensa.categoriaId || null
     });
     
-    // Aplicamos el estado enable/disable después de cargar los datos
+    // Estado enable/disable
     if (recompensa.tipoDescuento === TipoDescuento.PORCENTAJE) {
       this.recompensaForm.get('categoriaId')?.enable();
     } else {
@@ -263,11 +283,11 @@ export default class ReglasPuntosComponent implements OnInit {
     this.isSubmittingRecompensa = true;
     this.modalErrorMessage = null;
 
-    // Usamos .getRawValue() para obtener TODOS los valores, incluidos los deshabilitados
     const recompensaData = this.recompensaForm.getRawValue() as RecompensaDTO;
     recompensaData.reglaPuntosId = this.reglaActiva.id;
     
-    if (recompensaData.tipoDescuento === TipoDescuento.FIJO) {
+    // MENTOR: Validar consistencia. Si dice 'TODO' o es FIJO, limpiamos categoría.
+    if (this.aplicarA === 'TODO' || recompensaData.tipoDescuento === TipoDescuento.FIJO) {
         recompensaData.categoriaId = null; 
     }
 

@@ -1,9 +1,7 @@
 package com.masterserv.productos.repository;
 
 import com.masterserv.productos.entity.Producto;
-
 import jakarta.persistence.LockModeType;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,22 +17,19 @@ import java.util.Optional;
 @Repository
 public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSpecificationExecutor<Producto> {
 
-    // Método para buscar por el código de producto que definimos
     Optional<Producto> findByCodigo(String codigo);
-
-    // Método para verificar si ya existe un producto con ese código
     boolean existsByCodigo(String codigo);
-
     Optional<Producto> findByNombre(String nombre);
 
-    // Extendemos JpaSpecificationExecutor<Producto>. Esto es clave.
-    // Nos permitirá construir consultas dinámicas complejas más adelante 
-    // (filtrar por nombre, categoría, precio, etc.) 
-    // usando el "Criteria API" y el `ProductoFiltroDTO` que tenías.
+    // --- MENTOR: NUEVO MÉTODO PARA EL GENERADOR ---
+    // Busca el último producto cuyo código empiece con el prefijo (ej: "ELLA")
+    // ordenado descendentemente para obtener el número más alto (ej: "ELLA05").
+    Optional<Producto> findTopByCodigoStartingWithOrderByCodigoDesc(String prefix);
+    // ----------------------------------------------
 
     @Query("SELECT p FROM Producto p " +
            "JOIN p.categoria c " +
-           "JOIN c.proveedores provs " + // Asume 'proveedores' en Categoria.java
+           "JOIN c.proveedores provs " + 
            "WHERE provs.id = :proveedorId AND p.estado = 'ACTIVO' " +
            "ORDER BY p.nombre ASC")
     List<Producto> findActivosByProveedorId(@Param("proveedorId") Long proveedorId);
@@ -52,7 +47,6 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
         Pageable pageable
     );
 
-    //(Cuenta productos donde el stock es <= stock_minimo)
     @Query("SELECT COUNT(p) FROM Producto p WHERE p.stockActual <= p.stockMinimo AND p.estado = 'ACTIVO'")
     long countProductosBajoStock();
 
@@ -65,5 +59,4 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
 
     @Query("SELECT p FROM Producto p WHERE p.nombre ILIKE %:termino% AND p.estado = 'ACTIVO'")
     List<Producto> findByNombreILike(@Param("termino") String termino, Pageable pageable);
-    
 }

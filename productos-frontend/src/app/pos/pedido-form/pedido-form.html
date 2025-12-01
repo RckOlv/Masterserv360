@@ -12,7 +12,7 @@
 
       <div *ngIf="isLoading" class="loading-container d-flex align-items-center justify-content-center">
         <div class="spinner-border masterserv-spinner" role="status">
-          <span class="visually-hidden">Cargando proveedores...</span>
+          <span class="visually-hidden">Cargando...</span>
         </div>
       </div>
 
@@ -22,7 +22,7 @@
 
       <form [formGroup]="pedidoForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading">
         
-        <div class="row border-bottom border-metal pb-3 mb-3">
+        <div class="row border-bottom border-secondary pb-3 mb-3">
           <div class="col-md-6">
             <label for="proveedorId" class="form-label masterserv-label">Proveedor <span class="text-danger">*</span></label>
             <select id="proveedorId" class="form-select masterserv-input" 
@@ -46,7 +46,7 @@
         </div>
 
         <div formArrayName="detalles">
-          <h5 class="masterserv-label" *ngIf="detalles.length > 0">Detalles del Pedido</h5>
+          <h5 class="masterserv-label mb-3" *ngIf="detalles.length > 0">Detalles del Pedido</h5>
 
           <div *ngFor="let detalleGroup of detalles.controls; let i = index" 
                [formGroupName]="i" 
@@ -54,6 +54,7 @@
 
             <div class="col-md-4">
               <label [for]="'producto-' + i" class="form-label masterserv-label">Producto <span class="text-danger">*</span></label>
+              
               <ng-select
                 [id]="'producto-' + i"
                 class="masterserv-input"
@@ -67,13 +68,14 @@
                 [ngClass]="{ 'is-invalid': detalleGroup.get('productoDTO')?.invalid && detalleGroup.get('productoDTO')?.touched }">
                 
                 <ng-template ng-option-tmp let-item="item" let-search="searchTerm">
-                  <div class="ng-option-label">
+                  <div class="ng-option-label text-white">
                     <div>{{item.nombre}}</div>
-                    <small class="text-muted">Código: {{item.codigo}} | Costo: ${{item.precioCosto}}</small>
+                    <small class="text-metal">Código: {{item.codigo}} | Costo: ${{item.precioCosto}}</small>
                   </div>
                 </ng-template>
+                
                 <ng-template ng-notfound-tmp let-searchTerm="searchTerm">
-                  <div class="ng-option-disabled">
+                  <div class="ng-option-disabled text-metal">
                     No se encontraron productos para "{{searchTerm}}"
                   </div>
                 </ng-template>
@@ -129,7 +131,7 @@
           Debe agregar al menos un producto al pedido.
         </div>
         
-        <hr class="mt-4 border-metal">
+        <hr class="mt-4 border-secondary">
         
         <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
           <button type="button" class="btn masterserv-btn-secondary me-md-2" [routerLink]="['/pos/pedidos']">Cancelar</button>

@@ -1,3 +1,7 @@
+/* ================================
+   ESTILOS MASTERSERV360 - VENTAS LIST
+   ================================ */
+
 :host {
     display: block;
     height: 100%;
@@ -9,24 +13,27 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box; /* Importante */
 }
 
-/* Tarjeta Principal (Fondo oscuro con borde rojo sutil) */
+/* Tarjeta Principal */
 .masterserv-card {
     background-color: #1e1e1e;
     border: 1px solid #333;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     border-radius: 8px;
-    flex-grow: 1;
+    flex: 1; /* Ocupa todo el espacio disponible */
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: hidden; /* Mantiene los bordes redondeados */
+    min-height: 0; /* CLAVE para Flexbox anidado */
 }
 
 .masterserv-card-header {
     background-color: #121212;
-    border-bottom: 2px solid #dc3545; /* Rojo Masterserv */
+    border-bottom: 2px solid #dc3545;
     padding: 1rem;
+    flex-shrink: 0; /* No dejar que se aplaste */
 }
 
 .masterserv-title {
@@ -38,18 +45,42 @@
 .masterserv-card-body {
     background-color: #1e1e1e;
     padding: 1rem;
-    flex-grow: 1;
-    overflow: hidden; /* Para que la tabla tenga su propio scroll */
+    flex: 1; /* Crece para ocupar espacio */
+    display: flex; /* Convertimos el body en flex */
+    flex-direction: column; /* Vertical */
+    overflow: hidden; /* Evita scroll doble en el body */
+    min-height: 0; /* CLAVE para que el scroll interno funcione */
 }
+
+/* --- SOLUCIÓN AL PROBLEMA DE PAGINACIÓN OCULTA --- */
+
+/* Contenedor intermedio (entre filtro y tabla) */
+.content-main {
+    flex: 1;          /* Ocupa el espacio restante */
+    display: flex;
+    flex-direction: column;
+    min-height: 0;    /* Permite que los hijos (tabla) hagan scroll */
+    overflow: hidden; /* Contiene a sus hijos */
+}
+
+/* Contenedor de la tabla */
+.table-responsive {
+    flex: 1;          /* Ocupa todo el espacio disponible en content-main */
+    overflow-y: auto; /* Scroll vertical SOLO aquí */
+    border-bottom: 1px solid #333; /* Separador visual con el footer */
+}
+/* ------------------------------------------------ */
 
 /* Filtros */
 .masterserv-filter {
     background-color: #252525;
     border: 1px solid #444 !important;
+    flex-shrink: 0; /* Que no se achique el filtro */
+    margin-bottom: 1rem;
 }
 
 .masterserv-label {
-    color: #ffc107; /* Amarillo para labels */
+    color: #ffc107;
     font-weight: 600;
     text-transform: uppercase;
     font-size: 0.75rem;
@@ -68,13 +99,10 @@
     box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
 }
 
-/* Tabla */
-.table-responsive {
-    overflow: auto;
-}
-
+/* Estilos de Tabla */
 .masterserv-table {
     color: #e0e0e0;
+    margin-bottom: 0; /* Quitar margen inferior para pegar al footer */
 }
 
 .masterserv-table thead th {
@@ -83,14 +111,16 @@
     border-bottom: 2px solid #555;
     font-size: 0.85rem;
     text-transform: uppercase;
-    padding-top: 12px;
-    padding-bottom: 12px;
+    padding: 12px;
+    position: sticky; /* Cabecera fija */
+    top: 0;
+    z-index: 10;
 }
 
 .masterserv-table tbody td {
     border-bottom: 1px solid #333;
-    padding-top: 10px;
-    padding-bottom: 10px;
+    padding: 10px;
+    vertical-align: middle;
 }
 
 .masterserv-table-row:hover td {
@@ -105,7 +135,15 @@
 
 .masterserv-price {
     font-weight: bold;
-    color: #28a745; /* Verde dinero */
+    color: #28a745;
+}
+
+/* Footer de Paginación */
+.card-footer {
+    background-color: #1e1e1e; /* Mismo fondo que la tarjeta */
+    border-top: 1px solid #333;
+    padding-top: 1rem;
+    flex-shrink: 0; /* Evita que desaparezca si falta espacio */
 }
 
 /* Badges */
@@ -130,17 +168,53 @@
     background-color: #bb2d3b;
     border-color: #b02a37;
 }
+.masterserv-btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+.masterserv-btn-secondary:hover {
+    background-color: #5c636a;
+    border-color: #565e64;
+}
+.masterserv-btn-outline-info {
+    color: #0dcaf0;
+    border-color: #0dcaf0;
+    background: transparent;
+}
+.masterserv-btn-outline-info:hover {
+    color: #000;
+    background-color: #0dcaf0;
+}
+.masterserv-btn-outline-primary {
+    color: #0d6efd;
+    border-color: #0d6efd;
+    background: transparent;
+}
+.masterserv-btn-outline-primary:hover {
+    color: #fff;
+    background-color: #0d6efd;
+}
+.masterserv-btn-outline-warning {
+    color: #ffc107;
+    border-color: #ffc107;
+    background: transparent;
+}
+.masterserv-btn-outline-warning:hover {
+    color: #000;
+    background-color: #ffc107;
+}
 
 .btn-action {
     padding: 0.25rem 0.5rem;
 }
 
-/* NG-SELECT DARK MODE (Copiado del POS para consistencia) */
+/* NG-SELECT DARK MODE */
 :host ::ng-deep .ng-select.masterserv-select-dark .ng-select-container {
     background-color: #2c2c2c !important;
     color: #ffffff !important;
     border: 1px solid #555 !important;
-    min-height: 31px; /* Ajuste para sm */
+    min-height: 31px;
 }
 
 :host ::ng-deep .ng-select.masterserv-select-dark .ng-select-container .ng-value-container .ng-value {
@@ -165,4 +239,12 @@
 :host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option.ng-option-marked {
     background-color: #dc3545 !important;
     color: #ffffff !important;
+}
+
+/* Spinner y estados vacíos */
+.loading-container, .empty-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

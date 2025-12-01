@@ -68,4 +68,16 @@ export class UsuarioService {
     // Llama al endpoint específico que permite acceso a vendedores
     return this.http.post<UsuarioDTO>(`${this.apiUrl}/cliente-rapido`, usuario);
   }
+
+  getMiPerfil(): Observable<UsuarioDTO> {
+    return this.http.get<UsuarioDTO>(`${this.apiUrl}/perfil`);
+  }
+
+  actualizarMiPerfil(usuario: UsuarioDTO): Observable<UsuarioDTO> {
+    return this.http.put<UsuarioDTO>(`${this.apiUrl}/perfil`, usuario);
+  }
+
+  cambiarPassword(data: { passwordActual: string; passwordNueva: string }): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/perfil/cambiar-password`, data);
+  }
 }

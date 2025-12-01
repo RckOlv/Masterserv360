@@ -5,12 +5,13 @@ export interface Recompensa {
   tipoDescuento: 'PORCENTAJE' | 'FIJO';
   valor: number;
   categoriaNombre?: string;
+  // --- MENTOR: AGREGADO CAMPO STOCK ---
+  stock: number;
 }
 
 export interface SaldoPuntos {
   saldoPuntos: number;
   valorMonetario: number;
   equivalenciaActual: string;
-  // Aquí agregamos la lista que viene del backend
   recompensasDisponibles: Recompensa[];
 }

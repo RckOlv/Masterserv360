@@ -5,17 +5,20 @@ import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import java.math.BigDecimal;
 
-/**
- * Representa el precio que el proveedor pone a UN item.
- * Recibiremos una lista de estos.
- */
 @Data
 public class ItemOfertaDTO {
     
     @NotNull
-    private Long itemCotizacionId; // El ID del ItemCotizacion que está cotizando
+    private Long itemCotizacionId;
 
-    @NotNull
-    @Positive(message = "El precio debe ser mayor a cero")
+    // Puede ser null si el proveedor marca "No disponible"
+    @Positive(message = "El precio debe ser positivo")
     private BigDecimal precioUnitarioOfertado;
+
+    // --- NUEVOS CAMPOS ---
+    
+    @Positive(message = "La cantidad debe ser positiva")
+    private Integer cantidadOfertada; // Si es null, asumimos la original
+
+    private boolean disponible = true; // true = cotizo, false = no tengo
 }

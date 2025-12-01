@@ -1,0 +1,45 @@
+/* Reutilizamos los estilos globales de masterserv-card pero aseguramos el look */
+
+.masterserv-card {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.masterserv-card-header {
+    background-color: #121212;
+    border-bottom: 1px solid #333;
+    padding: 1rem;
+}
+
+.masterserv-label {
+    color: #ffc107;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.masterserv-input {
+    background-color: #2c2c2c;
+    border: 1px solid #555;
+    color: #fff;
+}
+
+.masterserv-input:focus {
+    background-color: #333;
+    border-color: #dc3545;
+    color: #fff;
+    box-shadow: none;
+}
+
+.masterserv-input:disabled {
+    background-color: #222;
+    color: #777;
+    border-color: #333;
+}
+
+.btn-outline-light:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}

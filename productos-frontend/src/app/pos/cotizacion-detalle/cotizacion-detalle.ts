@@ -9,20 +9,15 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CotizacionAdminDTO } from '../../models/cotizacion-admin.model';
 import { ItemCotizacionAdminDTO } from '../../models/item-cotizacion-admin.model';
 import { CotizacionService } from '../../service/cotizacion.service';
-import { PedidoDTO } from '../../models/pedido.model'; 
+// import { PedidoDTO } from '../../models/pedido.model'; // MENTOR: Ya no lo forzamos aquí
 
 // Utils
 import { mostrarToast } from '../../utils/toast';
-
-// --- Mentor: INICIO DE LA MODIFICACIÓN ---
-// 1. Importar la nueva directiva de permisos
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
-// --- Mentor: FIN DE LA MODIFICACIÓN ---
 
 @Component({
   selector: 'app-cotizacion-detalle',
   standalone: true,
-  // 2. Añadir la directiva al array de imports
   imports: [
     CommonModule, 
     RouterLink,
@@ -130,8 +125,10 @@ export default class CotizacionDetalleComponent implements OnInit {
 
     this.isProcessing = true;
     this.cotizacionService.confirmarCotizacion(cotizacion.id).subscribe({
-      next: (pedidoCreado: PedidoDTO) => { 
-        mostrarToast(`¡Éxito! Pedido #${pedidoCreado.id} generado correctamente.`, 'success');
+      // MENTOR: Cambiamos el tipo a 'any' para leer la respuesta flexible del mapa
+      next: (response: any) => { 
+        // CORRECCIÓN: Usamos response.pedidoId en lugar de response.id
+        mostrarToast(`¡Éxito! Pedido #${response.pedidoId} generado correctamente.`, 'success');
         this.router.navigate(['/pos/pedidos']); 
         this.isProcessing = false;
       },

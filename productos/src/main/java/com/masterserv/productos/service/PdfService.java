@@ -42,12 +42,14 @@ public class PdfService {
             subtitulo.setAlignment(Element.ALIGN_CENTER);
             document.add(subtitulo);
 
+            // --- MENTOR: AGREGADO EMAIL DE EMPRESA AQUÍ ---
             Paragraph datosEmpresa = new Paragraph(
                 "Razón Social: Masterserv S.A.\n" + 
                 "CUIT: 30-12345678-9\n" + 
                 "Inicio de Actividades: 01/01/2020\n" +
                 "Dirección: Av. San Martín 1234, El Soberbio, Misiones\n" +
-                "Tel: (3755) 12-3456", 
+                "Tel: (3755) 12-3456\n" + 
+                "Email: contacto@masterserv360.com", // <--- NUEVO DATO
                 FONT_DATA_EMPRESA
             );
             datosEmpresa.setAlignment(Element.ALIGN_CENTER);
@@ -63,7 +65,6 @@ public class PdfService {
             infoVenta.setSpacingBefore(15);
             infoVenta.setSpacingAfter(15);
             
-            // CORRECCIÓN: Usamos FontFactory.getFont aquí también para evitar el error de compilación
             Font fontNroVenta = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
             infoVenta.add(new Chunk("Nº Venta: " + venta.getId() + "\n", fontNroVenta));
             
@@ -75,7 +76,8 @@ public class PdfService {
                 if(venta.getCliente().getDocumento() != null) {
                     infoVenta.add(new Chunk("DNI/CUIT: " + venta.getCliente().getDocumento() + "\n", FONT_NORMAL));
                 }
-                infoVenta.add(new Chunk("Email: " + venta.getCliente().getEmail() + "\n", FONT_NORMAL));
+                // --- MENTOR: ELIMINADO EMAIL DEL CLIENTE (POR PEDIDO) ---
+                // infoVenta.add(new Chunk("Email: " + venta.getCliente().getEmail() + "\n", FONT_NORMAL));
             }
             
             if (venta.getVendedor() != null) {

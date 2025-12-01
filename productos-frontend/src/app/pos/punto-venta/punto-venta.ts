@@ -32,7 +32,6 @@ import { catchError, debounceTime, distinctUntilChanged, map, switchMap, tap, ta
 import { mostrarToast } from '../../utils/toast';
 import Swal from 'sweetalert2';
 
-// Declaramos bootstrap para poder controlar el Modal
 declare var bootstrap: any;
 
 @Component({
@@ -44,7 +43,6 @@ declare var bootstrap: any;
 })
 export default class PuntoVentaComponent implements OnInit {
 
-  // --- Inyección de Dependencias ---
   private carritoService = inject(CarritoService);
   public ventaService = inject(VentaService);
   private usuarioService = inject(UsuarioService);
@@ -53,24 +51,20 @@ export default class PuntoVentaComponent implements OnInit {
   private router = inject(Router);
   private fb = inject(FormBuilder);
 
-  // --- Estado del Componente ---
   public carrito: CarritoDTO | null = null;
   public isLoadingCarrito = true;
   public isFinalizandoVenta = false;
   public errorMessage: string | null = null;
 
-  // --- Estado de Descuentos ---
   public cuponAplicado: CuponDTO | null = null;
   public montoDescuento: number = 0;
   public totalFinal: number = 0;
   public isValidandoCupon = false;
 
-  // --- Estado para Alta Rápida de Cliente ---
   public nuevoClienteForm: FormGroup;
   public isGuardandoCliente = false;
   private modalClienteInstance: any;
 
-  // --- Buscadores ---
   public productoSearchForm: FormGroup;
   public productos$: Observable<ProductoDTO[]> = of([]);
   public productoSearch$ = new Subject<string>();
@@ -82,19 +76,16 @@ export default class PuntoVentaComponent implements OnInit {
   public isLoadingClientes = false;
 
   constructor() {
-    // Formulario de Productos
     this.productoSearchForm = this.fb.group({
       productoSeleccionado: [null, Validators.required],
       cantidadAgregar: [1, [Validators.required, Validators.min(1)]]
     });
 
-    // Formulario Principal de Venta
     this.clienteForm = this.fb.group({
       clienteId: [null, Validators.required],
       codigoCupon: [null]
     });
 
-    // --- Formulario para Alta Rápida (MODIFICADO) ---
     this.nuevoClienteForm = this.fb.group({
       nombre: ['', Validators.required],
       apellido: ['', Validators.required],
@@ -110,10 +101,6 @@ export default class PuntoVentaComponent implements OnInit {
     this.initProductoSearch();
     this.initClienteSearch();
   }
-
-  // =================================================
-  // --- MÉTODOS PARA ALTA RÁPIDA DE CLIENTE ---
-  // =================================================
 
   abrirModalCliente() {
     const modalElement = document.getElementById('modalNuevoCliente');
@@ -132,25 +119,18 @@ export default class PuntoVentaComponent implements OnInit {
     this.isGuardandoCliente = true;
     const datosCliente = this.nuevoClienteForm.value;
 
-    // Llamamos al servicio usando el endpoint especial para POS
     this.usuarioService.crearClienteRapido(datosCliente).subscribe({
       next: (nuevoUsuario: UsuarioDTO) => {
         this.isGuardandoCliente = false;
         
-        // 1. Cerrar el modal
         if (this.modalClienteInstance) {
           this.modalClienteInstance.hide();
         }
         
         mostrarToast(`Cliente ${nuevoUsuario.nombre} registrado con éxito.`, 'success');
         
-        // 2. Seleccionar automáticamente al nuevo cliente en el buscador
         this.clienteForm.patchValue({ clienteId: nuevoUsuario.id });
-        
-        // 3. Actualizar la lista para que el nombre aparezca seleccionado
         this.clientes$ = of([nuevoUsuario]);
-
-        // 4. Resetear el formulario (Volviendo a 'DNI')
         this.nuevoClienteForm.reset({ tipoDocumentoBusqueda: 'DNI' });
       },
       error: (err) => {
@@ -160,10 +140,6 @@ export default class PuntoVentaComponent implements OnInit {
       }
     });
   }
-
-  // =================================================
-  // --- LÓGICA DEL CARRITO Y VENTAS ---
-  // =================================================
 
   cargarCarrito(): void {
     this.isLoadingCarrito = true;
@@ -182,6 +158,7 @@ export default class PuntoVentaComponent implements OnInit {
     });
   }
 
+  // --- MENTOR: CÁLCULO DE TOTALES CORREGIDO ---
   calcularTotales(): void {
     if (!this.carrito) return;
 
@@ -189,15 +166,35 @@ export default class PuntoVentaComponent implements OnInit {
     this.montoDescuento = 0;
 
     if (this.cuponAplicado) {
+      
       if (this.cuponAplicado.tipoDescuento === 'FIJO') {
-        this.montoDescuento = this.cuponAplicado.valor;
-      } else if (this.cuponAplicado.tipoDescuento === 'PORCENTAJE') {
-        this.montoDescuento = (subtotal * this.cuponAplicado.valor) / 100;
+         this.montoDescuento = this.cuponAplicado.valor;
+      } 
+      else if (this.cuponAplicado.tipoDescuento === 'PORCENTAJE') {
+         
+         if (this.cuponAplicado.categoriaId) {
+             let montoElegible = 0;
+             
+             this.carrito.items.forEach(item => {
+                 // Conversión a Number para evitar error de tipos o string vs int
+                 const prodCatId = Number(item.productoCategoriaId);
+                 const cupCatId = Number(this.cuponAplicado!.categoriaId);
+                 
+                 if (prodCatId === cupCatId) {
+                     montoElegible += item.subtotal;
+                 }
+             });
+             
+             this.montoDescuento = (montoElegible * this.cuponAplicado.valor) / 100;
+         } else {
+             this.montoDescuento = (subtotal * this.cuponAplicado.valor) / 100;
+         }
       }
     }
 
     this.totalFinal = Math.max(0, subtotal - this.montoDescuento);
   }
+  // ---------------------------------------------
 
   aplicarCupon(): void {
     const clienteId = this.clienteForm.get('clienteId')?.value;
@@ -207,9 +204,7 @@ export default class PuntoVentaComponent implements OnInit {
       mostrarToast('Primero debes seleccionar un cliente.', 'warning');
       return;
     }
-    if (!codigo || codigo.trim() === '') {
-      return;
-    }
+    if (!codigo || codigo.trim() === '') return;
 
     this.isValidandoCupon = true;
     this.ventaService.validarCupon(codigo, clienteId).subscribe({
@@ -218,9 +213,12 @@ export default class PuntoVentaComponent implements OnInit {
         this.calcularTotales();
         this.isValidandoCupon = false;
         
+        let infoDesc = cupon.tipoDescuento === 'PORCENTAJE' ? `${cupon.valor}%` : `$${cupon.valor}`;
+        if(cupon.categoriaNombre) infoDesc += ` en ${cupon.categoriaNombre}`;
+        
         Swal.fire({
           title: '¡Cupón Aplicado!',
-          text: `Descuento: ${cupon.tipoDescuento === 'PORCENTAJE' ? cupon.valor + '%' : '$' + cupon.valor}`,
+          text: `Descuento: ${infoDesc}`,
           icon: 'success',
           toast: true,
           position: 'top-end',
@@ -248,23 +246,18 @@ export default class PuntoVentaComponent implements OnInit {
     this.productos$ = this.productoSearch$.pipe(
       debounceTime(300),
       distinctUntilChanged(),
-      tap(() => {
-        this.isLoadingProductos = true;
-      }),
+      tap(() => this.isLoadingProductos = true),
       switchMap(term => {
-        if (!term || term.length < 2) {
-          return of([]);
-        }
+        if (!term || term.length < 2) return of([]);
         const filtro = { nombre: term, estado: 'ACTIVO' };
         return this.productoService.filtrarProductos(filtro, 0, 20).pipe(
-          map((page: Page<ProductoDTO>): ProductoDTO[] => page.content),
+          map((page: Page<ProductoDTO>) => page.content),
           catchError(() => {
             mostrarToast('Error al buscar productos', 'danger');
             return of([]);
           })
         );
-        }
-      ),
+      }),
       tap(() => this.isLoadingProductos = false)
     );
   }
@@ -416,7 +409,7 @@ export default class PuntoVentaComponent implements OnInit {
 
     Swal.fire({
       title: '¿Confirmar Venta?',
-      text: `Total a cobrar: $${this.totalFinal}`,
+      text: `Total a cobrar: $${this.totalFinal.toFixed(2)}`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#198754',
@@ -455,7 +448,6 @@ export default class PuntoVentaComponent implements OnInit {
         
        Swal.fire({
           title: '¡Venta Exitosa!',
-          // HTML para formatear mejor el mensaje
           html: `
             <p>Comprobante <strong>#${ventaCreada.id}</strong> generado correctamente.</p>
             <p class="mb-0 text-success"><i class="bi bi-check-circle-fill"></i> Se ha enviado una copia al email del cliente.</p>
@@ -464,7 +456,7 @@ export default class PuntoVentaComponent implements OnInit {
           background: '#1e1e1e',
           color: '#ffffff',
           timer: 6000, 
-          showConfirmButton: true, // Botón por si quiere cerrar rápido
+          showConfirmButton: true, 
           confirmButtonColor: '#198754',
           confirmButtonText: 'Aceptar'
         });

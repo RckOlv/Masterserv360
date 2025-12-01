@@ -55,7 +55,7 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
     Page<Venta> findByFechaVentaBetween(LocalDateTime inicio, LocalDateTime fin, Pageable pageable);
 
     @Query("SELECT v FROM Venta v WHERE v.id = :id") // <-- AÑADIR ESTA LÍNEA
-    @EntityGraph(attributePaths = {"cliente", "vendedor", "detalles", "detalles.producto"})
+    @EntityGraph(attributePaths = {"cliente", "vendedor", "detalles", "detalles.producto","cupon"})
     Optional<Venta> findByIdWithDetails(@Param("id") Long id); // <-- AÑADIR @Param
 
     //(Suma los totales de ventas COMPLETADAS de este mes)

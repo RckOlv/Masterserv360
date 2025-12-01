@@ -37,25 +37,28 @@ public record ProductoDTO(
     @Min(value = 0, message = "El stock mínimo no puede ser negativo")
     int stockMinimo,
 
-    // --- Mentor: INICIO DE CAMBIOS ---
     @NotNull(message = "El lote de reposición es obligatorio")
     @Min(value = 1, message = "El lote de reposición debe ser al menos 1")
     int loteReposicion,
-    // --- Mentor: FIN DE CAMBIOS ---
 
     String estado,
 
     @NotNull(message = "La categoría es obligatoria")
     Long categoriaId, 
 
-    String categoriaNombre
+    String categoriaNombre,
+    
+    // --- MENTOR: CAMPO NUEVO AGREGADO AL RECORD ---
+    Long solicitudId 
+    // ----------------------------------------------
 ) {
     
-    // Constructor customizado (para mostrar)
+    // Constructor customizado (Actualizado para recibir solicitudId)
     public ProductoDTO(Long id, String codigo, String nombre, String descripcion, 
-                         BigDecimal precioVenta, BigDecimal precioCosto, String imagenUrl, 
-                         int stockActual, int stockMinimo, int loteReposicion, // <-- Añadido aquí
-                         String estado, Long categoriaId, String categoriaNombre) {
+                       BigDecimal precioVenta, BigDecimal precioCosto, String imagenUrl, 
+                       int stockActual, int stockMinimo, int loteReposicion, 
+                       String estado, Long categoriaId, String categoriaNombre,
+                       Long solicitudId) { // <-- Nuevo parámetro
         this.id = id;
         this.codigo = codigo;
         this.nombre = nombre;
@@ -65,18 +68,28 @@ public record ProductoDTO(
         this.imagenUrl = imagenUrl;
         this.stockActual = stockActual;
         this.stockMinimo = stockMinimo;
-        this.loteReposicion = loteReposicion; // <-- Asignación
+        this.loteReposicion = loteReposicion;
         this.estado = estado;
         this.categoriaId = categoriaId;
         this.categoriaNombre = categoriaNombre;
+        this.solicitudId = solicitudId; // <-- Asignación
     }
 
-    // Constructor para creación/actualización (sin el nombre de categoría)
+    // Constructor auxiliar (Actualizado para pasar null al nuevo campo)
     public ProductoDTO(Long id, String codigo, String nombre, String descripcion, 
-                         BigDecimal precioVenta, BigDecimal precioCosto, String imagenUrl, 
-                         int stockActual, int stockMinimo, int loteReposicion, // <-- Añadido aquí
-                         String estado, Long categoriaId) {
+                       BigDecimal precioVenta, BigDecimal precioCosto, String imagenUrl, 
+                       int stockActual, int stockMinimo, int loteReposicion, 
+                       String estado, Long categoriaId) {
+        // Llamamos al constructor principal pasando 'null' en los campos extra
         this(id, codigo, nombre, descripcion, precioVenta, precioCosto, imagenUrl, 
-             stockActual, stockMinimo, loteReposicion, estado, categoriaId, null); // <-- Añadido aquí
+             stockActual, stockMinimo, loteReposicion, estado, categoriaId, null, null); 
+             // El último null es para solicitudId
+    }
+    
+    // --- MENTOR: GETTER MANUAL (Opcional en records, pero útil para compatibilidad) ---
+    // Los records ya tienen el método .solicitudId(), pero si tu código busca .getSolicitudId()
+    // puedes agregar esto para que no falle nada:
+    public Long getSolicitudId() {
+        return solicitudId;
     }
 }

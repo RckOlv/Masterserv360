@@ -37,26 +37,54 @@
                   <th>Items</th>
                   <th class="text-end">Total Ofertado</th>
                   <th>Entrega Estimada</th>
-                  <th class="text-center">Recomendada</th>
+                  <th class="text-center">Recomendada</th> 
                   <th class="text-center pe-3">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let cot of cotizaciones" class="masterserv-table-row">
+                <tr *ngFor="let cot of cotizaciones" 
+                    class="masterserv-table-row" 
+                    [class.recomendada-row]="cot.esRecomendada"> 
+                  
                   <td class="ps-3"><span class="badge masterserv-badge bg-dark">#{{ cot.id }}</span></td>
                   <td class="masterserv-name">{{ cot.proveedorNombre }}</td>
                   <td class="text-metal">{{ cot.items.length }} items</td>
-                  <td class="masterserv-price text-end">{{ cot.precioTotalOfertado | currency:'ARS':'symbol':'1.2-2' }}</td>
-                  <td class="text-metal">{{ cot.fechaEntregaOfertada | date:'dd/MM/yyyy' }}</td>
-                  <td class="text-center">
-                    <span *ngIf="cot.esRecomendada" class="badge masterserv-badge masterserv-badge-success">
-                      <i class="bi bi-star-fill me-1"></i> Sí
-                    </span>
-                    <span *ngIf="!cot.esRecomendada" class="text-metal">—</span>
+                  <td class="masterserv-price text-end fw-bold">
+                    {{ cot.precioTotalOfertado | currency:'ARS':'symbol':'1.2-2' }}
                   </td>
+                  <td class="text-metal">{{ cot.fechaEntregaOfertada | date:'dd/MM/yyyy' }}</td>
+                  
+                  <td class="text-center">
+                    
+                    <div *ngIf="cot.esRecomendada">
+                        <span class="badge bg-warning text-dark border border-dark shadow-sm">
+                          <i class="bi bi-trophy-fill me-1"></i> MEJOR OPCIÓN
+                        </span>
+                    </div>
+
+                    <div *ngIf="!cot.esRecomendada">
+                        <span class="badge bg-dark border border-secondary text-light">
+                          Competidora
+                        </span>
+                    </div>
+
+                    <div class="mt-1">
+                        <small [ngClass]="{
+                            'text-danger fw-bold': cot.observacionAnalisis.includes('Incompleta'),
+                            'text-success': cot.esRecomendada,
+                            'text-white-50': !cot.esRecomendada && !cot.observacionAnalisis.includes('Incompleta')
+                        }" style="font-size: 0.75rem;">
+                            {{ cot.observacionAnalisis }}
+                        </small>
+                    </div>
+
+                  </td>
+                  
                   <td class="text-center pe-3">
-                    <a [routerLink]="['/pos/cotizaciones', cot.id]" class="btn masterserv-btn-primary btn-sm">
-                      Revisar y Aprobar
+                    <a [routerLink]="['/pos/cotizaciones', cot.id]" 
+                       class="btn btn-sm"
+                       [ngClass]="cot.esRecomendada ? 'btn-success fw-bold' : 'masterserv-btn-primary'">
+                      {{ cot.esRecomendada ? 'Confirmar Ganadora' : 'Revisar' }}
                       <i class="bi bi-chevron-right ms-1"></i>
                     </a>
                   </td>

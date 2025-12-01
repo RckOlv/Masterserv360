@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
-// --- Mentor: Importar BigDecimal ---
 import java.math.BigDecimal;
 
 @Service
@@ -24,10 +23,21 @@ public class ReglaPuntosService {
     @Autowired
     private ReglaPuntosMapper reglaPuntosMapper;
 
+    // --- MENTOR: VUELTA ATRÁS (Para PuntosService) ---
+    // Este método devuelve la ENTIDAD. Lo usan otros servicios internos.
     @Transactional(readOnly = true)
     public Optional<ReglaPuntos> getReglaActiva() {
         return reglaPuntosRepository.findByEstadoRegla(ESTADO_ACTIVO);
     }
+
+    // --- MENTOR: MÉTODO NUEVO (Para el Controller) ---
+    // Este método devuelve el DTO. Lo usa SOLO el Controlador para el Frontend.
+    @Transactional(readOnly = true)
+    public Optional<ReglaPuntosDTO> getReglaActivaDTO() {
+        return getReglaActiva()
+                .map(reglaPuntosMapper::toReglaPuntosDTO);
+    }
+    // ------------------------------------------------
 
     @Transactional(readOnly = true)
     public List<ReglaPuntosDTO> findAll() {
@@ -37,23 +47,17 @@ public class ReglaPuntosService {
     @Transactional
     public ReglaPuntosDTO createOrUpdateRegla(ReglaPuntosDTO nuevaReglaDTO) {
         
-        // 1. Desactivar la regla anterior si existe
         reglaPuntosRepository.findByEstadoRegla(ESTADO_ACTIVO).ifPresent(reglaAnterior -> {
             reglaAnterior.setEstadoRegla("CADUCADA");
             reglaPuntosRepository.save(reglaAnterior);
         });
         
-        // 2. Crear la nueva regla
         ReglaPuntos nuevaRegla = reglaPuntosMapper.toReglaPuntos(nuevaReglaDTO);
         nuevaRegla.setEstadoRegla(ESTADO_ACTIVO); 
         
-        // --- Mentor: CORRECCIÓN (Evitar error de Base de Datos) ---
-        // Como la BD tiene 'equivalencia_puntos NOT NULL', si viene null del frontend,
-        // le ponemos 1.0 por defecto para que no explote.
         if (nuevaRegla.getEquivalenciaPuntos() == null) {
             nuevaRegla.setEquivalenciaPuntos(new BigDecimal("1.00"));
         }
-        // --- Mentor: FIN CORRECCIÓN ---
         
         if (nuevaRegla.getId() != null && nuevaRegla.getId() != 0) {
             nuevaRegla.setId(null); 

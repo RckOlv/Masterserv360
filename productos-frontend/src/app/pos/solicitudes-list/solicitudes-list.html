@@ -1,0 +1,60 @@
+<div class="container-fluid p-4">
+    <h3 class="text-white mb-4">
+        <i class="bi bi-chat-square-quote-fill text-warning me-2"></i>Solicitudes de Productos (Chatbot)
+    </h3>
+
+    <div *ngIf="isLoading" class="text-center text-white mt-5">
+        <div class="spinner-border" role="status"></div>
+    </div>
+
+    <div *ngIf="!isLoading && solicitudes.length === 0" class="alert alert-info text-center">
+        No hay solicitudes pendientes. ¡Todo tranquilo!
+    </div>
+
+    <div class="row g-4" *ngIf="!isLoading">
+        <div class="col-md-6 col-xl-4" *ngFor="let sol of solicitudes">
+            <div class="card h-100 shadow bg-dark text-white border-secondary" 
+                 [ngClass]="sol.procesado ? 'card-procesada' : 'card-pendiente'">
+                
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title fw-bold text-light mb-0">
+                            {{ sol.descripcion }}
+                        </h5>
+                        <span class="badge" [ngClass]="sol.procesado ? 'bg-success' : 'bg-warning text-dark'">
+                            {{ sol.procesado ? 'ARCHIVADO' : 'NUEVO' }}
+                        </span>
+                    </div>
+                    
+                    <p class="card-text text-white-50 mb-1">
+                        <i class="bi bi-person-circle me-1"></i> {{ sol.clienteNombre }}
+                    </p>
+                    <p class="card-text text-white-50 small">
+                        <i class="bi bi-whatsapp me-1"></i> {{ sol.clienteTelefono }}
+                    </p>
+                    <p class="card-text text-secondary small text-end mt-3">
+                        {{ sol.fechaSolicitud | date:'dd/MM/yyyy HH:mm' }}
+                    </p>
+                </div>
+
+                <div class="card-footer bg-transparent border-top border-secondary d-flex gap-2">
+                    <a *ngIf="!sol.procesado" 
+                       [routerLink]="['/pos/productos/nuevo']" 
+                       [queryParams]="{ solicitudId: sol.id, nombreProducto: sol.descripcion }"
+                       class="btn btn-sm btn-primary fw-bold flex-grow-1"
+                       title="Crear producto y avisar al cliente">
+                        <i class="bi bi-magic me-1"></i> Convertir
+                    </a>
+
+                    <button *ngIf="!sol.procesado" class="btn btn-sm btn-success" (click)="procesar(sol)" title="Solo marcar leído">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
+                    
+                    <button class="btn btn-sm btn-outline-danger" (click)="eliminar(sol.id)" title="Eliminar">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,91 +1,148 @@
 <aside class="sidebar">
+  
   <div class="sidebar-header">
-    <div class="brand-logo">
-      <img src="/images/Masterserv.png" alt="Masterserv Logo" class="logo-img">
+    <div class="brand-container">
+      <img src="/images/Masterserv_Header2.png" alt="Masterserv Logo" class="logo-clean">
     </div>
-    <h2 class="brand">Masterserv<span class="brand-accent">360</span></h2>
+    
+    <div class="user-info mt-3 text-center cursor-pointer" (click)="toggleUserMenu()" title="Opciones de Usuario">
+        <div class="d-flex justify-content-center align-items-center gap-2">
+            <div class="user-name text-white fw-bold">{{ userName$ | async }}</div>
+            <i class="bi bi-chevron-down arrow-icon-user" [class.rotate]="isUserMenuOpen"></i>
+        </div>
+        <div class="user-role text-warning small">{{ userRoleLabel$ | async }}</div>
+    </div>
+
+    <div class="user-menu-content" [class.show]="isUserMenuOpen">
+        <ul class="user-nav-list">
+            <li>
+                <a routerLink="/pos/mi-perfil" routerLinkActive="active">
+                    <i class="bi bi-person-gear me-2"></i> Mi Perfil
+                </a>
+            </li>
+            <li>
+                <a (click)="logout()" class="text-danger logout-link">
+                    <i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión
+                </a>
+            </li>
+        </ul>
+    </div>
   </div>
 
-  <nav class="menu">
-    <ul>
-      <li class="menu-header"><span>General</span></li>
-      <li>
-        <a routerLink="/pos/dashboard" routerLinkActive="active">
-          <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
-        </a>
-      </li>
-      <li>
-        <a routerLink="/pos/punto-venta" routerLinkActive="active">
-          <i class="bi bi-display"></i> <span>Punto de Venta</span>
-        </a>
-      </li>
-      <li>
-        <a routerLink="/pos/ventas-historial" routerLinkActive="active">
-          <i class="bi bi-receipt"></i> <span>Ventas</span>
-        </a>
-      </li>
-
+  <nav class="menu-container custom-scrollbar">
+    
+    <div class="menu-section">
+      <div class="section-header" (click)="toggleSection('general')" [class.active]="sections['general']">
+        <span class="section-title">GENERAL</span>
+        <i class="bi bi-chevron-down arrow-icon"></i>
+      </div>
       
-      <li class="menu-header"><span>Inventario</span></li>
-      
-      <li>
-        <a routerLink="/pos/productos" routerLinkActive="active">
-          <i class="bi bi-box-seam"></i> <span>Productos</span>
-        </a>
-      </li>
-      <li>
-        <a routerLink="/pos/categorias" routerLinkActive="active">
-          <i class="bi bi-tags"></i> <span>Categorías</span>
-        </a>
-      </li>
+      <div class="section-content" [class.show]="sections['general']">
+        <ul class="nav-list">
+          <li>
+            <a routerLink="/pos/dashboard" routerLinkActive="active">
+              <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/pos/punto-venta" routerLinkActive="active">
+              <i class="bi bi-display"></i> <span>Punto de Venta</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/pos/ventas-historial" routerLinkActive="active">
+              <i class="bi bi-receipt"></i> <span>Ventas</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
 
-      <li *appHasPermission="'PROVEEDORES_MANAGE'">
-        <a routerLink="/pos/proveedores" routerLinkActive="active">
-          <i class="bi bi-truck"></i> <span>Proveedores</span>
-        </a>
-      </li>
-      <li *appHasPermission="'PEDIDOS_MANAGE'">
-        <a routerLink="/pos/pedidos" routerLinkActive="active">
-          <i class="bi bi-clipboard-data"></i> <span>Pedidos</span>
-        </a>
-      </li>
-      <ng-container *appHasPermission="'USUARIOS_MANAGE'">
-        <li class="menu-header"><span>Administración</span></li>
-        
-        <li> 
-          <a routerLink="/pos/cotizaciones" routerLinkActive="active">
-            <i class="bi bi-inbox-fill"></i> <span>Cotizaciones Recibidas</span>
-          </a>
-        </li>
-        
-        <li>
-          <a routerLink="/pos/usuarios" routerLinkActive="active">
-            <i class="bi bi-people"></i> <span>Usuarios</span>
-          </a>
-        </li>
-        <li>
-          <a routerLink="/pos/roles" routerLinkActive="active">
-            <i class="bi bi-shield-check"></i> <span>Roles</span>
-          </a>
-        </li>
-        <li>
-          <a routerLink="/pos/permisos" routerLinkActive="active">
-            <i class="bi bi-key"></i> <span>Permisos</span>
-          </a>
-        </li>
-        <li>
-          <a routerLink="/pos/reglas-puntos" routerLinkActive="active">
-            <i class="bi bi-star-fill"></i> <span>Reglas de Puntos</span>
-          </a>
-        </li>
-      </ng-container>
-      </ul>
+    <div class="menu-section">
+      <div class="section-header" (click)="toggleSection('inventario')" [class.active]="sections['inventario']">
+        <span class="section-title">INVENTARIO</span>
+        <i class="bi bi-chevron-down arrow-icon"></i>
+      </div>
+
+      <div class="section-content" [class.show]="sections['inventario']">
+        <ul class="nav-list">
+          <li>
+            <a routerLink="/pos/productos" routerLinkActive="active">
+              <i class="bi bi-box-seam"></i> <span>Productos</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/pos/categorias" routerLinkActive="active">
+              <i class="bi bi-tags"></i> <span>Categorías</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="menu-section" *appHasPermission="'PROVEEDORES_MANAGE'">
+      <div class="section-header" (click)="toggleSection('compras')" [class.active]="sections['compras']">
+        <span class="section-title">COMPRAS</span>
+        <i class="bi bi-chevron-down arrow-icon"></i>
+      </div>
+
+      <div class="section-content" [class.show]="sections['compras']">
+        <ul class="nav-list">
+          <li>
+            <a routerLink="/pos/proveedores" routerLinkActive="active">
+              <i class="bi bi-truck"></i> <span>Proveedores</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/pos/pedidos" routerLinkActive="active">
+              <i class="bi bi-clipboard-data"></i> <span>Pedidos</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="menu-section" *appHasPermission="'USUARIOS_MANAGE'">
+      <div class="section-header" (click)="toggleSection('admin')" [class.active]="sections['admin']">
+        <span class="section-title">ADMINISTRACIÓN</span>
+        <i class="bi bi-chevron-down arrow-icon"></i>
+      </div>
+
+      <div class="section-content" [class.show]="sections['admin']">
+        <ul class="nav-list">
+          <li> 
+            <a routerLink="/pos/cotizaciones" routerLinkActive="active">
+              <i class="bi bi-inbox-fill"></i> <span>Cotizaciones</span>
+            </a>
+          </li>
+          <li> 
+            <a routerLink="/pos/solicitudes" routerLinkActive="active">
+              <i class="bi bi-chat-quote-fill"></i> <span>Solicitudes Chatbot</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/pos/usuarios" routerLinkActive="active">
+              <i class="bi bi-people"></i> <span>Usuarios</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/pos/roles" routerLinkActive="active">
+              <i class="bi bi-shield-check"></i> <span>Roles</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/pos/permisos" routerLinkActive="active">
+              <i class="bi bi-key"></i> <span>Permisos</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/pos/reglas-puntos" routerLinkActive="active">
+              <i class="bi bi-star-fill"></i> <span>Reglas Puntos</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
   </nav>
-
-  <div class="sidebar-footer">
-    <a (click)="logout()" style="cursor: pointer;">
-      <i class="bi bi-box-arrow-right"></i>
-      <span>Cerrar Sesión</span>
-    </a>
-  </div>
 </aside>

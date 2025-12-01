@@ -2,6 +2,7 @@ package com.masterserv.productos.dto;
 
 import com.masterserv.productos.entity.Cotizacion;
 import com.masterserv.productos.enums.EstadoCotizacion;
+import com.masterserv.productos.enums.EstadoItemCotizacion;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -20,9 +21,11 @@ public class CotizacionAdminDTO {
     private LocalDate fechaEntregaOfertada;
     private BigDecimal precioTotalOfertado;
     private boolean esRecomendada;
+    // --- MENTOR: NUEVO CAMPO DE ANÁLISIS ---
+    private String observacionAnalisis; 
+    // ---------------------------------------
     private Set<ItemCotizacionAdminDTO> items;
 
-    // Constructor para el mapeo
     public CotizacionAdminDTO(Cotizacion cotizacion) {
         this.id = cotizacion.getId();
         this.proveedorNombre = cotizacion.getProveedor().getRazonSocial();
@@ -32,8 +35,31 @@ public class CotizacionAdminDTO {
         this.fechaEntregaOfertada = cotizacion.getFechaEntregaOfertada();
         this.precioTotalOfertado = cotizacion.getPrecioTotalOfertado();
         this.esRecomendada = cotizacion.isEsRecomendada();
+        
+        // Calculamos el análisis en tiempo real
+        this.observacionAnalisis = calcularObservacion(cotizacion);
+
         this.items = cotizacion.getItems().stream()
             .map(ItemCotizacionAdminDTO::new)
             .collect(Collectors.toSet());
+    }
+
+    private String calcularObservacion(Cotizacion c) {
+        long itemsCotizados = c.getItems().stream()
+             .filter(i -> i.getEstado() == EstadoItemCotizacion.COTIZADO).count();
+        int totalItems = c.getItems().size();
+
+        // 1. Check Completeness
+        if (itemsCotizados < totalItems) {
+            return "⚠️ Oferta Incompleta (" + itemsCotizados + "/" + totalItems + " items)";
+        }
+        
+        // 2. Check Winner
+        if (c.isEsRecomendada()) {
+            return "⭐ Mejor Opción Global";
+        }
+        
+        // 3. Losers (Generic Reason)
+        return "❌ Precio o Fecha superior";
     }
 }

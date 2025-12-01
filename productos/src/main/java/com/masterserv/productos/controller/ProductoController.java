@@ -18,14 +18,31 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/productos")
-// @CrossOrigin(origins = "http://localhost:4200") // No es necesario, lo pusimos global en SecurityConfig
 public class ProductoController {
 
     @Autowired
     private ProductoService productoService;
 
-    // --- Endpoint de Filtrado (Público o Semi-público) ---
-    // Este POST es para la búsqueda. Lo hacemos POST para poder enviar un body (el DTO de filtro).
+    // --- MENTOR: ENDPOINT PARA GENERAR CÓDIGO ---
+    @GetMapping("/generar-codigo")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<Map<String, String>> generarCodigo(
+            @RequestParam Long categoriaId, 
+            @RequestParam String nombre) {
+        
+        String nuevoCodigo = productoService.generarCodigoAutomatico(categoriaId, nombre);
+        return ResponseEntity.ok(Map.of("codigo", nuevoCodigo));
+    }
+    // --------------------------------------------
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<Page<ProductoDTO>> getAllProductos(
+            @PageableDefault(page = 0, size = 10, sort = "nombre") Pageable pageable) {
+        Page<ProductoDTO> productos = productoService.findAll(pageable);
+        return ResponseEntity.ok(productos);
+    }
+
     @PostMapping("/filtrar")
     public ResponseEntity<Page<ProductoDTO>> filterProductos(
             @RequestBody ProductoFiltroDTO filtro,
@@ -34,8 +51,6 @@ public class ProductoController {
         Page<ProductoDTO> productoPage = productoService.filter(filtro, pageable);
         return ResponseEntity.ok(productoPage);
     }
-
-    // --- Endpoints CRUD (Protegidos) ---
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
@@ -61,7 +76,6 @@ public class ProductoController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> deleteProducto(@PathVariable Long id) {
-        // Llamamos al nuevo método
         productoService.softDelete(id); 
         return ResponseEntity.ok(Map.of("message", "Producto marcado como inactivo exitosamente"));
     }
@@ -76,8 +90,8 @@ public class ProductoController {
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
     public ResponseEntity<Page<ProductoDTO>> searchByProveedor(
             @RequestParam Long proveedorId,
-            @RequestParam(defaultValue = "") String search, // El término de búsqueda
-            Pageable pageable // Spring arma el page, size, sort
+            @RequestParam(defaultValue = "") String search,
+            Pageable pageable
     ) {
         Page<ProductoDTO> pagina = productoService.searchByProveedor(proveedorId, search, pageable);
         return ResponseEntity.ok(pagina);

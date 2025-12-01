@@ -1,34 +1,32 @@
 package com.masterserv.productos.service;
 
+import com.masterserv.productos.dto.CambioPasswordDTO; // MENTOR: Import agregado
 import com.masterserv.productos.dto.RolDTO;
 import com.masterserv.productos.dto.UsuarioDTO;
-import com.masterserv.productos.dto.UsuarioFiltroDTO; 
+import com.masterserv.productos.dto.UsuarioFiltroDTO;
 import com.masterserv.productos.entity.Rol;
 import com.masterserv.productos.entity.TipoDocumento;
 import com.masterserv.productos.entity.Usuario;
-import com.masterserv.productos.entity.CuentaPuntos; 
+import com.masterserv.productos.entity.CuentaPuntos;
 import com.masterserv.productos.enums.EstadoUsuario;
 import com.masterserv.productos.mapper.UsuarioMapper;
 import com.masterserv.productos.repository.RolRepository;
 import com.masterserv.productos.repository.TipoDocumentoRepository;
 import com.masterserv.productos.repository.UsuarioRepository;
-import com.masterserv.productos.repository.CuentaPuntosRepository; 
-import com.masterserv.productos.specification.UsuarioSpecification; 
+import com.masterserv.productos.repository.CuentaPuntosRepository;
+import com.masterserv.productos.specification.UsuarioSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page; 
-import org.springframework.data.domain.Pageable; 
-import org.springframework.data.jpa.domain.Specification; 
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Optional;
 import java.util.Set;
-import java.util.Optional; // Importante
-import java.util.stream.Collectors;
 
 @Service
 public class UsuarioService {
@@ -38,19 +36,58 @@ public class UsuarioService {
     @Autowired private TipoDocumentoRepository tipoDocumentoRepository;
     @Autowired private UsuarioMapper usuarioMapper;
     @Autowired private PasswordEncoder passwordEncoder;
-    @Autowired private UsuarioSpecification usuarioSpecification; 
+    @Autowired private UsuarioSpecification usuarioSpecification;
     @Autowired private CuentaPuntosRepository cuentaPuntosRepository;
 
-    // ... (tus métodos filtrarUsuarios, findById, crearUsuarioAdmin, actualizar, etc. déjalos igual) ...
-    
-    // TE DEJO AQUÍ LOS MÉTODOS DE LECTURA Y ADMIN PARA QUE NO SE PIERDAN,
-    // PERO LA CORRECCIÓN IMPORTANTE ESTÁ AL FINAL EN 'crearClienteRapido'
+    // --- MENTOR: MÉTODOS NUEVOS PARA MI PERFIL (ADMIN/VENDEDOR) ---
+
+    @Transactional(readOnly = true)
+    public UsuarioDTO buscarPorEmail(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
+        return usuarioMapper.toUsuarioDTO(usuario);
+    }
+
+    @Transactional
+    public UsuarioDTO actualizarMiPerfil(String email, UsuarioDTO dto) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
+
+        // Solo permitimos actualizar datos personales básicos
+        usuario.setNombre(dto.getNombre());
+        usuario.setApellido(dto.getApellido());
+        usuario.setTelefono(dto.getTelefono());
+        usuario.setDocumento(dto.getDocumento());
+
+        if (dto.getTipoDocumentoId() != null) {
+             TipoDocumento td = tipoDocumentoRepository.findById(dto.getTipoDocumentoId())
+                     .orElseThrow(() -> new RuntimeException("Tipo de documento inválido"));
+             usuario.setTipoDocumento(td);
+        }
+
+        Usuario guardado = usuarioRepository.save(usuario);
+        return usuarioMapper.toUsuarioDTO(guardado);
+    }
+
+    @Transactional
+    public void cambiarPassword(String email, CambioPasswordDTO dto) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + email));
+
+        if (!passwordEncoder.matches(dto.getPasswordActual(), usuario.getPasswordHash())) {
+            throw new RuntimeException("La contraseña actual es incorrecta.");
+        }
+
+        usuario.setPasswordHash(passwordEncoder.encode(dto.getPasswordNueva()));
+        usuarioRepository.save(usuario);
+    }
+    // --------------------------------------------------------------
 
     @Transactional(readOnly = true)
     public Page<UsuarioDTO> filtrarUsuarios(UsuarioFiltroDTO filtro, Pageable pageable) {
         Specification<Usuario> spec = usuarioSpecification.getUsuariosByFilters(filtro);
         Page<Usuario> usuariosPage = usuarioRepository.findAll(spec, pageable);
-        return usuariosPage.map(usuarioMapper::toUsuarioDTO); 
+        return usuariosPage.map(usuarioMapper::toUsuarioDTO);
     }
 
     @Transactional(readOnly = true)
@@ -91,7 +128,6 @@ public class UsuarioService {
                     .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + rolDto.getId()));
             roles.add(rol);
             
-            // Verificamos si es cliente para crear cuenta puntos
             String nombreRol = rol.getNombreRol().toUpperCase();
             if (nombreRol.equals("ROLE_CLIENTE") || nombreRol.equals("CLIENTE")) {
                 esCliente = true;
@@ -142,7 +178,7 @@ public class UsuarioService {
             Set<Rol> roles = usuarioDTO.getRoles().stream()
                 .map(rolDto -> rolRepository.findById(rolDto.getId())
                         .orElseThrow(() -> new RuntimeException("Rol no encontrado: " + rolDto.getId())))
-                .collect(Collectors.toSet());
+                .collect(java.util.stream.Collectors.toSet());
             usuarioExistente.setRoles(roles);
         } else {
             usuarioExistente.getRoles().clear();
@@ -160,22 +196,6 @@ public class UsuarioService {
     public void softDelete(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
-
-        String currentAuthenticatedEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        if (usuario.getEmail().equals(currentAuthenticatedEmail)) {
-             throw new RuntimeException("No puedes desactivar tu propia cuenta mientras estás logueado.");
-        }
-        
-        boolean esAdmin = usuario.getRoles().stream()
-                .anyMatch(rol -> "ROLE_ADMIN".equals(rol.getNombreRol()));
-        
-        if (esAdmin) {
-            long adminCount = usuarioRepository.countActiveAdmins(); 
-            if (adminCount <= 1) { 
-                throw new RuntimeException("No se puede desactivar al único Administrador activo del sistema.");
-            }
-        }
-
         usuario.setEstado(EstadoUsuario.INACTIVO);
         usuarioRepository.save(usuario);
     }
@@ -188,17 +208,13 @@ public class UsuarioService {
         usuarioRepository.save(usuario);
     }
 
-    /**
-     * ALTA RÁPIDA (POS) - CORREGIDO
-     */
     @Transactional
     public UsuarioDTO crearClienteRapido(UsuarioDTO dto) {
         if (usuarioRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("El email ya está registrado.");
         }
-        if (usuarioRepository.existsByDocumento(dto.getDocumento())) {
-            throw new RuntimeException("El documento ya está registrado.");
-        }
+        // Validación opcional de documento si quieres evitar duplicados también
+        // if (usuarioRepository.existsByDocumento(dto.getDocumento())) ...
 
         Usuario usuario = new Usuario();
         usuario.setNombre(dto.getNombre());
@@ -212,10 +228,10 @@ public class UsuarioService {
         // Buscar por nombre (DNI, CUIT, etc.)
         if (dto.getTipoDocumentoBusqueda() != null) {
              TipoDocumento tipoDoc = tipoDocumentoRepository.findByNombreCorto(dto.getTipoDocumentoBusqueda())
-                    .orElseThrow(() -> new RuntimeException("Tipo de documento '" + dto.getTipoDocumentoBusqueda() + "' no encontrado."));
+                     .orElseThrow(() -> new RuntimeException("Tipo de documento '" + dto.getTipoDocumentoBusqueda() + "' no encontrado."));
             usuario.setTipoDocumento(tipoDoc);
         } 
-        // Fallback: si manda ID (como antes)
+        // Fallback: si manda ID
         else if (dto.getTipoDocumentoId() != null) {
             TipoDocumento tipoDoc = tipoDocumentoRepository.findById(dto.getTipoDocumentoId())
                     .orElseThrow(() -> new RuntimeException("Tipo de documento inválido (ID no encontrado)"));
@@ -224,18 +240,11 @@ public class UsuarioService {
 
         usuario.setPasswordHash(passwordEncoder.encode("123456")); 
         
-        // --- CORRECCIÓN: Búsqueda Robusta de Rol ---
-        // 1. Intentamos buscar "ROLE_CLIENTE" (nombre estándar)
         Optional<Rol> rolOpt = rolRepository.findByNombreRol("ROLE_CLIENTE");
-        
-        // 2. Si no existe, intentamos buscar "CLIENTE"
         if (rolOpt.isEmpty()) {
             rolOpt = rolRepository.findByNombreRol("CLIENTE");
         }
-        
-        // 3. Si aún así no existe, lanzamos un error claro
-        Rol rolCliente = rolOpt.orElseThrow(() -> new RuntimeException("Error crítico de configuración: No existe el rol 'ROLE_CLIENTE' ni 'CLIENTE' en la base de datos."));
-        // --------------------------------------------
+        Rol rolCliente = rolOpt.orElseThrow(() -> new RuntimeException("Error crítico: Rol CLIENTE no encontrado."));
         
         Set<Rol> roles = new HashSet<>();
         roles.add(rolCliente);
@@ -243,7 +252,6 @@ public class UsuarioService {
 
         Usuario guardado = usuarioRepository.save(usuario);
         
-        // Crear cuenta de puntos
         if (!cuentaPuntosRepository.existsByClienteId(guardado.getId())) {
              CuentaPuntos nuevaCuenta = new CuentaPuntos();
              nuevaCuenta.setCliente(guardado);

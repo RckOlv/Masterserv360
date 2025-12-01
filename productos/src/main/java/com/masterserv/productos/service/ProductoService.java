@@ -4,20 +4,23 @@ import com.masterserv.productos.event.StockActualizadoEvent;
 import com.masterserv.productos.exceptions.StockInsuficienteException;
 
 import org.springframework.context.ApplicationEventPublisher;
-// ... (otros imports)
 import com.masterserv.productos.dto.ProductoDTO;
 import com.masterserv.productos.dto.ProductoFiltroDTO;
 import com.masterserv.productos.dto.ProductoPublicoDTO;
 import com.masterserv.productos.dto.ProductoPublicoFiltroDTO;
-// ... (otros imports)
 import com.masterserv.productos.entity.Producto;
 import com.masterserv.productos.entity.Categoria;
-// ... (otros imports)
+// --- MENTOR: Imports nuevos necesarios para el flujo Chatbot ---
+import com.masterserv.productos.entity.SolicitudProducto;
+import com.masterserv.productos.entity.ListaEspera;
+import com.masterserv.productos.enums.EstadoListaEspera;
+import com.masterserv.productos.repository.SolicitudProductoRepository;
+import com.masterserv.productos.repository.ListaEsperaRepository;
+// ---------------------------------------------------------------
 import com.masterserv.productos.mapper.ProductoMapper;
 import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.specification.ProductoSpecification;
 import com.masterserv.productos.repository.CategoriaRepository;
-// ... (otros imports)
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +31,9 @@ import org.springframework.transaction.annotation.Propagation;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Optional;
 import jakarta.persistence.EntityNotFoundException;
+import java.time.LocalDate; // Importante para la fecha de inscripción
 
 @Service
 public class ProductoService {
@@ -47,8 +52,63 @@ public class ProductoService {
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+    
+    // --- MENTOR: NUEVOS REPOSITORIOS INYECTADOS ---
+    @Autowired
+    private SolicitudProductoRepository solicitudProductoRepository;
+    
+    @Autowired
+    private ListaEsperaRepository listaEsperaRepository;
+    // ----------------------------------------------
 
-    // ... (filter, findById, create - sin cambios, están correctos) ...
+    // --- MENTOR: GENERADOR DE CÓDIGO INTELIGENTE ---
+    @Transactional(readOnly = true)
+    public String generarCodigoAutomatico(Long categoriaId, String nombreProducto) {
+        // 1. Obtener Categoría
+        Categoria categoria = categoriaRepository.findById(categoriaId)
+                .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada"));
+        
+        // 2. Normalizar textos (Mayúsculas, sin espacios extra)
+        String catNombre = categoria.getNombre().trim().toUpperCase().replaceAll("[^A-Z]", "");
+        String prodNombre = nombreProducto.trim().toUpperCase().replaceAll("[^A-Z]", "");
+        
+        // Validación de seguridad para nombres muy cortos
+        if (catNombre.length() < 1) catNombre = "CAT";
+        if (prodNombre.length() < 1) prodNombre = "PROD";
+
+        // 3. Construir Prefijo (2 Letras Cat + 2 Letras Prod)
+        String catPrefix = catNombre.substring(0, Math.min(2, catNombre.length()));
+        String prodPrefix = prodNombre.substring(0, Math.min(2, prodNombre.length()));
+        
+        String prefixCompleto = catPrefix + prodPrefix;
+
+        // 4. Buscar el último en la BD
+        Optional<Producto> ultimo = productoRepository.findTopByCodigoStartingWithOrderByCodigoDesc(prefixCompleto);
+
+        int siguienteNumero = 1;
+
+        if (ultimo.isPresent()) {
+            String ultimoCodigo = ultimo.get().getCodigo();
+            try {
+                // Extraemos la parte numérica
+                String numeroStr = ultimoCodigo.substring(prefixCompleto.length());
+                siguienteNumero = Integer.parseInt(numeroStr) + 1;
+            } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+                siguienteNumero = 1; // Si el formato no coincide, reiniciamos
+            }
+        }
+
+        // 5. Formatear con ceros a la izquierda (Ej: 01, 05, 10)
+        return prefixCompleto + String.format("%02d", siguienteNumero);
+    }
+    // ----------------------------------------------
+
+    @Transactional(readOnly = true)
+    public Page<ProductoDTO> findAll(Pageable pageable) {
+        Page<Producto> productosPage = productoRepository.findAll(pageable);
+        return productosPage.map(productoMapper::toProductoDTO);
+    }
+
     @Transactional(readOnly = true)
     public Page<ProductoDTO> filter(ProductoFiltroDTO filtro, Pageable pageable) {
         Specification<Producto> spec = productoSpecification.getProductosByFilters(filtro);
@@ -74,23 +134,49 @@ public class ProductoService {
         Producto producto = productoMapper.toProducto(productoDTO);
         producto.setCategoria(categoria);
         producto.setEstado("ACTIVO");
-        // El nuevo 'loteReposicion' se mapea automáticamente desde el DTO
         
         Producto productoGuardado = productoRepository.save(producto);
+        
+        // --- MENTOR: LÓGICA DE VINCULACIÓN AUTOMÁTICA (Chatbot -> Producto) ---
+        // Si el DTO trae un ID de solicitud, cerramos el circuito
+        if (productoDTO.getSolicitudId() != null) {
+            procesarSolicitudPendiente(productoDTO.getSolicitudId(), productoGuardado);
+        }
+        // ----------------------------------------------------------------------
+
         return productoMapper.toProductoDTO(productoGuardado);
     }
+    
+    // --- Helper privado para crear la lista de espera ---
+    private void procesarSolicitudPendiente(Long solicitudId, Producto producto) {
+        solicitudProductoRepository.findById(solicitudId).ifPresent(solicitud -> {
+            // 1. Crear registro en ListaEspera (Evitamos duplicados por seguridad)
+            boolean yaEstaEnEspera = listaEsperaRepository.existsByUsuarioIdAndProductoIdAndEstado(
+                    solicitud.getUsuario().getId(), producto.getId(), EstadoListaEspera.PENDIENTE);
+            
+            if (!yaEstaEnEspera) {
+                ListaEspera espera = new ListaEspera();
+                espera.setUsuario(solicitud.getUsuario());
+                espera.setProducto(producto);
+                espera.setFechaInscripcion(LocalDate.now());
+                espera.setEstado(EstadoListaEspera.PENDIENTE);
+                
+                listaEsperaRepository.save(espera);
+            }
+            
+            // 2. Marcar solicitud como procesada (cerrar el ciclo)
+            solicitud.setProcesado(true);
+            solicitudProductoRepository.save(solicitud);
+        });
+    }
 
-    // --- Mentor: INICIO DE CAMBIOS (Soluciona el bug de Stock=0) ---
     @Transactional
     public ProductoDTO update(Long id, ProductoDTO productoDTO) {
         Producto productoExistente = productoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
 
-        // 1. Usamos el Mapper para actualizar solo los campos seguros.
-        // (Esto ignora stockActual pero actualiza loteReposicion, precioVenta, etc.)
         productoMapper.updateProductoFromDto(productoDTO, productoExistente);
 
-        // 2. Manejamos la lógica de Categoría (que es compleja)
         if (productoDTO.categoriaId() != null && 
             !productoDTO.categoriaId().equals(productoExistente.getCategoria().getId())) {
             
@@ -99,18 +185,14 @@ public class ProductoService {
             productoExistente.setCategoria(categoria);
         }
         
-        // 3. Manejamos el Estado (si se incluyó en el DTO)
         if (productoDTO.estado() != null) {
             productoExistente.setEstado(productoDTO.estado());
         }
 
         Producto productoActualizado = productoRepository.save(productoExistente);
-        
         return productoMapper.toProductoDTO(productoActualizado);
     }
-    // --- Mentor: FIN DE CAMBIOS ---
 
-    // ... (softDelete, findByProveedorId, etc. - sin cambios) ...
     @Transactional
     public void softDelete(Long id) {
         Producto producto = productoRepository.findById(id)
@@ -148,8 +230,6 @@ public class ProductoService {
         return productosPage.map(productoMapper::toProductoPublicoDTO);
     }
 
-
-    // --- Métodos de Stock (sin cambios) ---
 
     @Transactional(propagation = Propagation.REQUIRED)
     public Producto descontarStock(Long productoId, int cantidadADescontar) {

@@ -191,8 +191,8 @@
           </button>
 
           <span class="text-white-50 small">
-            Página <strong class="text-white">{{ ventasPage.number + 1 }}</strong> de <strong class="text-white">{{ ventasPage.totalPages }}</strong>
-            <span class="d-none d-md-inline"> (Total: {{ ventasPage.totalElements }} ventas)</span>
+            Página <strong class="text-warning">{{ ventasPage.number + 1 }}</strong> de <strong class="text-white">{{ ventasPage.totalPages }}</strong>
+            <span class="d-none d-md-inline text-light"> (Total: {{ ventasPage.totalElements }} ventas)</span>
           </span>
 
           <button class="btn masterserv-btn-secondary btn-sm" (click)="paginaSiguiente()" [disabled]="ventasPage.last">

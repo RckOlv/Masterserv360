@@ -20,9 +20,6 @@ public class ItemCarritoDTO {
     private int cantidad;
     private BigDecimal subtotal; // Calculado (precio * cantidad)
     private int stockDisponible; // ¡Útil! Para mostrar al vendedor si hay suficiente
+    private Long productoCategoriaId;
 
-    // --- Campos de Entrada (Para agregar/actualizar desde el frontend) ---
-    // Al agregar, solo necesitamos productoId y cantidad.
-    // Al actualizar, necesitamos id y cantidad.
-    // Lombok genera los constructores y setters necesarios.
 }

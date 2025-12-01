@@ -78,6 +78,7 @@ public class VentaService {
         venta.setVendedor(vendedor);
         venta.setCliente(cliente);
         venta.setDetalles(new HashSet<>());
+        venta.setMontoDescuento(null);
 
         // 1) Validar Cupón
         Cupon cuponAplicado = null;

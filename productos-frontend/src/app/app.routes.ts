@@ -40,7 +40,6 @@ export const routes: Routes = [
       
       // --- PRODUCTOS (Lista y Formulario) ---
       { path: 'productos', loadComponent: () => import('./pos/productos/productos') },
-      // 🚀 NUEVAS RUTAS AGREGADAS:
       { 
         path: 'productos/nuevo', 
         loadComponent: () => import('./pos/producto-form/producto-form') 
@@ -49,11 +48,19 @@ export const routes: Routes = [
         path: 'productos/editar/:id', 
         loadComponent: () => import('./pos/producto-form/producto-form') 
       },
-      // --------------------------------------
-
+      
       { path: 'categorias', loadComponent: () => import('./pos/categorias/categorias') },
 
       // --- Rutas EXCLUSIVAS DE ADMIN ---
+      
+      // MENTOR: NUEVA RUTA DE SOLICITUDES DE CHATBOT
+      { 
+        path: 'solicitudes', 
+        loadComponent: () => import('./pos/solicitudes-list/solicitudes-list'),
+        data: { roles: ['ROLE_ADMIN'] } 
+      },
+      // ----------------------------------------------
+
       { 
         path: 'proveedores', 
         loadComponent: () => import('./pos/proveedores/proveedores'),
@@ -69,7 +76,7 @@ export const routes: Routes = [
         loadComponent: () => import('./pos/proveedor-form/proveedor-form'),
         data: { roles: ['ROLE_ADMIN'] }
       },
-      // ---------------------------------------------
+      
       { 
         path: 'pedidos', 
         loadComponent: () => import('./pos/pedidos-list/pedidos-list'),
@@ -120,6 +127,11 @@ export const routes: Routes = [
         loadComponent: () => import('./pos/cotizacion-detalle/cotizacion-detalle'),
         data: { roles: ['ROLE_ADMIN'] } 
       },
+
+      { 
+        path: 'mi-perfil', 
+        loadComponent: () => import('./pos/perfil-usuario/perfil-usuario') 
+      },
         
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
@@ -138,7 +150,7 @@ export const routes: Routes = [
         { path: 'catalogo', loadComponent: () => import('./pages/catalogo/catalogo') }, 
         { path: 'mi-perfil', loadComponent: () => import('./pages/mi-perfil/mi-perfil') }, 
         { path: 'mis-compras', loadComponent: () => import('./pages/mis-compras/mis-compras') }, 
-        {path: 'mis-puntos', loadComponent: () => import('./pages/mis-puntos/mis-puntos').then(m => m.MisPuntosComponent) },
+        { path: 'mis-puntos', loadComponent: () => import('./pages/mis-puntos/mis-puntos').then(m => m.MisPuntosComponent) },
         { path: '', redirectTo: 'catalogo', pathMatch: 'full' }
     ]
   },

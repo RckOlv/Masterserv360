@@ -27,6 +27,7 @@ public class RecompensaService {
 
     @Transactional
     public RecompensaDTO crear(RecompensaDTO dto) {
+        // El mapper ya se encarga de pasar el stock del DTO a la Entidad
         Recompensa recompensa = recompensaMapper.toEntity(dto);
 
         // 1. Validar y asignar la Regla de Puntos (Obligatoria)
@@ -35,13 +36,7 @@ public class RecompensaService {
         recompensa.setReglaPuntos(regla);
 
         // 2. Validar y asignar la Categoría (Opcional)
-        if (dto.getCategoriaId() != null) {
-            Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
-                    .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada: " + dto.getCategoriaId()));
-            recompensa.setCategoria(categoria);
-        } else {
-            recompensa.setCategoria(null);
-        }
+        asignarCategoria(recompensa, dto.getCategoriaId());
 
         Recompensa guardada = recompensaRepository.save(recompensa);
         return recompensaMapper.toDto(guardada);
@@ -52,20 +47,19 @@ public class RecompensaService {
         Recompensa recompensa = recompensaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Recompensa no encontrada: " + id));
 
-        // Actualizar campos
+        // Actualizar campos manualmente
         recompensa.setDescripcion(dto.getDescripcion());
         recompensa.setPuntosRequeridos(dto.getPuntosRequeridos());
         recompensa.setTipoDescuento(dto.getTipoDescuento());
         recompensa.setValor(dto.getValor());
+        
+        // --- MENTOR: CORRECCIÓN CRÍTICA ---
+        // Faltaba actualizar el stock al editar
+        recompensa.setStock(dto.getStock()); 
+        // ----------------------------------
 
         // 2. Validar y asignar la Categoría (Opcional)
-        if (dto.getCategoriaId() != null) {
-            Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
-                    .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada: " + dto.getCategoriaId()));
-            recompensa.setCategoria(categoria);
-        } else {
-            recompensa.setCategoria(null);
-        }
+        asignarCategoria(recompensa, dto.getCategoriaId());
         
         Recompensa actualizada = recompensaRepository.save(recompensa);
         return recompensaMapper.toDto(actualizada);
@@ -76,5 +70,16 @@ public class RecompensaService {
         Recompensa recompensa = recompensaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Recompensa no encontrada: " + id));
         recompensaRepository.delete(recompensa);
+    }
+
+    // --- Helper para no repetir código ---
+    private void asignarCategoria(Recompensa recompensa, Long categoriaId) {
+        if (categoriaId != null) {
+            Categoria categoria = categoriaRepository.findById(categoriaId)
+                    .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada: " + categoriaId));
+            recompensa.setCategoria(categoria);
+        } else {
+            recompensa.setCategoria(null);
+        }
     }
 }

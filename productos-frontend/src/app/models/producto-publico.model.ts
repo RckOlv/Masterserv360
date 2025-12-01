@@ -7,4 +7,5 @@ export interface ProductoPublicoDTO {
   stockActual: number;
   imagenUrl?: string | null; 
   nombreCategoria: string;
+  stockMinimo: number;
 }

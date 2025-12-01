@@ -1,12 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http'; // ¡Importar HttpParams!
+import { HttpClient, HttpParams } from '@angular/common/http'; 
 import { Observable } from 'rxjs';
 import { ClientePerfilDTO } from '../models/cliente-perfil.model';
 import { ClientePerfilUpdateDTO } from '../models/cliente-perfil-update.model';
-import { VentaResumenDTO } from '../models/venta-resumen.model'; // <-- ¡DTO AÑADIDO!
-import { Page } from '../models/page.model'; // <-- ¡PAGE AÑADIDO!
+import { VentaResumenDTO } from '../models/venta-resumen.model'; 
+import { Page } from '../models/page.model'; 
 
-// Asumo que tu URL base está centralizada, si no, ponla aquí
 const API_URL = 'http://localhost:8080/api/cliente'; 
 
 @Injectable({
@@ -32,8 +31,6 @@ export class ClienteService {
     return this.http.put<ClientePerfilDTO>(`${API_URL}/mi-perfil`, updateDTO);
   }
 
-  // --- ¡NUEVO MÉTODO AÑADIDO! ---
-
   /**
    * Llama al backend (GET /api/cliente/mis-compras)
    * para obtener el historial de compras paginado del cliente.
@@ -45,5 +42,14 @@ export class ClienteService {
       // (El backend se encarga de ordenar por fecha desc)
       
     return this.http.get<Page<VentaResumenDTO>>(`${API_URL}/mis-compras`, { params });
+  }
+
+  // --- MENTOR: NUEVO MÉTODO AÑADIDO ---
+  /**
+   * Llama al backend (PATCH /api/cliente/cambiar-password)
+   * para actualizar la contraseña.
+   */
+  cambiarPassword(data: { passwordActual: string; passwordNueva: string }): Observable<void> {
+    return this.http.patch<void>(`${API_URL}/cambiar-password`, data);
   }
 }

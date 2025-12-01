@@ -59,4 +59,7 @@ public class Venta extends AuditableEntity {
     @OneToOne // Una Venta puede tener un Cupón
     @JoinColumn(name = "cupon_id", referencedColumnName = "id")
     private Cupon cupon;
+
+    @Column(name = "monto_descuento", precision = 10, scale = 2)
+    private BigDecimal montoDescuento;
 }

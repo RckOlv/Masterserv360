@@ -99,4 +99,22 @@
   overflow-y: auto;
 }
 
-/* El resto del CSS permanece igual... */
+/* Corrección para Input Groups (Iconos $, Varita, etc.) */
+.input-group-text.masterserv-input {
+  background-color: #121212 !important; /* Fondo oscuro igual al input */
+  border: 1px solid #9E9E9E;
+  color: #FFC107; /* Color amarillo Masterserv para el icono */
+  border-right: none; /* Para que se pegue visualmente al input si quieres */
+}
+
+/* Asegurar que el input pegado al grupo tenga el mismo borde */
+.input-group .form-control.masterserv-input {
+  border-left: 1px solid #9E9E9E; /* Restaurar borde si quitaste el del span */
+}
+
+/* Corrección específica para readonly (Código auto) */
+input[readonly].masterserv-input {
+  background-color: #1a1a1a !important; /* Un poco más claro para diferenciar */
+  color: #aaa !important;
+  cursor: not-allowed;
+}

@@ -1,7 +1,6 @@
 package com.masterserv.productos.controller;
 
 import com.masterserv.productos.dto.ReglaPuntosDTO;
-import com.masterserv.productos.entity.ReglaPuntos;
 import com.masterserv.productos.service.ReglaPuntosService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +20,12 @@ public class ReglaPuntosController {
     private ReglaPuntosService reglaPuntosService;
 
     @GetMapping("/activa")
-    public ResponseEntity<ReglaPuntos> getReglaActiva() {
-        Optional<ReglaPuntos> regla = reglaPuntosService.getReglaActiva();
+    public ResponseEntity<ReglaPuntosDTO> getReglaActiva() {
+        // --- MENTOR: CAMBIO AQUÍ ---
+        // Llamamos a getReglaActivaDTO() en lugar de getReglaActiva()
+        Optional<ReglaPuntosDTO> regla = reglaPuntosService.getReglaActivaDTO();
+        // ---------------------------
+        
         return regla.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

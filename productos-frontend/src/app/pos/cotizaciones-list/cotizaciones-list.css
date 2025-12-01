@@ -184,6 +184,11 @@
   color: #E0E0E0;
 }
 
+.recomendada-row {
+    background-color: rgba(255, 193, 7, 0.1) !important; /* Amarillo muy suave */
+    border-left: 4px solid #ffc107;
+}
+
 
 /* Alertas y Spinner */
 .masterserv-alert-info {

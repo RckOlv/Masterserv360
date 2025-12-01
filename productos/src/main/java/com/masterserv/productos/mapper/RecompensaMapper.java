@@ -4,14 +4,13 @@ import com.masterserv.productos.dto.RecompensaDTO;
 import com.masterserv.productos.entity.Categoria;
 import com.masterserv.productos.entity.Recompensa;
 import com.masterserv.productos.entity.ReglaPuntos;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Mappings;
-import org.mapstruct.Named;
+import org.mapstruct.*;
 
 @Mapper(componentModel = "spring")
 public interface RecompensaMapper {
 
+    // --- MENTOR: CORRECCIÓN DEL MAPPEO ---
+    // Forzamos la extracción de ID y Nombre de la categoría
     @Mappings({
         @Mapping(source = "reglaPuntos.id", target = "reglaPuntosId"),
         @Mapping(source = "categoria.id", target = "categoriaId"),
@@ -22,11 +21,13 @@ public interface RecompensaMapper {
     @Mappings({
         @Mapping(target = "id", ignore = true),
         @Mapping(target = "reglaPuntos", source = "reglaPuntosId", qualifiedByName = "idToReglaPuntos"),
-        @Mapping(target = "categoria", source = "categoriaId", qualifiedByName = "idToCategoria")
+        @Mapping(target = "categoria", source = "categoriaId", qualifiedByName = "idToCategoria"),
+        // El stock viaja directo, no hace falta mapearlo explícitamente si se llaman igual
+        @Mapping(target = "stock", source = "stock") 
     })
     Recompensa toEntity(RecompensaDTO dto);
 
-    // --- Métodos Helper para MapStruct ---
+    // --- Métodos Helper ---
     
     @Named("idToReglaPuntos")
     default ReglaPuntos idToReglaPuntos(Long id) {
@@ -42,5 +43,15 @@ public interface RecompensaMapper {
         Categoria categoria = new Categoria();
         categoria.setId(id);
         return categoria;
+    }
+    
+    // --- MENTOR: IMPORTANTE ---
+    // A veces MapStruct necesita ayuda extra si la relación es Lazy
+    @AfterMapping
+    default void afterToDto(Recompensa entity, @MappingTarget RecompensaDTO dto) {
+        if (entity.getCategoria() != null) {
+            dto.setCategoriaId(entity.getCategoria().getId());
+            dto.setCategoriaNombre(entity.getCategoria().getNombre());
+        }
     }
 }

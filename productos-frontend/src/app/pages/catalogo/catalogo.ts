@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Page } from '../../models/page.model';
 import { ProductoPublicoDTO } from '../../models/producto-publico.model';
 import { CategoriaDTO } from '../../models/categoria.model';
@@ -8,13 +8,14 @@ import { CatalogoService } from '../../service/catalogo.service';
 import { CategoriaService } from '../../service/categoria.service';
 import { ProductoPublicoFiltroDTO } from '../../models/producto-publico-filtro.model';
 import { mostrarToast } from '../../utils/toast';
-import { PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   selector: 'app-catalogo',
   standalone: true,
-  imports: [ CommonModule, ReactiveFormsModule, MatPaginatorModule ],
+  // MENTOR: Ya no necesitamos MatPaginatorModule
+  imports: [ CommonModule, ReactiveFormsModule ],
   templateUrl: './catalogo.html',
   styleUrl: './catalogo.css'
 })
@@ -27,10 +28,13 @@ export default class CatalogoComponent implements OnInit, OnDestroy {
   public page?: Page<ProductoPublicoDTO>;
   public categorias: CategoriaDTO[] = [];
   public filtroForm: FormGroup;
+  
+  public searchControl = new FormControl(''); 
+  
   public isLoading = true;
   private currentSort = 'nombre,asc';
+  private searchSub?: Subscription;
 
-  private searchTermSub?: Subscription;
   public selectedCategoriaId: number | null = null;
   
   constructor() {
@@ -44,15 +48,18 @@ export default class CatalogoComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadCategorias();
 
-    // Escuchamos la búsqueda de la Navbar.
-    this.searchTermSub = this.catalogoService.searchTerm$.subscribe(() => {
-      this.onFiltrar(0); // Filtra y resetea a la página 0
+    this.searchSub = this.searchControl.valueChanges.pipe(
+      debounceTime(500), 
+      distinctUntilChanged()
+    ).subscribe(() => {
+      this.onFiltrar(0); 
     });
+
+    this.onFiltrar(0);
   }
 
   ngOnDestroy(): void {
-    this.searchTermSub?.unsubscribe();
-    this.catalogoService.setSearchTerm('');
+    this.searchSub?.unsubscribe();
   }
 
   loadCategorias(): void {
@@ -62,17 +69,13 @@ export default class CatalogoComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Método ÚNICO que lee todos los filtros y llama a la API.
-   */
   onFiltrar(pageIndex: number = 0): void {
     this.isLoading = true;
     const formValues = this.filtroForm.value;
-    const searchTerm = this.catalogoService.getSearchTermValue(); 
-    const size = this.page?.size || 12;
+    const size = 12; // Tamaño fijo para catálogo
   
     const filtro: ProductoPublicoFiltroDTO = {
-      nombre: searchTerm || undefined, 
+      nombre: this.searchControl.value || undefined, 
       categoriaIds: this.selectedCategoriaId ? [this.selectedCategoriaId] : undefined,
       precioMin: formValues.precioMin || undefined,
       precioMax: formValues.precioMax || undefined,
@@ -85,35 +88,30 @@ export default class CatalogoComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * ¡CORREGIDO!
-   * Acepta 'number | undefined' (de cat.id) Y 'null' (de "Ver Todas").
-   */
   filtrarPorCategoria(id: number | null | undefined): void {
-    // Si el ID es undefined (de un cat.id opcional) O null (de "Ver Todas")
     const newId = (id === undefined || id === null) ? null : id; 
-    
-    // Si vuelve a clickear la misma, la deselecciona (null)
     this.selectedCategoriaId = (this.selectedCategoriaId === newId) ? null : newId;
     
-    // Limpiamos el término de búsqueda de la navbar
-    this.catalogoService.setSearchTerm(''); 
-    // onFiltrar(0) se disparará automáticamente por la suscripción a searchTerm$
+    this.searchControl.setValue('', {emitEvent: false}); 
+    this.onFiltrar(0);
   }
 
-  /**
-   * Limpia los filtros y el término de búsqueda.
-   */
   limpiarFiltros(): void {
     this.filtroForm.reset({ soloConStock: false });
     this.selectedCategoriaId = null;
-    this.catalogoService.setSearchTerm(''); 
+    this.searchControl.setValue(''); 
   }
 
-  /**
-   * Maneja el evento de cambio de página.
-   */
-  handlePageEvent(e: PageEvent): void {
-    this.onFiltrar(e.pageIndex);
+  // --- MÉTODOS DE PAGINACIÓN MANUAL ---
+  paginaAnterior(): void {
+    if (this.page && !this.page.first) {
+      this.onFiltrar(this.page.number - 1);
+    }
+  }
+
+  paginaSiguiente(): void {
+    if (this.page && !this.page.last) {
+      this.onFiltrar(this.page.number + 1);
+    }
   }
 }

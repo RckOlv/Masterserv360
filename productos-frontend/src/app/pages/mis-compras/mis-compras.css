@@ -2,111 +2,84 @@
     padding: 2rem 0;
 }
 
-/* --- TARJETA DE COMPRA --- */
-.compra-card {
+/* --- ESTILOS DE TABLA (LISTA) --- */
+.table-dark {
     background-color: #1e1e1e;
-    border: 1px solid #333;
-    border-radius: 12px;
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-    overflow: hidden;
+    color: #e0e0e0;
 }
 
-.compra-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-    border-color: #dc3545;
-}
-
-.card-header {
-    background-color: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid #333;
-    padding: 1rem;
-}
-
-.card-body {
-    padding: 1.5rem;
-}
-
-.card-footer {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-top: 1px solid #333;
-    padding: 1rem;
-}
-
-/* --- TIPOGRAFÍA --- */
-.text-label {
-    color: #aaa;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    display: block;
-    margin-bottom: 0.25rem;
-}
-
-.text-value {
-    color: #fff;
-    font-weight: 600;
-    font-size: 1.1rem;
+.table-hover tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 /* --- BADGES --- */
-.badge-estado {
-    padding: 0.5em 0.8em;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.75rem;
-    letter-spacing: 0.5px;
-}
-
 .bg-success-subtle {
-    background-color: rgba(25, 135, 84, 0.2);
-    color: #20c997;
-    border: 1px solid rgba(25, 135, 84, 0.3);
+    background-color: rgba(25, 135, 84, 0.15) !important;
+    border-color: rgba(25, 135, 84, 0.5) !important;
 }
 
 .bg-danger-subtle {
-    background-color: rgba(220, 53, 69, 0.2);
-    color: #ff6b6b;
-    border: 1px solid rgba(220, 53, 69, 0.3);
+    background-color: rgba(220, 53, 69, 0.15) !important;
+    border-color: rgba(220, 53, 69, 0.5) !important;
 }
 
-/* --- MODAL OSCURO --- */
+/* --- MODAL OSCURO (Mantenido para el detalle) --- */
 .modal-content-dark {
-    background-color: #1e1e1e;
-    border: 1px solid #444;
-    color: #fff;
+    background: linear-gradient(180deg, #1E1E1E 0%, #252525 100%);
+    border: 1px solid #9E9E9E;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    color: #E0E0E0;
 }
 
 .modal-header-dark {
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid #E41E26; /* Línea roja característica */
+    background-color: #121212;
+}
+
+.modal-footer {
+    border-top: 1px solid #333;
+    background-color: #121212;
+}
+
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
 }
 
 /* Tabla dentro del modal */
 .table-dark-custom {
-    background-color: #252525;
-    color: #e0e0e0;
-    margin-bottom: 0;
+    --bs-table-bg: #1E1E1E;
+    --bs-table-color: #E0E0E0;
+    border-color: #444;
 }
 
-.table-dark-custom th {
-    color: #dc3545;
+.table-dark-custom thead th {
+    background-color: #121212;
+    color: #E41E26;
+    border-bottom: 2px solid #555;
+    font-weight: 600;
     text-transform: uppercase;
-    font-size: 0.8rem;
-    border-bottom: 2px solid #444;
-    background-color: #2c2c2c;
+    font-size: 0.85rem;
+    padding: 12px;
 }
 
-.table-dark-custom td {
-    border-bottom: 1px solid #333;
+.table-dark-custom tbody td {
+    padding: 12px;
     vertical-align: middle;
+    border-bottom: 1px solid #333;
+}
+
+.table-dark-custom tbody tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+tfoot tr {
+    background-color: #121212;
 }
 
 /* --- PAGINADOR DE MATERIAL (DARK) --- */
 ::ng-deep .mat-mdc-paginator {
-    background-color: #1e1e1e !important;
+    background-color: transparent !important;
     color: #e0e0e0 !important;
-    border-radius: 8px;
-    border: 1px solid #333;
 }
 ::ng-deep .mat-mdc-icon-button {
     color: #e0e0e0 !important;

@@ -5,9 +5,12 @@ export interface CotizacionAdminDTO {
   proveedorNombre: string;
   proveedorId: number;
   estado: 'PENDIENTE_PROVEEDOR' | 'RECIBIDA' | 'CONFIRMADA_ADMIN' | 'CANCELADA_ADMIN' | 'VENCIDA';
-  fechaCreacion: string; // Angular manejará la fecha como string (ISO 8601)
-  fechaEntregaOfertada: string | null; // (ISO 8601)
+  fechaCreacion: string;
+  fechaEntregaOfertada: string | null;
   precioTotalOfertado: number | null;
   esRecomendada: boolean;
+  // --- MENTOR: NUEVO CAMPO ---
+  observacionAnalisis: string; 
+  // ---------------------------
   items: ItemCotizacionAdminDTO[];
 }

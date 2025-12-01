@@ -1,5 +1,6 @@
 package com.masterserv.productos.controller;
 
+import com.masterserv.productos.dto.CambioPasswordDTO; // Importar DTO
 import com.masterserv.productos.dto.UsuarioDTO;
 import com.masterserv.productos.dto.UsuarioFiltroDTO;
 import com.masterserv.productos.service.UsuarioService;
@@ -13,42 +14,68 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal; // Importar Principal
 import java.util.Map;
-// Quitar import no usado: import java.util.List;
 
 @RestController
 @RequestMapping("/api/usuarios")
-// --- ¡QUITAR @PreAuthorize DE AQUÍ! ---
-// @PreAuthorize("hasRole('ADMIN')") // Ya no protege toda la clase
 public class UsuarioController {
 
     @Autowired
     private UsuarioService usuarioService;
 
+    // --- MENTOR: NUEVOS ENDPOINTS PARA PERFIL PROPIO (Admin/Vendedor) ---
+    // IMPORTANTE: Estos deben ir ANTES de @GetMapping("/{id}") para evitar conflictos.
+
+    /**
+     * Obtener MI perfil (para el usuario logueado en el POS).
+     */
+    @GetMapping("/perfil")
+    public ResponseEntity<UsuarioDTO> getMiPerfil(Principal principal) {
+        String email = principal.getName();
+        // Requiere que hayas agregado 'buscarPorEmail' en UsuarioService
+        return ResponseEntity.ok(usuarioService.buscarPorEmail(email)); 
+    }
+
+    /**
+     * Actualizar MI perfil.
+     */
+    @PutMapping("/perfil")
+    public ResponseEntity<UsuarioDTO> updateMiPerfil(@Valid @RequestBody UsuarioDTO dto, Principal principal) {
+        String email = principal.getName();
+        // Requiere 'actualizarMiPerfil' en UsuarioService
+        return ResponseEntity.ok(usuarioService.actualizarMiPerfil(email, dto));
+    }
+
+    /**
+     * Cambiar MI contraseña.
+     */
+    @PatchMapping("/perfil/cambiar-password")
+    public ResponseEntity<Void> cambiarPassword(@Valid @RequestBody CambioPasswordDTO dto, Principal principal) {
+        String email = principal.getName();
+        // Requiere 'cambiarPassword' en UsuarioService
+        usuarioService.cambiarPassword(email, dto);
+        return ResponseEntity.noContent().build();
+    }
+    // --------------------------------------------------------------------
+
     /**
      * Filtra y pagina usuarios.
-     * Permitido para cualquier usuario autenticado (ADMIN o VENDEDOR).
      */
     @PostMapping("/filtrar")
-    // --- AÑADIR @PreAuthorize AQUÍ (más permisivo) ---
-    @PreAuthorize("isAuthenticated()") // Permite a cualquier logueado filtrar
+    @PreAuthorize("isAuthenticated()") 
     public ResponseEntity<Page<UsuarioDTO>> listarFiltrado(
             @RequestBody UsuarioFiltroDTO filtro,
-            @PageableDefault(page = 0, size = 10) Pageable pageable) { // @PageableDefault es opcional si ya configuras en frontend
-
-        // Asegurarse que el servicio tenga el método correcto
+            @PageableDefault(page = 0, size = 10) Pageable pageable) {
         return ResponseEntity.ok(usuarioService.filtrarUsuarios(filtro, pageable));
     }
 
     /**
      * Obtiene los detalles de un usuario por ID.
-     * Permitido para cualquier usuario autenticado.
      */
     @GetMapping("/{id}")
-    // --- AÑADIR @PreAuthorize AQUÍ ---
-    @PreAuthorize("isAuthenticated()") // Permite ver detalle si estás logueado
+    @PreAuthorize("isAuthenticated()") 
     public ResponseEntity<UsuarioDTO> getUsuarioById(@PathVariable Long id) {
-        // Asegurarse que el servicio tenga findById
         UsuarioDTO usuario = usuarioService.findById(id);
         return ResponseEntity.ok(usuario);
     }
@@ -57,7 +84,6 @@ public class UsuarioController {
      * Crea un nuevo usuario. SOLO ADMIN.
      */
     @PostMapping
-    // --- AÑADIR @PreAuthorize AQUÍ (restringido) ---
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UsuarioDTO> crearUsuario(@Valid @RequestBody UsuarioDTO usuarioDTO) {
         UsuarioDTO nuevoUsuario = usuarioService.crearUsuarioAdmin(usuarioDTO);
@@ -68,7 +94,6 @@ public class UsuarioController {
      * Actualiza un usuario existente. SOLO ADMIN.
      */
     @PutMapping("/{id}")
-    // --- AÑADIR @PreAuthorize AQUÍ (restringido) ---
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UsuarioDTO> actualizarUsuario(@PathVariable Long id, @Valid @RequestBody UsuarioDTO usuarioDTO) {
         UsuarioDTO usuarioActualizado = usuarioService.actualizarUsuarioAdmin(id, usuarioDTO);
@@ -79,7 +104,6 @@ public class UsuarioController {
      * Realiza un borrado lógico (soft delete). SOLO ADMIN.
      */
     @DeleteMapping("/{id}")
-    // --- AÑADIR @PreAuthorize AQUÍ (restringido) ---
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> softDeleteUsuario(@PathVariable Long id) {
         usuarioService.softDelete(id);
@@ -90,7 +114,6 @@ public class UsuarioController {
      * Reactiva un usuario inactivo. SOLO ADMIN.
      */
     @PatchMapping("/{id}/reactivar")
-    // --- AÑADIR @PreAuthorize AQUÍ (restringido) ---
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> reactivarUsuario(@PathVariable Long id) {
         usuarioService.reactivar(id);
@@ -99,10 +122,9 @@ public class UsuarioController {
 
     /**
      * Endpoint específico para POS (Punto de Venta).
-     * Permite a VENDEDORES y ADMINS registrar clientes rápidamente.
      */
     @PostMapping("/cliente-rapido")
-    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')") // <--- ¡AQUÍ ESTÁ LA MAGIA!
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')") 
     public ResponseEntity<UsuarioDTO> registrarClienteRapido(@Valid @RequestBody UsuarioDTO usuarioDTO) {
         UsuarioDTO nuevoCliente = usuarioService.crearClienteRapido(usuarioDTO);
         return new ResponseEntity<>(nuevoCliente, HttpStatus.CREATED);

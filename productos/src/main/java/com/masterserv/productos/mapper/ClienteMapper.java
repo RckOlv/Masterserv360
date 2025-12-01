@@ -16,8 +16,8 @@ public interface ClienteMapper {
      * Mapea la Entidad Usuario al DTO de Perfil (para LEER).
      */
     @Mappings({
-        // --- ¡CORRECCIÓN AQUÍ! ---
         // Mapeamos el ID
+        // ---
         @Mapping(source = "tipoDocumento.id", target = "tipoDocumentoId"),
         // Mapeamos el Nombre (usando 'nombreCorto' como detectaste)
         @Mapping(source = "tipoDocumento.nombreCorto", target = "tipoDocumento")

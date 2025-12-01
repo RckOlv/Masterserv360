@@ -4,9 +4,9 @@ import com.masterserv.productos.event.StockActualizadoEvent;
 import com.masterserv.productos.entity.*;
 import com.masterserv.productos.enums.EstadoCotizacion;
 import com.masterserv.productos.enums.EstadoItemCotizacion;
-import com.masterserv.productos.enums.EstadoListaEspera; // Importante: Nuevo Enum
+import com.masterserv.productos.enums.EstadoListaEspera;
 import com.masterserv.productos.repository.CotizacionRepository;
-import com.masterserv.productos.repository.ListaEsperaRepository; // Importante: Nuevo Repo
+import com.masterserv.productos.repository.ListaEsperaRepository;
 import com.masterserv.productos.repository.ProductoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,12 +35,16 @@ public class ProcesoAutomaticoService {
     @Autowired
     private CotizacionRepository cotizacionRepository;
 
-    // --- NUEVO REPOSITORIO INYECTADO ---
     @Autowired
     private ListaEsperaRepository listaEsperaRepository;
     
     @Autowired
     private EmailService emailService;
+
+    // --- MENTOR: INYECCIÓN NUEVA ---
+    @Autowired(required = false) // Opcional por si no lo has creado aún, pero debería estar
+    private WhatsappService whatsappService;
+    // -------------------------------
     
     @Autowired
     private TemplateEngine templateEngine; 
@@ -166,8 +170,6 @@ public class ProcesoAutomaticoService {
             return;
         }
 
-        // logger.info("-> 🟢 [EVENTO STOCK] Analizando Lista de Espera para Producto ID {} (Stock nuevo: {})", event.productoId(), event.stockNuevo());
-
         // 2. Recuperar el producto completo (necesario para el repositorio)
         Producto producto = productoRepository.findById(event.productoId()).orElse(null);
         if (producto == null) return;
@@ -179,7 +181,6 @@ public class ProcesoAutomaticoService {
         );
 
         if (esperas.isEmpty()) {
-            // Nadie espera este producto, terminamos.
             return;
         }
 
@@ -197,13 +198,25 @@ public class ProcesoAutomaticoService {
                     usuario.getNombre(), producto.getNombre()
                 );
 
-                // B. Enviar Email (Usamos el servicio que ya tienes configurado)
-                // Nota: Si tienes un servicio de WhatsApp, aquí lo llamarías.
+                // B. Enviar Email
                 emailService.enviarEmailHtml(usuario.getEmail(), asunto, mensajeCuerpo);
                 
+                // C. --- MENTOR: ENVIAR WHATSAPP ---
+                if (whatsappService != null && usuario.getTelefono() != null) {
+                    String mensajeWhatsapp = String.format(
+                        "👋 *¡Buenas noticias %s!*\n\n" +
+                        "El producto *%s* que esperabas ya llegó. 🛵💨\n" +
+                        "¡Vení a buscarlo!",
+                        usuario.getNombre(), producto.getNombre()
+                    );
+                    whatsappService.enviarMensaje(usuario.getTelefono(), mensajeWhatsapp);
+                    logger.info("-> 📱 WhatsApp enviado a {}", usuario.getTelefono());
+                }
+                // ----------------------------------
+
                 logger.info("-> 📧 Notificación enviada a {}", usuario.getEmail());
 
-                // C. Marcar como notificado para no volver a avisar en la próxima recarga
+                // D. Marcar como notificado para no volver a avisar en la próxima recarga
                 espera.setEstado(EstadoListaEspera.NOTIFICADA);
 
             } catch (Exception e) {

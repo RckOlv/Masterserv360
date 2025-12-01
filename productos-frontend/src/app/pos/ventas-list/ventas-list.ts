@@ -72,7 +72,7 @@ export default class VentasListComponent implements OnInit {
 
   // --- Paginación ---
   public currentPage = 0;
-  public pageSize = 15;
+  public pageSize = 10; // Nos aseguramos que sea 10 para coincidir con el backend
 
   constructor() {
     this.filtroForm = this.fb.group({
@@ -116,6 +116,7 @@ export default class VentasListComponent implements OnInit {
 
         this.filtroForm.get('clienteId')?.enable();
         
+        // Cargamos la lista inicial
         this.aplicarFiltros(true);
         this.cargarListaVendedores();
       },
@@ -133,16 +134,15 @@ export default class VentasListComponent implements OnInit {
       return;
     }
 
-    // CORRECCIÓN: Agregamos las propiedades faltantes (first, last, empty)
     const emptyUserPage: Page<UsuarioDTO> = { 
         content: [], 
         totalPages: 0, 
         totalElements: 0, 
         size: 0, 
         number: 0,
-        first: true,   // <--- Faltaba esto
-        last: true,    // <--- Faltaba esto
-        empty: true    // <--- Faltaba esto
+        first: true,
+        last: true,
+        empty: true
     };
 
     const filtroVendedor: UsuarioFiltroDTO = { rolId: this.vendedorRoleId, estado: 'ACTIVO' };
@@ -195,10 +195,23 @@ export default class VentasListComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
 
+    // getRawValue incluye campos deshabilitados si los hubiera
     const filtro: VentaFiltroDTO = this.filtroForm.getRawValue();
+    
+    // --- DEBUG: ESTO SALDRÁ EN TU CONSOLA (F12) ---
+    console.log("🔍 [DEBUG] Enviando Filtro al Backend:", filtro);
+    console.log(`📄 [DEBUG] Pidiendo Página: ${this.currentPage}, Tamaño: ${this.pageSize}`);
+    // ----------------------------------------------
 
     this.ventaService.filtrarVentas(filtro, this.currentPage, this.pageSize).subscribe({
       next: (pageData) => {
+        // --- DEBUG: QUÉ RESPONDE EL BACKEND ---
+        console.log("📦 [DEBUG] Respuesta Backend:", pageData);
+        console.log(`📊 [DEBUG] Total Elementos: ${pageData.totalElements}`);
+        console.log(`📄 [DEBUG] Total Páginas: ${pageData.totalPages}`);
+        console.log(`📝 [DEBUG] Elementos en esta página: ${pageData.content.length}`);
+        // ---------------------------------------
+
         this.ventasPage = pageData;
         this.isLoading = false;
       },
@@ -220,7 +233,6 @@ export default class VentasListComponent implements OnInit {
     });
     
     this.filtros.clienteId = null; // Limpiar modelo HTML
-
     this.aplicarFiltros(true);
   }
 

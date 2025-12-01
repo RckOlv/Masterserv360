@@ -30,10 +30,15 @@ public class RecompensaDTO {
 
     @NotNull(message = "El valor del descuento es obligatorio")
     @Min(value = 1, message = "El valor debe ser al menos 1")
-    private BigDecimal valor; // (Ej: 500 para $500 FIJO, o 20 para 20%)
+    private BigDecimal valor; 
+
+    // --- MENTOR: AGREGADO CAMPO STOCK ---
+    @NotNull(message = "El stock es obligatorio")
+    @Min(value = 0, message = "El stock no puede ser negativo")
+    private Integer stock;
+    // ------------------------------------
 
     // ID de la Regla de Puntos a la que pertenece
-    // (Es @NotNull en el backend, pero el frontend no lo necesita al leer)
     private Long reglaPuntosId;
 
     // Opcional: ID de la categoría a la que aplica

@@ -15,27 +15,38 @@ public class Recompensa {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Mentor: Aquí guardas el nombre, ej: "Gorra Masterserv"
     @Column(nullable = false)
-    private String descripcion; // Ej: "20% OFF en Neumáticos" o "$500 de descuento"
+    private String descripcion; 
 
     @Column(name = "puntos_requeridos", nullable = false)
-    private int puntosRequeridos; // Ej: 150
+    private int puntosRequeridos; 
+
+    // --- NUEVO CAMPO: STOCK ---
+    // Agregamos esto para que el error 'getStock undefined' desaparezca
+    @Column(nullable = false)
+    private Integer stock; 
+    // --------------------------
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_descuento", nullable = false)
-    private TipoDescuento tipoDescuento; // FIJO o PORCENTAJE
+    private TipoDescuento tipoDescuento; 
 
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal valor; // Ej: 500 (si es FIJO) or 20 (si es PORCENTAJE)
+    private BigDecimal valor; 
 
-    // Relación: Muchas recompensas pertenecen a Una Regla de Puntos
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "regla_puntos_id", nullable = false)
     @JsonBackReference
     private ReglaPuntos reglaPuntos; 
 
-    // Relación: Una recompensa puede aplicar a UNA categoría (opcional)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categoria_id", nullable = true) 
-    private Categoria categoria; // Si es null, aplica a toda la compra
+    private Categoria categoria; 
+    
+    // Mentor: Método helper para asegurar que nunca sea null al crear
+    @PrePersist
+    public void prePersist() {
+        if (this.stock == null) this.stock = 0;
+    }
 }

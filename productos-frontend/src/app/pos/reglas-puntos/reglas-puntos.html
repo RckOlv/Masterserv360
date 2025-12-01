@@ -64,7 +64,7 @@
                      <span class="input-group-text masterserv-input"><i class="bi bi-calendar-x"></i></span>
                   </div>
                   <div *ngIf="fRegla['caducidadPuntosMeses'].invalid && fRegla['caducidadPuntosMeses'].touched" class="invalid-feedback d-block">
-                     La caducidad debe ser al menos 1 mes.
+                      La caducidad debe ser al menos 1 mes.
                   </div>
               </div>
 
@@ -124,7 +124,7 @@
 
       <div class="card masterserv-card shadow-sm mb-3" *appHasPermission="'ROLES_MANAGE'">
         <div class="card-header masterserv-card-header-success d-flex justify-content-between align-items-center">
-          <h5 class="masterserv-subtitle mb-0">Recompensas de Canje (V2)</h5>
+          <h5 class="masterserv-subtitle mb-0">Recompensas de Canje</h5>
           <button class="btn btn-sm btn-outline-light" (click)="abrirModalNuevaRecompensa()" [disabled]="!reglaActiva">
             <i class="bi bi-plus-lg"></i> Nueva Recompensa
           </button>
@@ -141,14 +141,20 @@
             <div class="d-flex justify-content-between align-items-center">
                   <div>
                     <strong class="d-block masterserv-name">{{ rec.descripcion }}</strong>
-                    <span class="text-metal">
+                    
+                    <span class="text-metal small">
+                      Stock: <span [ngClass]="rec.stock > 0 ? 'text-success' : 'text-danger'">{{ rec.stock }}</span> |
                       Costo: {{ rec.puntosRequeridos }} Pts.
                     </span>
+
                     <span class="badge masterserv-badge bg-dark ms-2">
                       {{ rec.tipoDescuento === tipoDescuentoEnum.FIJO ? (rec.valor | currency:'ARS') : (rec.valor + '% OFF') }}
                     </span>
                     <span *ngIf="rec.categoriaNombre" class="badge masterserv-badge masterserv-badge-warning ms-1">
                       {{ rec.categoriaNombre }}
+                    </span>
+                    <span *ngIf="!rec.categoriaNombre && rec.tipoDescuento === tipoDescuentoEnum.PORCENTAJE" class="badge bg-secondary ms-1">
+                      Todo
                     </span>
                   </div>
                   <div class="btn-group btn-group-sm">
@@ -202,7 +208,6 @@
   </div> 
 </div>
 
-
 <div class="modal fade" id="recompensaModal" tabindex="-1" aria-labelledby="recompensaModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -239,6 +244,20 @@
                 <div *ngIf="fRec['puntosRequeridos'].errors?.['min']">Debe ser > 0.</div>
               </div>
             </div>
+            
+            <div class="col-md-6 mb-3">
+              <label for="recStock" class="form-label masterserv-label">Stock <span class="text-danger">*</span></label>
+              <input type="number" id="recStock" class="form-control masterserv-input" 
+                     formControlName="stock"
+                     placeholder="Ej: 50"
+                     [ngClass]="{ 'is-invalid': fRec['stock'].invalid && fRec['stock'].touched }">
+              <div *ngIf="fRec['stock'].invalid && fRec['stock'].touched" class="invalid-feedback">
+                Requerido (>= 0).
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
             <div class="col-md-6 mb-3">
               <label for="recTipo" class="form-label masterserv-label">Tipo Descuento <span class="text-danger">*</span></label>
               <select id="recTipo" class="form-select masterserv-input" formControlName="tipoDescuento">
@@ -246,9 +265,7 @@
                 <option [ngValue]="tipoDescuentoEnum.PORCENTAJE">Porcentaje (%)</option>
               </select>
             </div>
-          </div>
-          
-          <div class="row">
+
             <div class="col-md-6 mb-3">
               <label for="recValor" class="form-label masterserv-label">Valor <span class="text-danger">*</span></label>
               <div class="input-group">
@@ -264,25 +281,55 @@
                  <div *ngIf="fRec['valor'].errors?.['min']">Debe ser > 0.</div>
               </div>
             </div>
+          </div>
 
-            <div class="col-md-6 mb-3">
-              <label for="recCategoria" class="form-label masterserv-label">Aplicar a Categoría (Opcional)</label>
-              <select id="recCategoria" class="form-select masterserv-input" 
-                      formControlName="categoriaId">
-                      <option [ngValue]="null">Toda la compra</option>
-                <option *ngFor="let cat of categorias" [value]="cat.id">{{ cat.nombre }}</option>
-              </select>
-              <small class="text-metal" *ngIf="fRec['tipoDescuento'].value === tipoDescuentoEnum.FIJO">
-                (Los montos fijos siempre aplican al total)
+          <div class="mb-3">
+            <label class="form-label masterserv-label d-block">Aplicar descuento a:</label>
+
+            <div *ngIf="fRec['tipoDescuento'].value === tipoDescuentoEnum.FIJO">
+              <span class="badge bg-secondary w-100 py-2">
+                <i class="bi bi-cart-check"></i> Toda la compra
+              </span>
+              <small class="text-metal mt-1 d-block">
+                (Monto fijo siempre aplica al total)
               </small>
             </div>
+
+            <div *ngIf="fRec['tipoDescuento'].value === tipoDescuentoEnum.PORCENTAJE">
+              
+              <div class="btn-group w-100 mb-2" role="group">
+                <input type="radio" class="btn-check" name="aplicarARadio" id="radioTodo" 
+                       [checked]="aplicarA === 'TODO'" 
+                       (change)="aplicarA = 'TODO'; fRec['categoriaId'].setValue(null)">
+                <label class="btn btn-outline-light" for="radioTodo">Todo</label>
+              
+                <input type="radio" class="btn-check" name="aplicarARadio" id="radioCat" 
+                       [checked]="aplicarA === 'CATEGORIA'" 
+                       (change)="aplicarA = 'CATEGORIA'">
+                <label class="btn btn-outline-light" for="radioCat">Categoría</label>
+              </div>
+
+              <div *ngIf="aplicarA === 'CATEGORIA'">
+                <select id="recCategoria" class="form-select masterserv-input" 
+                        formControlName="categoriaId">
+                  <option [ngValue]="null">Seleccione...</option>
+                  <option *ngFor="let cat of categorias" [ngValue]="cat.id">{{ cat.nombre }}</option>
+                </select>
+                
+                <div *ngIf="aplicarA === 'CATEGORIA' && !fRec['categoriaId'].value" class="text-warning small mt-1">
+                  <i class="bi bi-exclamation-circle"></i> Seleccione una categoría.
+                </div>
+              </div>
+
             </div>
-          
+          </div>
+
         </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn masterserv-btn-secondary" (click)="cerrarModalRecompensa()" [disabled]="isSubmittingRecompensa">Cancelar</button>
-        <button type="submit" form="ngRecompensaForm" class="btn masterserv-btn-primary" [disabled]="recompensaForm.invalid || isSubmittingRecompensa">
+        <button type="submit" form="ngRecompensaForm" class="btn masterserv-btn-primary" 
+                [disabled]="recompensaForm.invalid || isSubmittingRecompensa || (aplicarA === 'CATEGORIA' && !fRec['categoriaId'].value)">
           <span *ngIf="!isSubmittingRecompensa">{{ esEdicionRecompensa ? 'Actualizar' : 'Crear' }} Recompensa</span>
           <span *ngIf="isSubmittingRecompensa" class="spinner-border spinner-border-sm" role="status"></span>
         </button>

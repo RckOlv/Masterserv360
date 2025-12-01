@@ -7,7 +7,8 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring")
+// MENTOR: Agregamos 'uses' para inyectar el mapper de recompensas
+@Mapper(componentModel = "spring", uses = {RecompensaMapper.class})
 public interface ReglaPuntosMapper {
 
     @Mapping(source = "fechaCreacion", target = "fechaInicioVigencia")

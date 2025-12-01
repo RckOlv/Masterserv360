@@ -12,6 +12,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import java.math.BigDecimal;
+
 @Component
 public class VentaEventListener {
 
@@ -25,66 +27,64 @@ public class VentaEventListener {
     @Async
     @TransactionalEventListener
     public void handleVentaRealizada(VentaRealizadaEvent event) {
-        logger.info("Reaccionando al evento VentaRealizadaEvent para Venta ID: {}", event.getVentaId());
+        logger.info("-> 📨 [EVENTO] Procesando venta #{} para envío de email...", event.getVentaId());
         
         try {
-            Venta ventaCompleta = ventaRepository.findByIdWithDetails(event.getVentaId())
-                    .orElseThrow(() -> new RuntimeException("Venta no encontrada para PDF: " + event.getVentaId()));
+            // 1. Recuperar Venta con todos sus detalles
+            Venta venta = ventaRepository.findByIdWithDetails(event.getVentaId())
+                    .orElseThrow(() -> new RuntimeException("Venta no encontrada ID: " + event.getVentaId()));
 
-            // --- INICIO DE LA MODIFICACIÓN ---
-            // Generamos el PDF
-            byte[] pdf = pdfService.generarComprobanteVenta(ventaCompleta);
-
-            // ¡LA PRUEBA DE TINTA!
-            // Vamos a loguear el tamaño del PDF ANTES de enviarlo.
-            if (pdf != null && pdf.length > 0) {
-                logger.info("PDF generado para Venta #{}. Tamaño: {} bytes.", event.getVentaId(), pdf.length);
-            } else {
-                logger.warn("PDF para Venta #{} NO se generó o está vacío (bytes is null or empty).", event.getVentaId());
+            // 2. Generar PDF
+            byte[] pdf = pdfService.generarComprobanteVenta(venta);
+            if (pdf == null || pdf.length == 0) {
+                logger.error("❌ Error: PDF generado vacío para Venta #{}", venta.getId());
+                return;
             }
 
-            // Llamamos al método de envío
-            enviarComprobantePorEmail(ventaCompleta, pdf);
-            // --- FIN DE LA MODIFICACIÓN ---
-
-            // (El log de éxito lo moví al método de abajo para ser más precisos)
-
-        } catch (Exception e) {
-            logger.error("⚠️ La Venta #{} se guardó, pero falló la generación/envío de PDF/Email asíncrono: {}", 
-                         event.getVentaId(), e.getMessage(), e);
-        }
-    }
-
-    private void enviarComprobantePorEmail(Venta venta, byte[] pdf) {
-        // Hacemos una última validación aquí
-        if (pdf == null || pdf.length == 0) {
-            logger.error("Error al enviar email: El PDF está nulo o vacío. Abortando envío de adjunto.");
-            // (Podríamos enviar el email SIN adjunto aquí si quisiéramos)
-            return; 
-        }
-
-        try {
+            // 3. Preparar Contexto Email (AQUÍ FALTABAN DATOS)
             Context context = new Context();
             context.setVariable("clienteNombre", venta.getCliente().getNombre());
-            // Mentor: ¡CUIDADO! El total de la compra no estaba en el template. 
-            // Lo añado aquí para que coincida con tu imagen de MailHog.
-            context.setVariable("totalVenta", String.format("$%.2f", venta.getTotalVenta()));
-
-            String html = templateEngine.process("email-comprobante", context);
             
+            // Total
+            BigDecimal total = venta.getTotalVenta() != null ? venta.getTotalVenta() : BigDecimal.ZERO;
+            context.setVariable("totalVenta", String.format("$%.2f", total));
+            
+            // Datos Básicos
+            context.setVariable("idVenta", venta.getId());
+            context.setVariable("fechaVenta", venta.getFechaVenta());
+
+            // --- MENTOR: VARIABLES DE DESCUENTO AGREGADAS ---
+            BigDecimal descuento = venta.getMontoDescuento() != null ? venta.getMontoDescuento() : BigDecimal.ZERO;
+            context.setVariable("montoDescuento", String.format("$%.2f", descuento));
+            
+            // Pasamos el objeto booleano para saber si mostrar la fila de descuento en el HTML
+            context.setVariable("hayDescuento", descuento.compareTo(BigDecimal.ZERO) > 0);
+
+            // Código de cupón (si existe)
+            if (venta.getCupon() != null) {
+                context.setVariable("codigoCupon", venta.getCupon().getCodigo());
+            } else {
+                context.setVariable("codigoCupon", "");
+            }
+            // ------------------------------------------------
+
+            // 4. Procesar Template HTML
+            String html = templateEngine.process("email-comprobante", context);
+
+            // 5. Enviar
             emailService.enviarEmailConAdjunto(
                     venta.getCliente().getEmail(),
                     "Comprobante de compra #" + venta.getId(),
                     html,
-                    pdf, // El byte[] del PDF
+                    pdf, 
                     "Comprobante-Masterserv-" + venta.getId() + ".pdf"
             );
             
-            // Este log solo se ejecuta si emailService.enviarEmailConAdjunto NO lanza una excepción
-            logger.info("PDF y Email para Venta #{} procesados y enviados exitosamente.", venta.getId());
+            logger.info("✅ Email con comprobante enviado a {}", venta.getCliente().getEmail());
 
         } catch (Exception e) {
-            logger.error("Error al construir o enviar el email para Venta #{}: {}", venta.getId(), e.getMessage());
+            // Si falla aquí, verás el error en la consola
+            logger.error("🔴 Error crítico enviando email de venta #{}: {}", event.getVentaId(), e.getMessage(), e);
         }
     }
 }

@@ -1,13 +1,10 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http'; // Asegúrate de importar HttpParams
 import { Observable } from 'rxjs';
-import { API_URL } from '../app.config'; 
+import { environment } from '../../environments/environment'; 
 import { ProductoDTO } from '../models/producto.model';
+import { Page } from '../models/page.model';
 import { ProductoFiltroDTO } from '../models/producto-filtro.model';
-
-// --- CORRECCIÓN: Importamos la interfaz Page COMPLETA desde el modelo ---
-// (Ya no la definimos aquí abajo para evitar conflictos)
-import { Page } from '../models/page.model'; 
 
 @Injectable({
   providedIn: 'root'
@@ -15,76 +12,61 @@ import { Page } from '../models/page.model';
 export class ProductoService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/productos`; 
+  private apiUrl = `${environment.apiUrl}/productos`;
 
   constructor() { }
 
-  /**
-   * Obtiene productos usando filtros y paginación.
-   * Llama al endpoint POST /filtrar del backend.
-   */
+  getProductos(page: number, size: number): Observable<Page<ProductoDTO>> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+      
+    return this.http.get<Page<ProductoDTO>>(this.apiUrl, { params });
+  }
+
+  getProductoById(id: number): Observable<ProductoDTO> {
+    return this.http.get<ProductoDTO>(`${this.apiUrl}/${id}`);
+  }
+
+  // --- MENTOR: NUEVO MÉTODO PARA GENERAR CÓDIGO ---
+  generarCodigo(categoriaId: number, nombre: string): Observable<{ codigo: string }> {
+    return this.http.get<{ codigo: string }>(`${this.apiUrl}/generar-codigo`, {
+      params: { categoriaId: categoriaId.toString(), nombre }
+    });
+  }
+  // -----------------------------------------------
+
+  searchProductosByProveedor(proveedorId: number, term: string): Observable<Page<ProductoDTO>> {
+    let params = new HttpParams()
+      .set('proveedorId', proveedorId.toString())
+      .set('search', term)
+      .set('page', '0')
+      .set('size', '20'); // Límite para el buscador
+
+    return this.http.get<Page<ProductoDTO>>(`${this.apiUrl}/search-by-proveedor`, { params });
+  }
+
   filtrarProductos(filtro: ProductoFiltroDTO, page: number, size: number): Observable<Page<ProductoDTO>> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
 
     return this.http.post<Page<ProductoDTO>>(`${this.apiUrl}/filtrar`, filtro, { params });
   }
 
-  /**
-   * Obtiene un producto por su ID.
-   */
-  getProductoById(id: number): Observable<ProductoDTO> {
-    return this.http.get<ProductoDTO>(`${this.apiUrl}/${id}`);
-  }
-
-  /**
-   * Crea un nuevo producto.
-   */
   crearProducto(producto: ProductoDTO): Observable<ProductoDTO> {
-    // Desestructuramos para quitar ID y categoriaNombre si vienen
-    const { id, categoriaNombre, ...productoParaCrear } = producto;
-    return this.http.post<ProductoDTO>(this.apiUrl, productoParaCrear);
+    return this.http.post<ProductoDTO>(this.apiUrl, producto);
   }
 
-  /**
-   * Actualiza un producto existente.
-   */
   actualizarProducto(id: number, producto: ProductoDTO): Observable<ProductoDTO> {
-    const { categoriaNombre, ...productoParaActualizar } = producto;
-    return this.http.put<ProductoDTO>(`${this.apiUrl}/${id}`, productoParaActualizar);
+    return this.http.put<ProductoDTO>(`${this.apiUrl}/${id}`, producto);
   }
 
-  /**
-   * Elimina un producto por su ID.
-   */
   eliminarProducto(id: number): Observable<any> {
-    return this.http.delete<any>(`${this.apiUrl}/${id}`);
+    return this.http.delete(`${this.apiUrl}/${id}`);
   }
 
-  /**
-   * Obtiene productos por proveedor (Método simple)
-   */
-  getProductosByProveedor(proveedorId: number): Observable<ProductoDTO[]> {
+  getProductosPorProveedor(proveedorId: number): Observable<ProductoDTO[]> {
     return this.http.get<ProductoDTO[]>(`${this.apiUrl}/por-proveedor/${proveedorId}`);
-  }
-
-  /**
-   * Búsqueda paginada de productos por proveedor.
-   */
-  searchProductosByProveedor(
-    proveedorId: number, 
-    term: string, 
-    page: number = 0, 
-    size: number = 20
-  ): Observable<Page<ProductoDTO>> {
-    
-    let params = new HttpParams()
-      .set('proveedorId', proveedorId.toString())
-      .set('search', term)
-      .set('page', page.toString())
-      .set('size', size.toString());
-
-    return this.http.get<Page<ProductoDTO>>(`${this.apiUrl}/search-by-proveedor`, { params });
   }
 }

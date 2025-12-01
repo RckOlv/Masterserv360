@@ -1,12 +1,16 @@
 <ng-container *ngIf="isLoggedIn$ | async as isLoggedIn">
   
-  <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+  <nav class="navbar navbar-expand-lg navbar-dark sticky-top py-2" style="background-color: #121212; border-bottom: 1px solid #E41E26;">
     <div class="container-fluid">
       
-      <a class="navbar-brand" 
+      <a class="navbar-brand d-flex align-items-center p-0" 
          [routerLink]="(userRole$ | async) === 'CLIENTE' ? '/portal/catalogo' : '/pos/dashboard'">
-        <i class="bi bi-gear-wide-connected me-2"></i>
-        Masterserv360
+        
+        <img src="/images/Masterserv_Header2.png" 
+             alt="Masterserv Logo" 
+             height="65" 
+             style="width: 140px; object-fit: fill;" 
+             class="hover-effect my-1">
       </a>
       
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" 
@@ -17,20 +21,20 @@
 
       <div class="collapse navbar-collapse" id="navbarNavDropdown">
         
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <ul class="navbar-nav mx-auto mb-2 mb-lg-0 fw-bold text-uppercase">
           
           <ng-container *ngIf="(userRole$ | async) === 'CLIENTE'">
-            <li class="nav-item">
+            <li class="nav-item mx-2">
               <a class="nav-link" routerLink="/portal/catalogo" routerLinkActive="active">
                 <i class="bi bi-grid-fill me-1"></i> Catálogo
               </a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item mx-2">
               <a class="nav-link" routerLink="/portal/mis-compras" routerLinkActive="active">
                 <i class="bi bi-bag-check-fill me-1"></i> Mis Compras
               </a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item mx-2">
               <a class="nav-link" routerLink="/portal/mis-puntos" routerLinkActive="active">
                 <i class="bi bi-star-fill me-1"></i> Mis Puntos
               </a>
@@ -46,41 +50,38 @@
           </ng-container>
         </ul>
 
-        <form class="d-flex mx-auto mb-2 mb-lg-0" *ngIf="(userRole$ | async) === 'CLIENTE'" (ngSubmit)="onBuscar(searchInput.value)">
-          <div class="input-group">
-            <input #searchInput class="form-control form-control-search" type="search" 
-                   placeholder="Buscar repuesto..." 
-                   aria-label="Buscar" style="width: 250px;">
-            <button class="btn btn-outline-danger" type="submit">
-              <i class="bi bi-search"></i>
-            </button>
-          </div>
-        </form>
-
         <ul class="navbar-nav ms-auto">
           <li *ngIf="!isLoggedIn" class="nav-item">
-            <a class="btn btn-danger btn-sm mt-1" routerLink="/login">Iniciar Sesión</a>
+            <a class="btn btn-danger btn-sm fw-bold px-3 rounded-pill" routerLink="/login">
+              <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar Sesión
+            </a>
           </li>
 
           <li *ngIf="isLoggedIn" class="nav-item dropdown">
             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarUserDropdown" 
                role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px;">
-                <i class="bi bi-person-fill"></i>
+              
+              <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
+                <i class="bi bi-person-fill lead"></i>
               </div>
-              {{ userEmail$ | async }}
+              
+              <div class="d-flex flex-column line-height-sm text-start">
+                <span class="fw-bold" style="font-size: 0.9rem;">{{ userName$ | async }}</span>
+                <span class="text-white-50" style="font-size: 0.75rem;">{{ userRoleLabel$ | async }}</span>
+              </div>
+
             </a>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark border-secondary shadow" aria-labelledby="navbarUserDropdown">
               <ng-container *ngIf="(userRole$ | async) === 'CLIENTE'">
-                <li class="dropdown-header text-danger fw-bold">
+                <li class="dropdown-header text-warning fw-bold">
                   <i class="bi bi-trophy-fill me-1"></i>
                   {{ saldoPuntos$ | async | number }} Puntos
                 </li>
-                <li><a class="dropdown-item" routerLink="/portal/mi-perfil">Mi Perfil</a></li>
-                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" routerLink="/portal/mi-perfil"><i class="bi bi-person-vcard me-2"></i>Mi Perfil</a></li>
+                <li><hr class="dropdown-divider border-secondary"></li>
               </ng-container>
               <li>
-                <a class="dropdown-item text-danger" (click)="logout()" style="cursor: pointer;">
+                <a class="dropdown-item text-danger fw-bold" (click)="logout()" style="cursor: pointer;">
                   <i class="bi bi-box-arrow-right me-2"></i>
                   Cerrar Sesión
                 </a>

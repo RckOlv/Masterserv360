@@ -26,29 +26,39 @@
   <div class="row row-cols-1 row-cols-md-3 g-4" *ngIf="!loading && saldo?.recompensasDisponibles">
     
     <div class="col" *ngFor="let reward of saldo!.recompensasDisponibles">
-      <div class="card h-100 shadow-sm border-0 hover-effect" style="background-color: #1e1e1e; border: 1px solid #333;">
+      <div class="card h-100 shadow-sm border-0 hover-effect" 
+           [class.opacity-50]="reward.stock === 0"
+           style="background-color: #1e1e1e; border: 1px solid #333;">
         
         <div class="card-header bg-transparent border-bottom-0 pt-4 text-center">
-            <span class="badge bg-warning text-dark mb-2">{{ reward.tipoDescuento }}</span>
+            <span class="badge bg-warning text-dark mb-2 me-1">{{ reward.tipoDescuento }}</span>
+            
+            <span *ngIf="reward.stock > 0" class="badge bg-success mb-2">Stock: {{ reward.stock }}</span>
+            <span *ngIf="reward.stock === 0" class="badge bg-danger mb-2">AGOTADO</span>
+
             <h4 class="card-title fw-bold text-primary">{{ reward.descripcion }}</h4>
         </div>
 
         <div class="card-body text-center">
           <h1 class="display-6 fw-bold my-2 text-white">{{ reward.puntosRequeridos }}</h1>
-          
           <span class="text-white-50 text-uppercase small fw-bold">Puntos</span>
         </div>
 
         <div class="card-footer bg-transparent border-top-0 pb-4 px-4">
           <button 
             class="btn btn-outline-primary w-100 py-2 fw-bold" 
-            [disabled]="(saldo?.saldoPuntos || 0) < reward.puntosRequeridos"
+            [disabled]="(saldo?.saldoPuntos || 0) < reward.puntosRequeridos || reward.stock === 0"
             (click)="confirmarCanje(reward)">
             
-            <span *ngIf="(saldo?.saldoPuntos || 0) >= reward.puntosRequeridos">
+            <span *ngIf="(saldo?.saldoPuntos || 0) >= reward.puntosRequeridos && reward.stock > 0">
               <i class="bi bi-gift-fill me-2"></i> Canjear
             </span>
-            <span *ngIf="(saldo?.saldoPuntos || 0) < reward.puntosRequeridos">
+
+            <span *ngIf="reward.stock === 0">
+              Sin Stock
+            </span>
+
+            <span *ngIf="reward.stock > 0 && (saldo?.saldoPuntos || 0) < reward.puntosRequeridos">
               Faltan {{ reward.puntosRequeridos - (saldo?.saldoPuntos || 0) }} pts
             </span>
             

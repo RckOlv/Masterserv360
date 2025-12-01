@@ -3,8 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../service/auth.service';
 import { PuntosService } from '../../service/puntos.service';
-import { CatalogoService } from '../../service/catalogo.service'; // <-- ¡IMPORTAR SERVICIO DE CATÁLOGO!
-import { SaldoPuntos } from '../../models/saldo-puntos.model';
+import { CatalogoService } from '../../service/catalogo.service'; 
 import { Observable, BehaviorSubject, switchMap, of, catchError, map } from 'rxjs';
 
 @Component({
@@ -18,11 +17,16 @@ export class PublicLayoutComponent implements OnInit {
 
   private authService = inject(AuthService);
   private puntosService = inject(PuntosService);
-  private catalogoService = inject(CatalogoService); // <-- ¡INYECTAR!
+  private catalogoService = inject(CatalogoService);
   private router = inject(Router);
 
   public isLoggedIn$: Observable<boolean>;
   public userEmail$ = new BehaviorSubject<string | null>(null);
+  
+  // MENTOR: Nuevos observables para Nombre y Rol visual
+  public userName$ = new BehaviorSubject<string | null>(null);
+  public userRoleLabel$ = new BehaviorSubject<string | null>(null);
+  
   public saldoPuntos$ = new BehaviorSubject<number>(0);
   public userRole$ = new BehaviorSubject<string | null>(null);
 
@@ -31,30 +35,45 @@ export class PublicLayoutComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // (Tu lógica de ngOnInit está perfecta, no se toca)
     this.isLoggedIn$.pipe(
       switchMap(isLoggedIn => {
         if (isLoggedIn) {
           const token = this.authService.getDecodedToken();
           if (token) {
+            // 1. Determinamos el nombre a mostrar
+            // Si el token tiene claims 'nombre' y 'apellido', los usamos. Si no, el email.
+            // (Nota: Para que aparezca nombre real, el backend debe incluirlo en el JWT)
+            const nombreDisplay = (token.nombre && token.apellido) 
+                                  ? `${token.nombre} ${token.apellido}` 
+                                  : token.sub;
+            
             this.userEmail$.next(token.sub); 
+            this.userName$.next(nombreDisplay);
+
+            // 2. Determinamos el Rol y su Etiqueta amigable
             if (this.authService.hasRole('ROLE_CLIENTE')) {
               this.userRole$.next('CLIENTE');
+              this.userRoleLabel$.next('Cliente'); // Etiqueta bonita
               return this.puntosService.getMiSaldo().pipe(
                 map(saldo => saldo.saldoPuntos),
                 catchError(() => of(0))
               );
             } else if (this.authService.hasRole('ROLE_ADMIN')) {
               this.userRole$.next('ADMIN');
+              this.userRoleLabel$.next('Administrador');
               return of(0);
             } else if (this.authService.hasRole('ROLE_VENDEDOR')) {
               this.userRole$.next('VENDEDOR');
+              this.userRoleLabel$.next('Vendedor');
               return of(0);
             }
           }
         }
+        // Reset si no hay sesión
         this.userEmail$.next(null);
+        this.userName$.next(null);
         this.userRole$.next(null);
+        this.userRoleLabel$.next(null);
         return of(0);
       })
     ).subscribe(saldo => {
@@ -67,16 +86,8 @@ export class PublicLayoutComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 
-  // --- ¡NUEVO MÉTODO PARA LA BARRA DE BÚSQUEDA! ---
-  /**
-   * Se llama cuando el usuario busca en la Navbar.
-   * Guarda el término en el servicio y navega al catálogo.
-   */
   onBuscar(termino: string): void {
-    // 1. Guardamos el término en el servicio compartido
     this.catalogoService.setSearchTerm(termino);
-    
-    // 2. Aseguramos que el usuario esté en la página del catálogo
     this.router.navigate(['/portal/catalogo']);
   }
 }

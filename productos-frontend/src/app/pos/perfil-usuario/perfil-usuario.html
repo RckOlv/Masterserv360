@@ -1,0 +1,122 @@
+<div class="container-fluid p-4">
+  
+  <h3 class="text-white mb-4">
+    <i class="bi bi-person-gear me-2 text-danger"></i>Mi Perfil
+  </h3>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-danger" role="status"></div>
+  </div>
+
+  <div class="row g-4" *ngIf="!isLoading">
+    
+    <div class="col-lg-7">
+      <div class="card masterserv-card h-100">
+        <div class="card-header masterserv-card-header">
+          <h5 class="masterserv-title fs-6 mb-0">Información Personal</h5>
+        </div>
+        <div class="card-body masterserv-card-body">
+          
+          <form [formGroup]="perfilForm" (ngSubmit)="onSubmitPerfil()">
+            
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label masterserv-label">Nombre</label>
+                <input type="text" class="form-control masterserv-input" formControlName="nombre"
+                       [class.is-invalid]="perfilForm.get('nombre')?.invalid && perfilForm.get('nombre')?.touched">
+                <div class="invalid-feedback">Requerido (mín 2 letras).</div>
+              </div>
+              
+              <div class="col-md-6">
+                <label class="form-label masterserv-label">Apellido</label>
+                <input type="text" class="form-control masterserv-input" formControlName="apellido"
+                       [class.is-invalid]="perfilForm.get('apellido')?.invalid && perfilForm.get('apellido')?.touched">
+                <div class="invalid-feedback">Requerido.</div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label masterserv-label">Email (No editable)</label>
+              <div class="input-group">
+                 <span class="input-group-text masterserv-input border-end-0"><i class="bi bi-envelope-fill text-muted"></i></span>
+                 <input type="email" class="form-control masterserv-input border-start-0" formControlName="email">
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label masterserv-label">Tipo Doc.</label>
+                <select class="form-select masterserv-input" formControlName="tipoDocumentoId">
+                   <option [ngValue]="null">Seleccione...</option>
+                   <option *ngFor="let t of tiposDocumento" [ngValue]="t.id">{{ t.nombreCorto }}</option>
+                </select>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label masterserv-label">Número</label>
+                <input type="text" class="form-control masterserv-input" formControlName="documento">
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label masterserv-label">Teléfono</label>
+              <input type="tel" class="form-control masterserv-input" formControlName="telefono">
+            </div>
+
+            <div class="text-end border-top border-secondary pt-3">
+              <button type="submit" class="btn masterserv-btn-primary px-4" [disabled]="perfilForm.invalid || isSubmitting || perfilForm.pristine">
+                <span *ngIf="!isSubmitting"><i class="bi bi-save me-2"></i> Guardar Cambios</span>
+                <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+                <span *ngIf="isSubmitting">Guardando...</span>
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card masterserv-card h-100 border-danger" style="border: 1px solid #dc3545;">
+        <div class="card-header bg-danger text-white">
+          <h5 class="mb-0 fw-bold fs-6"><i class="bi bi-shield-lock-fill me-2"></i>Seguridad</h5>
+        </div>
+        <div class="card-body masterserv-card-body">
+          
+          <form [formGroup]="passwordForm" (ngSubmit)="onSubmitPassword()">
+            
+            <div class="mb-3">
+              <label class="form-label masterserv-label">Contraseña Actual</label>
+              <input type="password" class="form-control masterserv-input" formControlName="passwordActual">
+            </div>
+
+            <hr class="border-secondary my-4">
+
+            <div class="mb-3">
+              <label class="form-label masterserv-label">Nueva Contraseña</label>
+              <input type="password" class="form-control masterserv-input" formControlName="passwordNueva"
+                     [class.is-invalid]="passwordForm.get('passwordNueva')?.invalid && passwordForm.get('passwordNueva')?.touched">
+              <div class="invalid-feedback">Mínimo 6 caracteres.</div>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label masterserv-label">Repetir Nueva</label>
+              <input type="password" class="form-control masterserv-input" formControlName="passwordRepetir"
+                     [class.is-invalid]="passwordForm.errors?.['mismatch'] && passwordForm.get('passwordRepetir')?.touched">
+              <div class="invalid-feedback">Las contraseñas no coinciden.</div>
+            </div>
+
+            <div class="d-grid">
+              <button type="submit" class="btn btn-outline-light" [disabled]="passwordForm.invalid || isSubmittingPass">
+                <span *ngIf="isSubmittingPass" class="spinner-border spinner-border-sm me-1"></span>
+                Actualizar Contraseña
+              </button>
+            </div>
+
+          </form>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

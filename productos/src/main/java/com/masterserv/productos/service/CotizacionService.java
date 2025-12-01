@@ -1,42 +1,32 @@
 package com.masterserv.productos.service;
 
-// DTOs
 import com.masterserv.productos.dto.CotizacionAdminDTO;
 import com.masterserv.productos.dto.CotizacionPublicaDTO;
 import com.masterserv.productos.dto.ItemOfertaDTO;
 import com.masterserv.productos.dto.OfertaProveedorDTO;
-
-// Entidades
 import com.masterserv.productos.entity.Cotizacion;
 import com.masterserv.productos.entity.DetallePedido;
 import com.masterserv.productos.entity.ItemCotizacion;
 import com.masterserv.productos.entity.Pedido;
-import com.masterserv.productos.entity.Usuario; // ¡IMPORTADO!
-
-// Enums
+import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.enums.EstadoCotizacion;
 import com.masterserv.productos.enums.EstadoItemCotizacion;
 import com.masterserv.productos.enums.EstadoPedido;
-
-// Repositorios
 import com.masterserv.productos.repository.CotizacionRepository;
 import com.masterserv.productos.repository.ItemCotizacionRepository;
 import com.masterserv.productos.repository.PedidoRepository;
-import com.masterserv.productos.repository.UsuarioRepository; // ¡IMPORTADO!
-
-// Excepciones y Spring
+import com.masterserv.productos.repository.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-// Java Utils
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -53,20 +43,12 @@ public class CotizacionService {
     @Autowired
     private PedidoRepository pedidoRepository;
     
-    // --- ¡INICIO DE LA CORRECCIÓN 1! ---
     @Autowired
-    private UsuarioRepository usuarioRepository; // 1. Inyectamos el repo de Usuario
-    // --- FIN DE LA CORRECCIÓN 1 ---
+    private UsuarioRepository usuarioRepository;
     
 
-    // --- MÉTODOS PÚBLICOS (Para el Portal de Proveedor) ---
-
-    /**
-     * Busca una cotización por su token público (GET).
-     */
     @Transactional(readOnly = true)
     public CotizacionPublicaDTO findCotizacionPublicaByToken(String token) {
-        
         Cotizacion cotizacion = cotizacionRepository.findByToken(token)
             .orElseThrow(() -> new EntityNotFoundException("Solicitud de cotización no encontrada o inválida."));
 
@@ -77,13 +59,9 @@ public class CotizacionService {
         return new CotizacionPublicaDTO(cotizacion);
     }
     
-    /**
-     * Procesa y guarda la oferta enviada por el proveedor (POST).
-     */
     @Transactional
     public void submitOfertaProveedor(String token, OfertaProveedorDTO ofertaDTO) {
         
-        // 1. Buscar y validar la Cotizacion (Padre)
         Cotizacion cotizacion = cotizacionRepository.findByToken(token)
             .orElseThrow(() -> new EntityNotFoundException("Solicitud de cotización no encontrada o inválida."));
 
@@ -91,42 +69,59 @@ public class CotizacionService {
             throw new IllegalStateException("Esta solicitud de cotización ya ha sido procesada o ha expirado.");
         }
 
-        // 2. Cargar los items de esta cotización en un Mapa para acceso rápido
         Map<Long, ItemCotizacion> itemsMap = cotizacion.getItems().stream()
             .collect(Collectors.toMap(ItemCotizacion::getId, Function.identity()));
 
         BigDecimal precioTotalOfertado = BigDecimal.ZERO;
 
-        // 3. Procesar cada item de la oferta
         for (ItemOfertaDTO itemOferta : ofertaDTO.getItems()) {
-            
             ItemCotizacion itemDB = itemsMap.get(itemOferta.getItemCotizacionId());
+            
             if (itemDB == null || !itemDB.getCotizacion().getId().equals(cotizacion.getId())) {
-                throw new SecurityException("Intento de cotizar un item inválido o que no pertenece a esta solicitud.");
+                throw new SecurityException("Intento de cotizar un item inválido.");
             }
 
+            // --- MENTOR: LÓGICA DE DISPONIBILIDAD ---
+            
+            // Caso A: Proveedor marca "No tengo stock"
+            if (!itemOferta.isDisponible()) {
+                // NOTA: Asegúrate de tener RECHAZADO_PROVEEDOR en tu Enum EstadoItemCotizacion.
+                // Si no, usa CANCELADO_ADMIN temporalmente.
+                itemDB.setEstado(EstadoItemCotizacion.CANCELADO_ADMIN); 
+                itemDB.setPrecioUnitarioOfertado(BigDecimal.ZERO);
+                // itemDB.setCantidadOfertada(0); // (Si agregaste el campo a la entidad)
+                continue; // No suma al total
+            }
+
+            // Caso B: Proveedor cotiza (verificamos cantidad parcial)
             itemDB.setPrecioUnitarioOfertado(itemOferta.getPrecioUnitarioOfertado());
             itemDB.setEstado(EstadoItemCotizacion.COTIZADO);
             
-            precioTotalOfertado = precioTotalOfertado.add(
-                itemOferta.getPrecioUnitarioOfertado().multiply(new BigDecimal(itemDB.getCantidadSolicitada()))
-            );
+            // Usamos la cantidad ofertada por el proveedor, o la solicitada si no especificó
+            int cantidadFinal = (itemOferta.getCantidadOfertada() != null && itemOferta.getCantidadOfertada() > 0) 
+                    ? itemOferta.getCantidadOfertada() 
+                    : itemDB.getCantidadSolicitada();
+            
+            // (Si tu entidad ItemCotizacion tuviera el campo, lo guardaríamos aquí)
+            // itemDB.setCantidadOfertada(cantidadFinal);
+
+            // Calculamos subtotal REAL (Precio x Cantidad que me van a dar)
+            BigDecimal subtotal = itemOferta.getPrecioUnitarioOfertado()
+                    .multiply(new BigDecimal(cantidadFinal));
+            
+            precioTotalOfertado = precioTotalOfertado.add(subtotal);
         }
 
-        // 4. Actualizar la Cotizacion (Padre)
         cotizacion.setFechaEntregaOfertada(ofertaDTO.getFechaEntregaOfertada());
         cotizacion.setPrecioTotalOfertado(precioTotalOfertado);
-        cotizacion.setEstado(EstadoCotizacion.RECIBIDA); // ¡Lista para el Admin!
+        cotizacion.setEstado(EstadoCotizacion.RECIBIDA);
 
-        // 5. Guardar todo
         cotizacionRepository.save(cotizacion);
+        
+        // --- LLAMADA AL ALGORITMO ---
+        recalcularRecomendacion(cotizacion);
     }
 
-    // --- MÉTODOS DE ADMIN (Para el Panel de Control) ---
-
-    /**
-     * Busca todas las cotizaciones que el Admin necesita revisar.
-     */
     @Transactional(readOnly = true)
     public List<CotizacionAdminDTO> findCotizacionesRecibidas() {
         return cotizacionRepository.findByEstado(EstadoCotizacion.RECIBIDA).stream()
@@ -134,9 +129,6 @@ public class CotizacionService {
             .collect(Collectors.toList());
     }
 
-    /**
-     * Busca una cotización por ID para la vista de detalle del Admin.
-     */
     @Transactional(readOnly = true)
     public CotizacionAdminDTO findCotizacionAdminById(Long id) {
         Cotizacion cotizacion = cotizacionRepository.findById(id)
@@ -144,16 +136,13 @@ public class CotizacionService {
         return new CotizacionAdminDTO(cotizacion);
     }
 
-    /**
-     * Cancela un solo item (requisito de cancelación parcial).
-     */
     @Transactional
     public void cancelarItem(Long itemId) {
         ItemCotizacion item = itemCotizacionRepository.findById(itemId)
-            .orElseThrow(() -> new EntityNotFoundException("Item de cotización no encontrado: " + itemId));
+            .orElseThrow(() -> new EntityNotFoundException("Item no encontrado: " + itemId));
         
         if (item.getCotizacion().getEstado() != EstadoCotizacion.RECIBIDA) {
-            throw new IllegalStateException("Solo se pueden cancelar items de cotizaciones que estén en estado 'RECIBIDA'.");
+            throw new IllegalStateException("Solo se pueden cancelar items en estado RECIBIDA.");
         }
         
         item.setEstado(EstadoItemCotizacion.CANCELADO_ADMIN);
@@ -162,93 +151,73 @@ public class CotizacionService {
         recalcularTotalCotizacion(item.getCotizacion());
     }
 
-    /**
-     * Cancela una cotización completa.
-     */
     @Transactional
     public void cancelarCotizacion(Long id) {
         Cotizacion cotizacion = cotizacionRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Cotización no encontrada: " + id));
         
         if (cotizacion.getEstado() != EstadoCotizacion.RECIBIDA) {
-            throw new IllegalStateException("Solo se pueden cancelar cotizaciones en estado 'RECIBIDA'.");
+            throw new IllegalStateException("Solo se pueden cancelar cotizaciones RECIBIDAS.");
         }
         
         cotizacion.setEstado(EstadoCotizacion.CANCELADA_ADMIN);
         cotizacionRepository.save(cotizacion);
     }
     
-    /**
-     * ¡La acción principal! Confirma la cotización ganadora.
-     */
-    // --- ¡INICIO DE LA CORRECCIÓN 2! ---
     @Transactional
-    public Pedido confirmarCotizacion(Long id, String adminEmail) { // 2. Aceptamos el email del Admin
-        
-        // 3. Buscamos al Admin que está confirmando
+    public Pedido confirmarCotizacion(Long id, String adminEmail) {
         Usuario adminUsuario = usuarioRepository.findByEmail(adminEmail)
-            .orElseThrow(() -> new EntityNotFoundException("Usuario Admin no encontrado: " + adminEmail));
+            .orElseThrow(() -> new EntityNotFoundException("Admin no encontrado: " + adminEmail));
         
-        // 4. Obtener la cotización ganadora
         Cotizacion cotizacionGanadora = cotizacionRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Cotización no encontrada: " + id));
 
         if (cotizacionGanadora.getEstado() != EstadoCotizacion.RECIBIDA) {
-            throw new IllegalStateException("Solo se pueden confirmar cotizaciones en estado 'RECIBIDA'.");
+            throw new IllegalStateException("Solo se pueden confirmar cotizaciones RECIBIDAS.");
         }
         
-        // 5. Crear el Pedido
         Pedido pedido = new Pedido();
         pedido.setFechaPedido(LocalDateTime.now());
         pedido.setEstado(EstadoPedido.PENDIENTE); 
         pedido.setProveedor(cotizacionGanadora.getProveedor());
-        
-        // 6. ¡ASIGNAMOS EL USUARIO ADMIN AL PEDIDO! (Esto arregla el bug)
         pedido.setUsuario(adminUsuario); 
         
         Set<DetallePedido> detallesPedido = new HashSet<>();
         BigDecimal totalPedido = BigDecimal.ZERO;
 
-        // 7. Convertir Items de Cotización a Detalles de Pedido
         for (ItemCotizacion itemGanador : cotizacionGanadora.getItems()) {
             if (itemGanador.getEstado() == EstadoItemCotizacion.COTIZADO) {
-                
                 DetallePedido detalle = new DetallePedido();
                 detalle.setPedido(pedido);
                 detalle.setProducto(itemGanador.getProducto());
+                // MENTOR: Aquí deberíamos usar la cantidadOfertada si la guardaste en BD
+                // Por ahora usamos la solicitada original si no cambiaste la entidad ItemCotizacion
                 detalle.setCantidad(itemGanador.getCantidadSolicitada());
                 detalle.setPrecioUnitario(itemGanador.getPrecioUnitarioOfertado()); 
                 
                 detallesPedido.add(detalle);
-                totalPedido = totalPedido.add(
-                    itemGanador.getPrecioUnitarioOfertado().multiply(new BigDecimal(itemGanador.getCantidadSolicitada()))
-                );
+                
+                BigDecimal subtotal = itemGanador.getPrecioUnitarioOfertado()
+                        .multiply(new BigDecimal(itemGanador.getCantidadSolicitada()));
+                totalPedido = totalPedido.add(subtotal);
             }
         }
         
         if (detallesPedido.isEmpty()) {
-            throw new IllegalStateException("No se puede confirmar una cotización sin items válidos (cotizados).");
+            throw new IllegalStateException("No hay items cotizados válidos para crear el pedido.");
         }
 
         pedido.setDetalles(detallesPedido);
         pedido.setTotalPedido(totalPedido);
 
-        // 8. Guardar el nuevo Pedido
-        Pedido pedidoGuardado = pedidoRepository.save(pedido);
+        pedidoRepository.save(pedido);
 
-        // 9. Actualizar estados de las cotizaciones
         cotizacionGanadora.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
         cotizacionRepository.save(cotizacionGanadora);
         
-        // (Futura mejora: buscar y cancelar las otras cotizaciones competidoras)
-        
-        return pedidoGuardado; // Devolvemos la entidad Pedido
+        return pedido;
     }
-    // --- FIN DE LA CORRECCIÓN 2 ---
     
-    /**
-     * Helper para recalcular el total de una cotización si se cancela un item.
-     */
     private void recalcularTotalCotizacion(Cotizacion cotizacion) {
         BigDecimal nuevoTotal = BigDecimal.ZERO;
         for (ItemCotizacion item : cotizacion.getItems()) {
@@ -260,5 +229,41 @@ public class CotizacionService {
         }
         cotizacion.setPrecioTotalOfertado(nuevoTotal);
         cotizacionRepository.save(cotizacion);
+        
+        recalcularRecomendacion(cotizacion);
+    }
+
+    private void recalcularRecomendacion(Cotizacion cotizacionRef) {
+        List<Cotizacion> competidoras = cotizacionRepository.findByEstado(EstadoCotizacion.RECIBIDA);
+        
+        if (competidoras.isEmpty()) return;
+
+        for (Cotizacion c : competidoras) {
+            c.setEsRecomendada(false);
+        }
+
+        Cotizacion mejorOpcion = competidoras.stream()
+            .max((c1, c2) -> {
+                long itemsC1 = c1.getItems().stream().filter(i -> i.getEstado() == EstadoItemCotizacion.COTIZADO).count();
+                long itemsC2 = c2.getItems().stream().filter(i -> i.getEstado() == EstadoItemCotizacion.COTIZADO).count();
+                int compareItems = Long.compare(itemsC1, itemsC2);
+                if (compareItems != 0) return compareItems;
+
+                BigDecimal p1 = c1.getPrecioTotalOfertado() != null ? c1.getPrecioTotalOfertado() : BigDecimal.valueOf(Long.MAX_VALUE);
+                BigDecimal p2 = c2.getPrecioTotalOfertado() != null ? c2.getPrecioTotalOfertado() : BigDecimal.valueOf(Long.MAX_VALUE);
+                int comparePrecio = p2.compareTo(p1); 
+                if (comparePrecio != 0) return comparePrecio;
+
+                LocalDate f1 = c1.getFechaEntregaOfertada() != null ? c1.getFechaEntregaOfertada() : LocalDate.MAX;
+                LocalDate f2 = c2.getFechaEntregaOfertada() != null ? c2.getFechaEntregaOfertada() : LocalDate.MAX;
+                return f2.compareTo(f1); 
+            })
+            .orElse(null);
+
+        if (mejorOpcion != null) {
+            mejorOpcion.setEsRecomendada(true);
+        }
+        
+        cotizacionRepository.saveAll(competidoras);
     }
 }
