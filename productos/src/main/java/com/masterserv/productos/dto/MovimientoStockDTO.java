@@ -1,7 +1,6 @@
 package com.masterserv.productos.dto;
 
 import com.masterserv.productos.enums.TipoMovimiento;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -16,20 +15,20 @@ public class MovimientoStockDTO {
     @NotNull(message = "El ID del producto es obligatorio")
     private Long productoId;
 
-    @NotNull(message = "El ID del usuario es obligatorio")
-    private Long usuarioId; // El usuario que REALIZA el movimiento (Vendedor/Admin)
+    // MENTOR: Quitamos @NotNull porque esto lo obtenemos del Token en el Controller
+    private Long usuarioId; 
 
-    @NotNull(message = "El tipo de movimiento es obligatorio")
+    // MENTOR: Quitamos @NotNull porque esto lo definimos en el Service como AJUSTE_MANUAL
     private TipoMovimiento tipoMovimiento;
 
+    // MENTOR: Quitamos @Min(1) para permitir números negativos (restar stock)
     @NotNull
-    @Min(value = 1, message = "La cantidad debe ser al menos 1")
-    private int cantidad; // Siempre un número positivo. El 'tipo' define si suma o resta.
+    private int cantidad; 
 
     @NotEmpty(message = "El motivo es obligatorio")
     private String motivo;
 
     // --- Campos Opcionales para Trazabilidad ---
-    private Long ventaId;    // ID de la Venta que disparó la salida
-    private Long pedidoId;   // ID del Pedido que disparó la entrada
+    private Long ventaId;    
+    private Long pedidoId;   
 }

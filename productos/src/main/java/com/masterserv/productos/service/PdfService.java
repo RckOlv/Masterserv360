@@ -5,27 +5,38 @@ import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.pdf.draw.LineSeparator;
+import com.masterserv.productos.dto.DashboardFilterDTO;
+import com.masterserv.productos.dto.DashboardStatsDTO;
+import com.masterserv.productos.dto.TopProductoDTO;
 import com.masterserv.productos.entity.DetalleVenta;
 import com.masterserv.productos.entity.Venta;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.awt.Color;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
+import java.util.List;
 
 @Service
 public class PdfService {
 
-    // Definimos fuentes estáticas usando la Fábrica (Safe)
-    private static final Font FONT_TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, Color.BLACK);
+    // Fuentes
+    private static final Font FONT_TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.BLACK);
     private static final Font FONT_SUBTITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.DARK_GRAY);
     private static final Font FONT_BOLD = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK);
     private static final Font FONT_NORMAL = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
-    private static final Font FONT_DATA_EMPRESA = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.GRAY);
+    private static final Font FONT_DATA_EMPRESA = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.GRAY);
+    private static final Font FONT_HEADER_TABLA = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
+    private static final Font FONT_LEYENDA = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 9, Color.DARK_GRAY);
+
+    @Autowired 
+    private DashboardService dashboardService;
 
     public byte[] generarComprobanteVenta(Venta venta) {
-        
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4);
 
@@ -33,7 +44,7 @@ public class PdfService {
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            // --- 1. CABECERA DE LA EMPRESA ---
+            // CABECERA
             Paragraph titulo = new Paragraph("MASTERSERV360", FONT_TITULO);
             titulo.setAlignment(Element.ALIGN_CENTER);
             document.add(titulo);
@@ -42,31 +53,25 @@ public class PdfService {
             subtitulo.setAlignment(Element.ALIGN_CENTER);
             document.add(subtitulo);
 
-            // --- MENTOR: AGREGADO EMAIL DE EMPRESA AQUÍ ---
             Paragraph datosEmpresa = new Paragraph(
                 "Razón Social: Masterserv S.A.\n" + 
                 "CUIT: 30-12345678-9\n" + 
-                "Inicio de Actividades: 01/01/2020\n" +
                 "Dirección: Av. San Martín 1234, El Soberbio, Misiones\n" +
-                "Tel: (3755) 12-3456\n" + 
-                "Email: contacto@masterserv360.com", // <--- NUEVO DATO
+                "Email: contacto@masterserv360.com", 
                 FONT_DATA_EMPRESA
             );
             datosEmpresa.setAlignment(Element.ALIGN_CENTER);
-            datosEmpresa.setSpacingAfter(20);
+            datosEmpresa.setSpacingAfter(10);
             document.add(datosEmpresa);
 
-            LineSeparator separator = new LineSeparator();
-            separator.setLineColor(Color.LIGHT_GRAY);
-            document.add(separator);
+            document.add(new LineSeparator());
 
-            // --- 2. DATOS DE LA VENTA ---
+            // DATOS VENTA
             Paragraph infoVenta = new Paragraph();
-            infoVenta.setSpacingBefore(15);
-            infoVenta.setSpacingAfter(15);
+            infoVenta.setSpacingBefore(10);
+            infoVenta.setSpacingAfter(10);
             
-            Font fontNroVenta = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
-            infoVenta.add(new Chunk("Nº Venta: " + venta.getId() + "\n", fontNroVenta));
+            infoVenta.add(new Chunk("Nº Venta: " + venta.getId() + "\n", FONT_BOLD));
             
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
             infoVenta.add(new Chunk("Fecha: " + venta.getFechaVenta().format(formatter) + "\n", FONT_NORMAL));
@@ -76,20 +81,14 @@ public class PdfService {
                 if(venta.getCliente().getDocumento() != null) {
                     infoVenta.add(new Chunk("DNI/CUIT: " + venta.getCliente().getDocumento() + "\n", FONT_NORMAL));
                 }
-                // --- MENTOR: ELIMINADO EMAIL DEL CLIENTE (POR PEDIDO) ---
-                // infoVenta.add(new Chunk("Email: " + venta.getCliente().getEmail() + "\n", FONT_NORMAL));
-            }
-            
-            if (venta.getVendedor() != null) {
-                infoVenta.add(new Chunk("Atendido por: " + venta.getVendedor().getNombre() + "\n", FONT_NORMAL));
             }
             
             document.add(infoVenta);
 
-            // --- 3. TABLA DE PRODUCTOS ---
+            // TABLA PRODUCTOS
             PdfPTable table = new PdfPTable(4); 
             table.setWidthPercentage(100);
-            table.setWidths(new float[] { 3f, 1f, 1.5f, 1.5f });
+            table.setWidths(new float[] { 4f, 1f, 2f, 2f });
             table.setSpacingBefore(10f);
 
             table.addCell(crearCeldaHeader("Producto"));
@@ -100,61 +99,45 @@ public class PdfService {
             BigDecimal subtotalSinDescuento = BigDecimal.ZERO;
 
             for (DetalleVenta detalle : venta.getDetalles()) {
-                // Producto
-                PdfPCell cellProd = new PdfPCell(new Paragraph(detalle.getProducto().getNombre(), FONT_NORMAL));
-                cellProd.setPadding(5);
-                table.addCell(cellProd);
+                table.addCell(new Paragraph(detalle.getProducto().getNombre(), FONT_NORMAL));
                 
-                // Cantidad (Centrada)
                 PdfPCell cellCant = new PdfPCell(new Paragraph(String.valueOf(detalle.getCantidad()), FONT_NORMAL));
                 cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
-                cellCant.setPadding(5);
                 table.addCell(cellCant);
                 
-                // Precio Unitario (Derecha)
                 PdfPCell cellPrecio = new PdfPCell(new Paragraph(String.format("$%.2f", detalle.getPrecioUnitario()), FONT_NORMAL));
                 cellPrecio.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                cellPrecio.setPadding(5);
                 table.addCell(cellPrecio);
                 
-                // Subtotal Item
                 BigDecimal subtotalItem = detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad()));
                 subtotalSinDescuento = subtotalSinDescuento.add(subtotalItem);
                 
                 PdfPCell cellSub = new PdfPCell(new Paragraph(String.format("$%.2f", subtotalItem), FONT_NORMAL));
                 cellSub.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                cellSub.setPadding(5);
                 table.addCell(cellSub);
             }
 
             document.add(table);
 
-            // --- 4. TOTALES Y DESCUENTOS ---
+            // TOTALES
             Paragraph totales = new Paragraph();
             totales.setAlignment(Element.ALIGN_RIGHT);
             totales.setSpacingBefore(15);
 
-            // Cálculo del descuento
             BigDecimal descuento = subtotalSinDescuento.subtract(venta.getTotalVenta());
             
             if (descuento.compareTo(BigDecimal.ZERO) > 0) {
                 totales.add(new Chunk("Subtotal: $" + String.format("%.2f", subtotalSinDescuento) + "\n", FONT_NORMAL));
-                
-                String cuponTexto = (venta.getCupon() != null) ? " (" + venta.getCupon().getCodigo() + ")" : "";
-                
-                // Descuento en Rojo (Usamos FontFactory)
                 Font fontRojo = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.RED);
-                totales.add(new Chunk("Descuento aplicado" + cuponTexto + ": -$" + String.format("%.2f", descuento) + "\n", fontRojo));
+                totales.add(new Chunk("Descuento: -$" + String.format("%.2f", descuento) + "\n", fontRojo));
             }
 
-            // Total Final en Grande (Usamos FontFactory)
-            Font fontTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.BLACK);
+            Font fontTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK);
             totales.add(new Chunk("TOTAL: $" + String.format("%.2f", venta.getTotalVenta()), fontTotal));
             
             document.add(totales);
 
         } catch (DocumentException e) {
-            System.err.println("Error al generar PDF: " + e.getMessage());
             throw new RuntimeException("Error al generar el comprobante PDF", e);
         } finally {
             document.close();
@@ -163,12 +146,131 @@ public class PdfService {
         return baos.toByteArray();
     }
 
+    // --- MÉTODO REPORTE DASHBOARD MEJORADO ---
+    public byte[] generarReporteDashboard(DashboardFilterDTO filtro) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4);
+
+        try {
+            PdfWriter.getInstance(document, baos);
+            document.open();
+
+            // 1. Título
+            Paragraph titulo = new Paragraph("Reporte de Gestión - Masterserv360", FONT_TITULO);
+            titulo.setAlignment(Element.ALIGN_CENTER);
+            document.add(titulo);
+            
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            
+            String inicioStr = (filtro.getFechaInicio() != null) ? filtro.getFechaInicio().format(fmt) : "Inicio";
+            String finStr = (filtro.getFechaFin() != null) ? filtro.getFechaFin().format(fmt) : "Hoy";
+            
+            // --- MENTOR: INFO DE CONTEXTO ---
+            Paragraph contexto = new Paragraph();
+            contexto.setAlignment(Element.ALIGN_CENTER);
+            contexto.setSpacingAfter(20);
+            
+            contexto.add(new Chunk("Periodo: " + inicioStr + " al " + finStr + "\n", FONT_SUBTITULO));
+            
+            if (filtro.getGeneradoPor() != null) {
+                contexto.add(new Chunk("Generado por: " + filtro.getGeneradoPor(), FONT_DATA_EMPRESA));
+            }
+            
+            document.add(contexto);
+            // --------------------------------
+
+            // 2. Gráfico
+            if (filtro.getGraficoBase64() != null && !filtro.getGraficoBase64().isEmpty()) {
+                try {
+                    String base64Image = filtro.getGraficoBase64().split(",")[1];
+                    byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+                    
+                    Image grafico = Image.getInstance(imageBytes);
+                    grafico.setAlignment(Element.ALIGN_CENTER);
+                    grafico.scaleToFit(500, 250); 
+                    grafico.setSpacingAfter(5);
+                    document.add(grafico);
+
+                    Paragraph leyenda = new Paragraph(
+                        "Gráfico: Evolución de ventas diarias (en pesos) durante el periodo seleccionado.", 
+                        FONT_LEYENDA
+                    );
+                    leyenda.setAlignment(Element.ALIGN_CENTER);
+                    leyenda.setSpacingAfter(20);
+                    document.add(leyenda);
+
+                } catch (Exception e) {
+                    System.err.println("Error al procesar imagen del gráfico: " + e.getMessage());
+                }
+            }
+
+            // 3. Datos
+            DashboardStatsDTO stats = dashboardService.getEstadisticasFiltradas(filtro.getFechaInicio(), filtro.getFechaFin());
+            List<TopProductoDTO> top = dashboardService.getTopProductosPorRango(filtro.getFechaInicio(), filtro.getFechaFin());
+
+            // 4. Tabla Métricas
+            PdfPTable tableMetrics = new PdfPTable(3);
+            tableMetrics.setWidthPercentage(100);
+            tableMetrics.setSpacingAfter(20);
+
+            tableMetrics.addCell(crearCeldaHeader("Ventas Totales"));
+            tableMetrics.addCell(crearCeldaHeader("Productos Bajo Stock"));
+            tableMetrics.addCell(crearCeldaHeader("Clientes Activos"));
+            
+            PdfPCell cellVentas = new PdfPCell(new Paragraph("$ " + stats.getTotalVentasMes(), FONT_NORMAL));
+            cellVentas.setHorizontalAlignment(Element.ALIGN_CENTER);
+            cellVentas.setPadding(8);
+            tableMetrics.addCell(cellVentas);
+
+            PdfPCell cellStock = new PdfPCell(new Paragraph(String.valueOf(stats.getProductosBajoStock()), FONT_NORMAL));
+            cellStock.setHorizontalAlignment(Element.ALIGN_CENTER);
+            cellStock.setPadding(8);
+            tableMetrics.addCell(cellStock);
+
+            PdfPCell cellClientes = new PdfPCell(new Paragraph(String.valueOf(stats.getClientesActivos()), FONT_NORMAL));
+            cellClientes.setHorizontalAlignment(Element.ALIGN_CENTER);
+            cellClientes.setPadding(8);
+            tableMetrics.addCell(cellClientes);
+            
+            document.add(tableMetrics);
+
+            // 5. Tabla Top
+            Paragraph subtituloTop = new Paragraph("Top Productos Vendidos", FONT_SUBTITULO);
+            subtituloTop.setSpacingAfter(10);
+            document.add(subtituloTop);
+
+            PdfPTable tableTop = new PdfPTable(2);
+            tableTop.setWidthPercentage(100);
+            tableTop.setWidths(new float[] { 3f, 1f });
+
+            tableTop.addCell(crearCeldaHeader("Producto"));
+            tableTop.addCell(crearCeldaHeader("Cantidad Vendida"));
+
+            for (TopProductoDTO p : top) {
+                PdfPCell cellNombre = new PdfPCell(new Paragraph(p.getNombre(), FONT_NORMAL));
+                cellNombre.setPadding(5);
+                tableTop.addCell(cellNombre);
+
+                PdfPCell cellCant = new PdfPCell(new Paragraph(String.valueOf(p.getCantidadVendida()), FONT_NORMAL));
+                cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
+                cellCant.setPadding(5);
+                tableTop.addCell(cellCant);
+            }
+            document.add(tableTop);
+
+            document.close();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Error generando PDF reporte: " + e.getMessage(), e);
+        }
+    }
+
     private PdfPCell crearCeldaHeader(String texto) {
-        PdfPCell cell = new PdfPCell(new Paragraph(texto, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE)));
+        PdfPCell cell = new PdfPCell(new Paragraph(texto, FONT_HEADER_TABLA));
         cell.setBackgroundColor(Color.DARK_GRAY);
         cell.setHorizontalAlignment(Element.ALIGN_CENTER);
         cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        cell.setPadding(6);
+        cell.setPadding(8);
         return cell;
     }
 }

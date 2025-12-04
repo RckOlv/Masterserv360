@@ -1,22 +1,31 @@
 <div class="dashboard-container">
   
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="masterserv-title mb-0">
-      <i class="bi bi-speedometer2 me-2"></i>Panel de Control
-    </h3> 
-    <div *appHasPermission="'PRODUCTOS_MANAGE'">
+  <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 gap-3">
+    <div>
+      <h3 class="masterserv-title mb-0"><i class="bi bi-speedometer2 me-2"></i>Panel de Control</h3> 
+      <small class="text-white-50">Métricas y estadísticas clave</small>
     </div>
+    <div class="card p-2 bg-dark border-secondary">
+        <form [formGroup]="filtroForm" (ngSubmit)="aplicarFiltros()" class="d-flex align-items-center gap-2">
+            <div class="d-flex flex-column"><label class="form-label small text-secondary mb-0" style="font-size: 0.7rem;">Desde</label><input type="date" class="form-control form-control-sm masterserv-input" formControlName="fechaInicio"></div>
+            <div class="d-flex flex-column"><label class="form-label small text-secondary mb-0" style="font-size: 0.7rem;">Hasta</label><input type="date" class="form-control form-control-sm masterserv-input" formControlName="fechaFin"></div>
+            <div class="d-flex gap-1 mt-3">
+                <button type="submit" class="btn btn-sm btn-primary" title="Filtrar"><i class="bi bi-funnel-fill"></i></button>
+                <button type="button" class="btn btn-sm btn-danger" (click)="descargarReporte()" [disabled]="isDownloading" title="PDF">
+                    <span *ngIf="!isDownloading"><i class="bi bi-file-earmark-pdf-fill"></i> PDF</span>
+                    <span *ngIf="isDownloading" class="spinner-border spinner-border-sm"></span>
+                </button>
+            </div>
+        </form>
     </div>
+  </div>
+
   <div class="row g-3 mb-4">
     <div class="col-md-3">
       <div class="card kpi-card kpi-card-success">
         <div class="card-body">
           <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
-          <div class="kpi-text">
-            <div class="kpi-label">Ventas de Hoy (ARS)</div>
-            <div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.totalVentasHoy | currency:'ARS':'symbol-narrow':'1.0-0' }}</div>
-            <div *ngIf="isLoadingStats" class="kpi-value placeholder">...</div>
-          </div>
+          <div class="kpi-text"><div class="kpi-label">Ventas (Periodo)</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.totalVentasMes | currency:'ARS':'symbol-narrow':'1.0-0' }}</div></div>
         </div>
       </div>
     </div>
@@ -24,11 +33,7 @@
       <div class="card kpi-card kpi-card-success-dark">
         <div class="card-body">
           <div class="kpi-icon"><i class="bi bi-calendar-check"></i></div>
-          <div class="kpi-text">
-            <div class="kpi-label">Ventas del Mes (ARS)</div>
-            <div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.totalVentasMes | currency:'ARS':'symbol-narrow':'1.0-0' }}</div>
-            <div *ngIf="isLoadingStats" class="kpi-value placeholder">...</div>
-          </div>
+          <div class="kpi-text"><div class="kpi-label">Ventas Hoy</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.totalVentasHoy | currency:'ARS':'symbol-narrow':'1.0-0' }}</div></div>
         </div>
       </div>
     </div>
@@ -36,42 +41,28 @@
       <div class="card kpi-card kpi-card-warning">
         <div class="card-body">
           <div class="kpi-icon"><i class="bi bi-box-seam"></i></div>
-          <div class="kpi-text">
-            <div class="kpi-label">Productos Bajos de Stock</div>
-            <div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.productosBajoStock | number }}</div>
-            <div *ngIf="isLoadingStats" class="kpi-value placeholder">...</div>
-          </div>
+          <div class="kpi-text"><div class="kpi-label">Stock Bajo</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.productosBajoStock | number }}</div></div>
         </div>
       </div>
     </div>
     <div class="col-md-3">
-      <a [routerLink]="!canManageUsers ? null : '/pos/usuarios'" 
-         class="kpi-link" 
-         [class.disabled]="!canManageUsers">
+      <a [routerLink]="!canManageUsers ? null : '/pos/usuarios'" class="kpi-link" [class.disabled]="!canManageUsers">
       <div class="card kpi-card kpi-card-info">
           <div class="card-body">
             <div class="kpi-icon"><i class="bi bi-people"></i></div>
-            <div class="kpi-text">
-              <div class="kpi-label">Clientes Activos</div>
-              <div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.clientesActivos | number }}</div>
-              <div *ngIf="isLoadingStats" class="kpi-value placeholder">...</div>
-            </div>
+            <div class="kpi-text"><div class="kpi-label">Clientes</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.clientesActivos | number }}</div></div>
           </div>
         </div>
       </a>
     </div>
   </div>
 
-  <div class="row g-3">
+  <div class="row g-3 mb-3">
     <div class="col-lg-8">
       <div class="card masterserv-card h-100">
-        <div class="card-header masterserv-card-header">
-          <h5 class="masterserv-subtitle mb-0">Ventas (Últimos 7 Días)</h5>
-        </div>
+        <div class="card-header masterserv-card-header"><h5 class="masterserv-subtitle mb-0">Evolución de Ventas</h5></div>
         <div class="card-body masterserv-card-body">
-          <div *ngIf="isLoadingChart" class="loading-container">
-            <div class="spinner-border masterserv-spinner" role="status"></div>
-          </div>
+          <div *ngIf="isLoadingChart" class="loading-container"><div class="spinner-border masterserv-spinner"></div></div>
           <app-sales-chart *ngIf="!isLoadingChart" [chartData]="ventasSemanales"></app-sales-chart>
         </div>
       </div>
@@ -79,13 +70,25 @@
 
     <div class="col-lg-4">
       <div class="card masterserv-card h-100">
-        <div class="card-header masterserv-card-header">
-          <h5 class="masterserv-subtitle mb-0">Top 5 Productos del Mes</h5>
-        </div>
-        <div class="card-body masterserv-card-body p-0">
-          <div *ngIf="isLoadingTopProducts" class="loading-container">
-            <div class="spinner-border masterserv-spinner" role="status"></div>
+        <div class="card-header masterserv-card-header"><h5 class="masterserv-subtitle mb-0">Por Categoría</h5></div>
+        <div class="card-body masterserv-card-body d-flex align-items-center justify-content-center">
+          <div *ngIf="isLoadingCategories" class="loading-container"><div class="spinner-border masterserv-spinner"></div></div>
+          
+          <app-category-chart *ngIf="!isLoadingCategories" [data]="ventasPorCategoria"></app-category-chart>
+          
+          <div *ngIf="!isLoadingCategories && ventasPorCategoria.length === 0" class="text-muted text-center">
+              <i class="bi bi-pie-chart display-4 d-block mb-2 opacity-25"></i>Sin datos
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card masterserv-card h-100">
+        <div class="card-header masterserv-card-header"><h5 class="masterserv-subtitle mb-0">Top Productos (Periodo)</h5></div>
+        <div class="card-body masterserv-card-body p-0">
           <div *ngIf="!isLoadingTopProducts" class="table-responsive">
             <table class="table table-sm masterserv-table mb-0">
               <tbody>
@@ -94,48 +97,32 @@
                   <td class="masterserv-name">{{ prod.nombre }}</td>
                   <td class="masterserv-stock text-end pe-3">{{ prod.cantidadVendida }} <span class="text-metal">unid.</span></td>
                 </tr>
+                <tr *ngIf="topProductos.length === 0">
+                    <td colspan="3" class="text-center text-muted py-3">Sin datos en este periodo</td>
+                </tr>
               </tbody>
             </table>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="row g-3 mt-1">
-    <div class="col-12">
-      <div class="card masterserv-card">
-        <div class="card-header masterserv-card-header">
-          <h5 class="masterserv-subtitle mb-0">Últimas Ventas Registradas</h5>
-        </div>
+    <div class="col-lg-6">
+      <div class="card masterserv-card h-100">
+        <div class="card-header masterserv-card-header"><h5 class="masterserv-subtitle mb-0">Últimas Ventas (General)</h5></div>
         <div class="card-body masterserv-card-body p-0">
-          <div *ngIf="isLoadingRecentSales" class="loading-container">
-            <div class="spinner-border masterserv-spinner" role="status"></div>
-          </div>
           <div *ngIf="!isLoadingRecentSales" class="table-responsive">
             <table class="table table-sm table-hover align-middle masterserv-table mb-0">
               <thead class="masterserv-table-header">
-                <tr>
-                  <th class="ps-3">ID</th>
-                  <th>Fecha</th>
-                  <th>Cliente</th>
-                  <th>Vendedor</th>
-                  <th class="text-end pe-3">Total</th>
-                  <th class="text-center">Estado</th>
-                </tr>
+                <tr><th class="ps-3">#</th><th>Fecha</th><th>Cliente</th><th class="text-end pe-3">Total</th><th class="text-center">Estado</th></tr>
               </thead>
               <tbody>
                 <tr *ngFor="let venta of ultimasVentas" class="masterserv-table-row" [routerLink]="['/pos/ventas', venta.id]">
-                  <td class="ps-3">#{{ venta.id }}</td>
-                  <td>{{ venta.fechaVenta | date:'dd/MM HH:mm' }}hs</td>
-                  <td class="masterserv-name">{{ venta.clienteNombre }}</td>
-                  <td>{{ venta.vendedorNombre }}</td>
-                  <td class="masterserv-price text-end pe-3">{{ venta.totalVenta | currency:'ARS':'symbol':'1.2-2' }}</td>
-                  <td class="text-center">
-                    <span class="badge masterserv-badge" [ngClass]="venta.estado === 'COMPLETADA' ? 'masterserv-badge-success' : 'masterserv-badge-danger'">
-                      {{ venta.estado }}
-                    </span>
-                  </td>
+                  <td class="ps-3">{{ venta.id }}</td>
+                  <td>{{ venta.fechaVenta | date:'dd/MM' }}</td>
+                  <td class="masterserv-name text-truncate" style="max-width: 120px;">{{ venta.clienteNombre }}</td>
+                  <td class="masterserv-price text-end pe-3">{{ venta.totalVenta | currency:'ARS':'symbol':'1.0-0' }}</td>
+                  <td class="text-center"><span class="badge masterserv-badge" [ngClass]="venta.estado === 'COMPLETADA' ? 'masterserv-badge-success' : 'masterserv-badge-danger'">{{ venta.estado === 'COMPLETADA' ? 'OK' : 'X' }}</span></td>
                 </tr>
               </tbody>
             </table>

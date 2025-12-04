@@ -190,6 +190,113 @@
    FIN ESTILOS DE TABLA
    ================================ */
 
+:host {
+  display: block;
+  width: 100%;
+}
+
+.dashboard-container {
+  width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* ================================
+   Estilos de las Tarjetas KPI
+   ================================ */
+:host ::ng-deep .kpi-link { text-decoration: none; }
+:host ::ng-deep .kpi-link.disabled { cursor: not-allowed; opacity: 0.6; }
+:host ::ng-deep .kpi-link.disabled .kpi-card:hover { transform: none; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+
+:host ::ng-deep .kpi-card {
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+}
+:host ::ng-deep .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+:host ::ng-deep .kpi-card .card-body { display: flex; align-items: center; padding: 1.25rem; }
+:host ::ng-deep .kpi-icon { font-size: 2.5rem; opacity: 0.5; margin-right: 1rem; }
+:host ::ng-deep .kpi-text { text-align: left; }
+:host ::ng-deep .kpi-label { font-size: 0.9rem; font-weight: 500; opacity: 0.8; text-transform: uppercase; }
+:host ::ng-deep .kpi-value { font-size: 2rem; font-weight: 700; }
+:host ::ng-deep .kpi-value.placeholder { color: transparent; background: rgba(255,255,255,0.2); border-radius: 4px; width: 100px; }
+
+/* Colores de KPI */
+:host ::ng-deep .kpi-card-success { background: linear-gradient(135deg, #28a745 0%, #218838 100%); }
+:host ::ng-deep .kpi-card-success-dark { background: linear-gradient(135deg, #198754 0%, #146c43 100%); }
+:host ::ng-deep .kpi-card-warning { background: linear-gradient(135deg, #FFC107 0%, #d39e00 100%); color: #121212; }
+:host ::ng-deep .kpi-card-info { background: linear-gradient(135deg, #0dcaf0 0%, #0a9fb5 100%); }
+:host ::ng-deep .kpi-link.disabled .kpi-card-info { background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); }
+
+/* ================================
+   Estilos Masterserv (Tablas y Cards)
+   ================================ */
+:host ::ng-deep .masterserv-card {
+  background: linear-gradient(180deg, #121212 0%, #1a1a1a 100%);
+  border: 1px solid #9E9E9E;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  overflow: hidden;
+}
+:host ::ng-deep .masterserv-card-header {
+  background: #121212;
+  border-bottom: 1px solid #E41E26;
+  padding: 1rem 1.5rem;
+}
+:host ::ng-deep .masterserv-card-body {
+  background: #1a1a1a;
+  color: #E0E0E0;
+  padding: 1.5rem;
+  flex: 1;
+}
+:host ::ng-deep .masterserv-title { color: #E41E26; font-weight: 700; margin: 0; font-size: 1.5rem; }
+:host ::ng-deep .masterserv-subtitle { color: #E0E0E0; font-weight: 600; }
+
+/* MENTOR: FIX INPUT DATE ICON */
+:host ::ng-deep .masterserv-input {
+    background-color: #2c2c2c;
+    border: 1px solid #444;
+    color: #e0e0e0;
+}
+:host ::ng-deep .masterserv-input:focus {
+    background-color: #333;
+    border-color: #E41E26;
+    color: #fff;
+    box-shadow: none;
+}
+/* Invertir color del icono del calendario */
+::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
+/* Tablas */
+:host ::ng-deep .masterserv-table { background: #121212; color: #E0E0E0 !important; margin-bottom: 0 !important; width: 100%; border-collapse: collapse; }
+:host ::ng-deep .masterserv-table th, :host ::ng-deep .masterserv-table td { border: 1px solid #9E9E9E; padding: 0.75rem 0.5rem; vertical-align: middle; color: #E0E0E0 !important; }
+:host ::ng-deep .masterserv-table-header { background: rgba(228, 30, 38, 0.1) !important; }
+:host ::ng-deep .masterserv-table-header th { color: #E41E26 !important; font-weight: 600; border-bottom: 2px solid #9E9E9E; text-transform: uppercase; font-size: 0.85rem; }
+:host ::ng-deep .masterserv-table-row { cursor: pointer; transition: all 0.2s ease; }
+:host ::ng-deep .masterserv-table-row:hover { background: rgba(228, 30, 38, 0.05); }
+
+/* Texto y Badges */
+:host ::ng-deep .masterserv-name { font-weight: 500; color: #FFFFFF !important; }
+:host ::ng-deep .masterserv-price { font-weight: 700; font-family: 'Courier New', monospace; color: #FFC107 !important; }
+:host ::ng-deep .masterserv-stock { font-weight: 600; font-family: 'Courier New', monospace; }
+:host ::ng-deep .text-metal { color: #9E9E9E; }
+:host ::ng-deep .masterserv-badge { font-size: 0.75rem; font-weight: 600; padding: 0.35em 0.65em; }
+:host ::ng-deep .masterserv-badge-success { background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; }
+:host ::ng-deep .masterserv-badge-danger { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; }
+
+.loading-container { min-height: 200px; display: flex; align-items: center; justify-content: center; }
+.masterserv-spinner { color: #E41E26; width: 3rem; height: 3rem; }
+.masterserv-alert-danger { background: rgba(220, 53, 69, 0.1); border: 1px solid #dc3545; color: #f8d7da; }
+
 
 /* Contenedor del gráfico */
 :host ::ng-deep .chart-container {

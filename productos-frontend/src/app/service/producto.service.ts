@@ -69,4 +69,8 @@ export class ProductoService {
   getProductosPorProveedor(proveedorId: number): Observable<ProductoDTO[]> {
     return this.http.get<ProductoDTO[]>(`${this.apiUrl}/por-proveedor/${proveedorId}`);
   }
+
+  ajustarStock(data: { productoId: number; cantidad: number; motivo: string }): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/ajuste-stock`, data);
+  }
 }

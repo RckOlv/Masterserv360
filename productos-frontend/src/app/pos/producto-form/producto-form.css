@@ -118,3 +118,41 @@ input[readonly].masterserv-input {
   color: #aaa !important;
   cursor: not-allowed;
 }
+
+/* --- Estilos para ng-select DARK MODE --- */
+:host ::ng-deep .custom-ng-select .ng-select-container {
+    background-color: #2c2c2c !important;
+    border: 1px solid #555 !important;
+    color: #fff !important;
+    min-height: 38px; /* Altura estándar de bootstrap input */
+    border-radius: 0.375rem;
+}
+
+:host ::ng-deep .custom-ng-select .ng-select-container .ng-value-container .ng-input > input {
+    color: #fff !important;
+}
+
+:host ::ng-deep .custom-ng-select .ng-select-container .ng-value-container .ng-value {
+    color: #fff !important;
+}
+
+:host ::ng-deep .custom-ng-select .ng-dropdown-panel {
+    background-color: #2c2c2c !important;
+    border: 1px solid #555 !important;
+}
+
+:host ::ng-deep .custom-ng-select .ng-dropdown-panel .ng-dropdown-panel-items .ng-option {
+    background-color: #2c2c2c !important;
+    color: #ccc !important;
+}
+
+:host ::ng-deep .custom-ng-select .ng-dropdown-panel .ng-dropdown-panel-items .ng-option:hover,
+:host ::ng-deep .custom-ng-select .ng-dropdown-panel .ng-dropdown-panel-items .ng-option.ng-option-marked {
+    background-color: #E41E26 !important;
+    color: #fff !important;
+}
+
+/* Alineación del botón + */
+.d-flex.gap-2 button {
+    height: 38px; /* Misma altura que el select */
+}

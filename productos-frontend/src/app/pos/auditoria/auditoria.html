@@ -1,0 +1,147 @@
+<div class="container-fluid p-4">
+    <h3 class="text-white mb-4">
+        <i class="bi bi-activity me-2 text-info"></i>Registro de Auditoría
+    </h3>
+
+    <div class="card masterserv-card shadow">
+        <div class="card-body p-0">
+            
+            <div *ngIf="isLoading" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+            </div>
+
+            <div class="table-responsive" *ngIf="!isLoading && page" style="max-height: 75vh;">
+                <table class="table table-dark table-hover mb-0 align-middle text-sm">
+                    <thead class="sticky-top" style="background-color: #121212; border-bottom: 2px solid #dc3545;">
+                        <tr>
+                            <th class="text-uppercase text-white-50 small ps-3">Fecha</th>
+                            <th class="text-uppercase text-white-50 small">Usuario</th>
+                            <th class="text-uppercase text-white-50 small text-center">Acción</th>
+                            <th class="text-uppercase text-white-50 small">Entidad</th>
+                            <th class="text-uppercase text-white-50 small">Resumen</th>
+                            <th class="text-uppercase text-white-50 small text-center">Detalle</th> 
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let log of page.content">
+                            <td class="text-nowrap text-white-50 small ps-3">
+                                {{ log.fecha | date:'dd/MM HH:mm' }}
+                            </td>
+                            
+                            <td class="fw-bold text-white">
+                                <i class="bi bi-person-circle me-1 text-secondary"></i>
+                                {{ log.usuario }}
+                            </td>
+                            
+                            <td class="text-center">
+                                <span class="badge" [ngClass]="getBadgeClass(log.accion)">
+                                    {{ log.accion }}
+                                </span>
+                            </td>
+                            
+                            <td>
+                                <div class="text-info fw-bold">{{ log.entidad }}</div>
+                                <div class="text-white-50 small font-monospace">#{{ log.entidadId }}</div>
+                            </td>
+                            
+                            <td class="text-white-50 small text-truncate" style="max-width: 250px;" title="{{ log.detalle }}">
+                                {{ log.detalle.split('(')[0] }}...
+                            </td>
+
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-info" 
+                                        (click)="verDetalles(log)" 
+                                        title="Ver cambios completos"
+                                        [disabled]="!log.valorAnterior && !log.valorNuevo">
+                                    <i class="bi bi-eye"></i> Ver
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card-footer bg-dark border-top border-secondary d-flex justify-content-between align-items-center py-3" 
+                 *ngIf="!isLoading && page && page.totalElements > 0">
+                
+                <button class="btn btn-outline-light btn-sm" (click)="paginaAnterior()" [disabled]="page.first">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </button>
+
+                <span class="text-white-50 small">
+                    Página <strong class="text-warning">{{ page.number + 1 }}</strong> de <strong class="text-white">{{ page.totalPages }}</strong>
+                </span>
+
+                <button class="btn btn-outline-light btn-sm" (click)="paginaSiguiente()" [disabled]="page.last">
+                    Siguiente <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDetalleAuditoria" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background-color: #1e1e1e; border: 1px solid #444; color: white;">
+            
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title text-info">
+                    <i class="bi bi-journal-text me-2"></i>Detalle de Movimiento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="cerrarModal()"></button>
+            </div>
+
+            <div class="modal-body p-0" *ngIf="selectedLog">
+                <div class="p-3 border-bottom border-secondary bg-dark">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="badge bg-secondary">{{ selectedLog.fecha | date:'dd/MM/yyyy HH:mm:ss' }}</span>
+                        <span class="badge" [ngClass]="getBadgeClass(selectedLog.accion)">{{ selectedLog.accion }}</span>
+                    </div>
+                    <p class="mb-0 text-white small">{{ selectedLog.detalle }}</p>
+                </div>
+
+                <div class="row g-0">
+                    <div class="col-md-6 border-end border-secondary">
+                        <div class="p-2 text-center bg-dark border-bottom border-secondary text-danger fw-bold">
+                            <i class="bi bi-clock-history me-1"></i> ANTES
+                        </div>
+                        <div class="p-3" style="max-height: 400px; overflow-y: auto;">
+                            <div *ngIf="datosAnteriores.length === 0" class="text-white-50 text-center fst-italic small mt-3">
+                                No hay datos anteriores (Creación o vacío)
+                            </div>
+                            <ul class="list-unstyled mb-0">
+                                <li *ngFor="let item of datosAnteriores" class="mb-2 border-bottom border-secondary pb-1">
+                                    <small class="text-white-50 d-block">{{ item.key }}</small>
+                                    <span class="text-danger font-monospace">{{ item.value }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-2 text-center bg-dark border-bottom border-secondary text-success fw-bold">
+                            <i class="bi bi-check-circle me-1"></i> DESPUÉS
+                        </div>
+                        <div class="p-3" style="max-height: 400px; overflow-y: auto;">
+                            <div *ngIf="datosNuevos.length === 0" class="text-white-50 text-center fst-italic small mt-3">
+                                Datos eliminados o vacíos.
+                            </div>
+                            <ul class="list-unstyled mb-0">
+                                <li *ngFor="let item of datosNuevos" class="mb-2 border-bottom border-secondary pb-1">
+                                    <small class="text-white-50 d-block">{{ item.key }}</small>
+                                    <span class="text-success font-monospace fw-bold">{{ item.value }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div class="modal-footer border-top border-secondary">
+                <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>

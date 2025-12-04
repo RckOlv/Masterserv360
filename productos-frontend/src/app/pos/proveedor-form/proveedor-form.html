@@ -30,17 +30,22 @@
               <label for="razonSocial" class="form-label masterserv-label">Razón Social <span class="text-danger">*</span></label>
               <input type="text" id="razonSocial" class="form-control masterserv-input" formControlName="razonSocial"
                      [ngClass]="{ 'is-invalid': f['razonSocial'].invalid && f['razonSocial'].touched }">
-              <div *ngIf="f['razonSocial'].invalid && f['razonSocial'].touched" class="invalid-feedback">
-                Obligatorio.
-              </div>
+              <div class="invalid-feedback" *ngIf="f['razonSocial'].errors?.['required']">Requerido.</div>
+              <div class="invalid-feedback" *ngIf="f['razonSocial'].errors?.['minlength']">Mínimo 3 caracteres.</div>
             </div>
 
             <div class="col-md-6 mb-3">
               <label for="cuit" class="form-label masterserv-label">CUIT <span class="text-danger">*</span></label>
+              
               <input type="text" id="cuit" class="form-control masterserv-input" formControlName="cuit"
+                     placeholder="Solo números (11 dígitos)"
+                     maxlength="11"
+                     (input)="validarInputNumerico($event)"
                      [ngClass]="{ 'is-invalid': f['cuit'].invalid && f['cuit'].touched }">
-              <div *ngIf="f['cuit'].invalid && f['cuit'].touched" class="invalid-feedback">
-                Obligatorio.
+              
+              <div class="invalid-feedback" *ngIf="f['cuit'].errors?.['required']">Requerido.</div>
+              <div class="invalid-feedback" *ngIf="f['cuit'].errors?.['pattern']">
+                  Debe tener exactamente 11 números.
               </div>
             </div>
           </div>
@@ -50,17 +55,35 @@
           <legend class="masterserv-label border-bottom border-metal pb-2 mb-3">Contacto y Ubicación</legend>
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="email" class="form-label masterserv-label">Email</label>
+              <label for="email" class="form-label masterserv-label">Email <span class="text-danger">*</span></label>
               <input type="email" id="email" class="form-control masterserv-input" formControlName="email"
+                     placeholder="ejemplo@dominio.com"
                      [ngClass]="{ 'is-invalid': f['email'].invalid && f['email'].touched }">
-              <div *ngIf="f['email'].invalid && f['email'].touched" class="invalid-feedback">
-                Email no válido.
-              </div>
+              
+              <div class="invalid-feedback" *ngIf="f['email'].errors?.['required']">Requerido.</div>
+              <div class="invalid-feedback" *ngIf="f['email'].errors?.['email']">Formato inválido.</div>
             </div>
 
             <div class="col-md-6 mb-3">
-              <label for="telefono" class="form-label masterserv-label">Teléfono</label>
-              <input type="tel" id="telefono" class="form-control masterserv-input" formControlName="telefono">
+              <label for="telefono" class="form-label masterserv-label">Teléfono / Celular</label>
+              
+              <div class="input-group">
+                  <select class="form-select masterserv-input" formControlName="codigoPais" style="max-width: 110px;">
+                      <option *ngFor="let pais of paises" [value]="pais.codigo">
+                          {{ pais.bandera }} {{ pais.codigo }}
+                      </option>
+                  </select>
+                  
+                  <input type="tel" id="telefono" class="form-control masterserv-input" formControlName="telefono"
+                         placeholder="Sin 0 ni 15"
+                         maxlength="15"
+                         (input)="validarInputNumerico($event)"
+                         [ngClass]="{ 'is-invalid': f['telefono'].invalid && f['telefono'].touched }">
+              </div>
+              
+              <div class="invalid-feedback d-block" *ngIf="f['telefono'].invalid && f['telefono'].touched">
+                  <span *ngIf="f['telefono'].errors?.['minlength']">Mínimo 8 números.</span>
+              </div>
             </div>
           </div>
 

@@ -36,13 +36,21 @@
           <tbody>
             <tr *ngFor="let r of roles">
               <td class="ps-3">{{ r.id }}</td>
-              <td><span class="badge masterserv-badge" [ngClass]="{'masterserv-badge-danger': r.nombreRol === 'ROLE_ADMIN', 'masterserv-badge-success': r.nombreRol === 'ROLE_VENDEDOR', 'masterserv-badge-info': r.nombreRol === 'ROLE_CLIENTE'}">{{ r.nombreRol | slice:5 }}</span></td>
-              <td class="text-metal">{{ r.descripcion || '-' }}</td>
               <td>
-                <span *ngIf="!r.permisos || r.permisos.length === 0">-</span>
-                <span *ngFor="let permiso of r.permisos" class="badge masterserv-badge-warning me-1 text-dark">
-                    {{ permiso.nombrePermiso | lowercase }}
-                </span>
+                  <span class="badge masterserv-badge" 
+                        [ngClass]="{'masterserv-badge-danger': r.nombreRol === 'ROLE_ADMIN', 'masterserv-badge-success': r.nombreRol === 'ROLE_VENDEDOR', 'masterserv-badge-info': r.nombreRol === 'ROLE_CLIENTE'}">
+                        {{ r.nombreRol | slice:5 }}
+                  </span>
+              </td>
+              
+              <td class="text-white-50 small fst-italic">{{ r.descripcion || '-' }}</td>
+              <td>
+                <span *ngIf="!r.permisos || r.permisos.length === 0" class="text-muted">-</span>
+                <div class="d-flex flex-wrap gap-1">
+                    <span *ngFor="let permiso of r.permisos" class="badge bg-dark border border-secondary text-light fw-normal">
+                        {{ permiso.nombrePermiso | lowercase }}
+                    </span>
+                </div>
               </td>
               <td *appHasPermission="'ROLES_MANAGE'" class="text-center pe-3">
                 <div class="btn-group btn-group-sm" role="group">
@@ -71,28 +79,30 @@
 </div>
 
 <div class="modal fade" id="rolModal" tabindex="-1" aria-labelledby="rolModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl"> <div class="modal-content">
-      <div class="modal-header">
+  <div class="modal-dialog modal-xl"> 
+      <div class="modal-content masterserv-modal-content">
+      <div class="modal-header masterserv-modal-header">
         <h5 class="modal-title" id="rolModalLabel">{{ editMode ? 'Editar' : 'Nuevo' }} Rol</h5>
         <button type="button" class="btn-close btn-close-white" (click)="cerrarModal()" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body masterserv-modal-body">
         <form [formGroup]="rolForm" id="ngRolForm" (ngSubmit)="guardarRol()">
           <input type="hidden" formControlName="id">
 
           <div class="row">
-            <div class="col-md-5 border-end border-metal pe-4">
+            <div class="col-md-4 border-end border-secondary pe-4">
                 <fieldset class="mb-4">
                   <legend class="masterserv-label border-bottom border-metal pb-2 mb-3">Datos del Rol</legend>
                   
                   <div class="mb-3">
                     <label for="nombreRol" class="form-label masterserv-label">Nombre del Rol <span class="text-danger">*</span></label>
                     <input type="text" id="nombreRol" class="form-control masterserv-input" formControlName="nombreRol"
-                            placeholder="Ej: ROLE_AUDITOR"
-                            [readonly]="editMode && f['nombreRol'].value === 'ROLE_ADMIN'"
-                            [ngClass]="{ 'is-invalid': f['nombreRol'].invalid && f['nombreRol'].touched }">
+                           placeholder="Ej: ROLE_AUDITOR"
+                           [readonly]="editMode && f['nombreRol'].value === 'ROLE_ADMIN'"
+                           [ngClass]="{ 'is-invalid': f['nombreRol'].invalid && f['nombreRol'].touched }">
                     <div *ngIf="f['nombreRol'].invalid && f['nombreRol'].touched" class="invalid-feedback">
-                      El nombre del rol es obligatorio (ej. ROLE_NUEVO).
+                      <div *ngIf="f['nombreRol'].errors?.['required']">Requerido.</div>
+                      <div *ngIf="f['nombreRol'].errors?.['pattern']">Debe empezar con ROLE_ y ser mayúsculas.</div>
                     </div>
                   </div>
 
@@ -103,24 +113,28 @@
                 </fieldset>
             </div>
 
-            <div class="col-md-7">
+            <div class="col-md-8">
                 <fieldset formArrayName="permisos">
                   <legend class="masterserv-label border-bottom border-metal pb-2 mb-3">Asignar Permisos</legend>
                   
+                  <div *ngIf="rolForm.get('permisos')?.errors?.['noPermissionSelected'] && rolForm.touched" 
+                       class="alert alert-warning py-2 small mb-3">
+                      <i class="bi bi-exclamation-triangle-fill me-2"></i> Debe seleccionar al menos un permiso.
+                  </div>
+
                   <div *ngIf="permisosDisponibles.length === 0" class="alert masterserv-alert-info text-center">
                     No hay permisos definidos en el sistema.
                   </div>
 
-                  <div class="row">
-                      <div class="col-sm-6 mb-2" *ngFor="let control of permisosArray.controls; let i = index">
-                          <div class="form-check">
-                              <input class="form-check-input" type="checkbox" [formControlName]="i" [id]="'permiso-' + i">
-                              <label class="form-check-label text-metal" [for]="'permiso-' + i">
-                                  {{ permisosDisponibles[i].nombrePermiso | slice:0:30 | lowercase }}
+                  <div class="row g-2">
+                      <div class="col-md-6" *ngFor="let control of permisosArray.controls; let i = index">
+                          <div class="form-check p-2 rounded border border-secondary hover-effect" 
+                               [ngClass]="{'bg-dark': control.value, 'bg-transparent': !control.value}">
+                              <input class="form-check-input ms-1" type="checkbox" [formControlName]="i" [id]="'permiso-' + i">
+                              <label class="form-check-label text-white ps-2 w-100 cursor-pointer" [for]="'permiso-' + i">
+                                  <div class="fw-bold">{{ permisosDisponibles[i].nombrePermiso | lowercase }}</div>
+                                  <small class="text-white-50" style="font-size: 0.75rem;">{{ permisosDisponibles[i].descripcion }}</small>
                               </label>
-                          </div>
-                          <div class="text-metal small ms-4" style="line-height: 1;">
-                              ({{ permisosDisponibles[i].nombrePermiso }})
                           </div>
                       </div>
                   </div>
@@ -130,7 +144,7 @@
           
         </form>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer border-secondary">
         <button type="button" class="btn masterserv-btn-secondary" (click)="cerrarModal()">Cancelar</button>
         <button type="submit" form="ngRolForm" class="btn masterserv-btn-primary" [disabled]="rolForm.invalid || isLoading">
           <span *ngIf="!isLoading">{{ editMode ? 'Actualizar' : 'Crear' }}</span>

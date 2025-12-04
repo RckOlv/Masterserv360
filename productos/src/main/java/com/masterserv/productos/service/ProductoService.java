@@ -4,6 +4,8 @@ import com.masterserv.productos.event.StockActualizadoEvent;
 import com.masterserv.productos.exceptions.StockInsuficienteException;
 
 import org.springframework.context.ApplicationEventPublisher;
+
+import com.masterserv.productos.dto.MovimientoStockDTO;
 import com.masterserv.productos.dto.ProductoDTO;
 import com.masterserv.productos.dto.ProductoFiltroDTO;
 import com.masterserv.productos.dto.ProductoPublicoDTO;
@@ -12,10 +14,15 @@ import com.masterserv.productos.entity.Producto;
 import com.masterserv.productos.entity.Categoria;
 // --- MENTOR: Imports nuevos necesarios para el flujo Chatbot ---
 import com.masterserv.productos.entity.SolicitudProducto;
+import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.entity.ListaEspera;
+import com.masterserv.productos.entity.MovimientoStock;
 import com.masterserv.productos.enums.EstadoListaEspera;
+import com.masterserv.productos.enums.TipoMovimiento;
 import com.masterserv.productos.repository.SolicitudProductoRepository;
+import com.masterserv.productos.repository.UsuarioRepository;
 import com.masterserv.productos.repository.ListaEsperaRepository;
+import com.masterserv.productos.repository.MovimientoStockRepository;
 // ---------------------------------------------------------------
 import com.masterserv.productos.mapper.ProductoMapper;
 import com.masterserv.productos.repository.ProductoRepository;
@@ -34,6 +41,7 @@ import java.util.stream.Collectors;
 import java.util.Optional;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDate; // Importante para la fecha de inscripción
+import java.time.LocalDateTime;
 
 @Service
 public class ProductoService {
@@ -52,14 +60,19 @@ public class ProductoService {
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+   
+    @Autowired 
+    private MovimientoStockRepository movimientoStockRepository;
     
-    // --- MENTOR: NUEVOS REPOSITORIOS INYECTADOS ---
+    @Autowired 
+    private UsuarioRepository usuarioRepository;
+
     @Autowired
     private SolicitudProductoRepository solicitudProductoRepository;
     
     @Autowired
     private ListaEsperaRepository listaEsperaRepository;
-    // ----------------------------------------------
+
 
     // --- MENTOR: GENERADOR DE CÓDIGO INTELIGENTE ---
     @Transactional(readOnly = true)
@@ -286,4 +299,42 @@ public class ProductoService {
 
          return productoGuardado;
     }
+
+    // --- MENTOR: MÉTODO DE AJUSTE MANUAL CON HISTORIAL ---
+    @Transactional
+    public void ajustarStock(MovimientoStockDTO dto, String emailUsuario) {
+        Producto producto = productoRepository.findById(dto.getProductoId())
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
+
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado: " + emailUsuario));
+
+        // 1. Calcular nuevo stock
+        int stockAnterior = producto.getStockActual();
+        int cantidadAjuste = dto.getCantidad(); // Puede ser + o -
+        int nuevoStock = stockAnterior + cantidadAjuste;
+
+        if (nuevoStock < 0) {
+            throw new StockInsuficienteException("El ajuste dejaría el stock en negativo (" + nuevoStock + ").");
+        }
+
+        // 2. Actualizar producto
+        producto.setStockActual(nuevoStock);
+        productoRepository.save(producto);
+
+        // 3. Guardar Movimiento (Historial)
+        MovimientoStock movimiento = new MovimientoStock();
+        movimiento.setFecha(LocalDateTime.now());
+        movimiento.setCantidad(cantidadAjuste);
+        movimiento.setTipoMovimiento(TipoMovimiento.AJUSTE_MANUAL); // O dto.getTipoMovimiento()
+        movimiento.setMotivo(dto.getMotivo());
+        movimiento.setProducto(producto);
+        movimiento.setUsuario(usuario);
+        
+        movimientoStockRepository.save(movimiento);
+
+        // 4. Publicar evento (para alertas de stock bajo, etc.)
+        eventPublisher.publishEvent(new StockActualizadoEvent(producto.getId(), stockAnterior, nuevoStock));
+    }
+    
 }

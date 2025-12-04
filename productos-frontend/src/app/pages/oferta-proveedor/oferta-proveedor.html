@@ -40,6 +40,28 @@
                   <strong class="text-white">{{ cotizacion.fechaSolicitud | date:'dd/MM/yyyy' }}</strong>
                 </div>
               </div>
+              
+              <div class="row justify-content-end mt-4">
+                  <div class="col-auto">
+                      <label class="form-label text-white fw-bold me-3">Fecha de Entrega Estimada: <span class="text-danger">*</span></label>
+                  </div>
+                  <div class="col-auto">
+                      <input type="date" class="form-control bg-dark text-white border-secondary"
+                             formControlName="fechaEntregaOfertada"
+                             [min]="minDate"
+                             [class.is-invalid]="f['fechaEntregaOfertada']?.invalid && f['fechaEntregaOfertada']?.touched">
+                      
+                      <div *ngIf="f['fechaEntregaOfertada']?.errors?.['required'] && f['fechaEntregaOfertada']?.touched" 
+                           class="text-danger small mt-1">
+                          Fecha requerida.
+                      </div>
+                      <div *ngIf="f['fechaEntregaOfertada']?.errors?.['fechaPasada']" 
+                           class="text-danger small mt-1">
+                          La fecha no puede ser anterior a hoy.
+                      </div>
+                  </div>
+              </div>
+
             </div>
           </div>
 
@@ -54,7 +76,7 @@
                   <tr>
                     <th>Producto</th>
                     <th style="width: 130px;" class="text-center">Solicitado</th>
-                    <th style="width: 140px;">Su Oferta (Cant)</th>
+                    <th style="width: 160px;">Su Oferta (Cant)</th>
                     <th style="width: 180px;">Precio Unitario</th>
                     <th style="width: 80px;" class="text-center">Disp.</th>
                   </tr>
@@ -80,7 +102,16 @@
                       <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary"
                              formControlName="cantidadOfertada"
                              min="1"
-                             [attr.disabled]="!itemGroup.get('disponible')?.value ? true : null">
+                             [attr.disabled]="!itemGroup.get('disponible')?.value ? true : null"
+                             [class.is-invalid]="itemGroup.get('cantidadOfertada')?.invalid && itemGroup.get('cantidadOfertada')?.touched">
+                      
+                      <div *ngIf="itemGroup.get('cantidadOfertada')?.invalid && itemGroup.get('cantidadOfertada')?.touched" class="text-danger small mt-1" style="line-height: 1.2;">
+                           <div *ngIf="itemGroup.get('cantidadOfertada')?.errors?.['required']">Requerido</div>
+                           <div *ngIf="itemGroup.get('cantidadOfertada')?.errors?.['min']">Mínimo 1</div>
+                           <div *ngIf="itemGroup.get('cantidadOfertada')?.errors?.['max']">
+                               Máximo {{ itemGroup.get('cantidadSolicitada')?.value }}
+                           </div>
+                      </div>
                     </td>
 
                     <td>
@@ -89,7 +120,8 @@
                         <input type="number" class="form-control bg-dark text-white border-secondary"
                                placeholder="0.00"
                                formControlName="precioUnitarioOfertado"
-                               [attr.disabled]="!itemGroup.get('disponible')?.value ? true : null">
+                               [attr.disabled]="!itemGroup.get('disponible')?.value ? true : null"
+                               [class.is-invalid]="itemGroup.get('precioUnitarioOfertado')?.invalid && itemGroup.get('precioUnitarioOfertado')?.touched">
                       </div>
                       <div *ngIf="itemGroup.get('precioUnitarioOfertado')?.invalid && itemGroup.get('precioUnitarioOfertado')?.touched"
                            class="text-danger small mt-1">
@@ -107,19 +139,6 @@
                   </tr>
                 </tbody>
               </table>
-            </div>
-
-            <div class="card-body border-top border-secondary pt-4">
-                <div class="row justify-content-end align-items-center">
-                    <div class="col-auto">
-                        <label class="form-label text-white fw-bold me-3">Fecha de Entrega Estimada:</label>
-                    </div>
-                    <div class="col-auto">
-                        <input type="date" class="form-control bg-dark text-white border-secondary"
-                               formControlName="fechaEntregaOfertada"
-                               [class.is-invalid]="form.get('fechaEntregaOfertada')?.invalid && form.get('fechaEntregaOfertada')?.touched">
-                    </div>
-                </div>
             </div>
 
             <div class="card-footer border-0 text-end p-3" style="background-color: #252525;">

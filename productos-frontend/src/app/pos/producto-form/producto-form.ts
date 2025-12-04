@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms'; // <--- Importar ValidatorFn
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClientModule, HttpErrorResponse } from '@angular/common/http';
 
@@ -10,9 +10,12 @@ import { CategoriaService } from '../../service/categoria.service';
 import { CategoriaDTO } from '../../models/categoria.model';
 import { mostrarToast } from '../../utils/toast'; 
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
+import { NgSelectModule } from '@ng-select/ng-select'; 
 
 import { merge } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
+
+declare var bootstrap: any;
 
 @Component({
   selector: 'app-producto-form',
@@ -22,7 +25,8 @@ import { debounceTime } from 'rxjs/operators';
     ReactiveFormsModule,
     HttpClientModule,
     HasPermissionDirective,
-    RouterLink
+    RouterLink,
+    NgSelectModule 
   ],
   templateUrl: './producto-form.html',
   styleUrls: ['./producto-form.css']
@@ -43,14 +47,18 @@ export default class ProductoFormComponent implements OnInit {
   public pageTitle = 'Nuevo Producto'; 
   public errorMessage: string | null = null;
   
-  // MENTOR: Variable para guardar el ID de la solicitud si viene del chatbot
   private solicitudIdOrigen: number | null = null;
+
+  // Modal Categoría Rápida
+  public categoriaForm: FormGroup;
+  public isSavingCategoria = false;
+  public mostrarModalCategoria = false;
 
   constructor() {
     this.productoForm = this.fb.group({
       id: [null], 
       codigo: ['', [Validators.required, Validators.maxLength(50)]],
-      nombre: ['', [Validators.required, Validators.maxLength(255)]],
+      nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(255)]],
       descripcion: [''],
       precioVenta: [null, [Validators.required, Validators.min(0)]],
       precioCosto: [null, [Validators.required, Validators.min(0)]],
@@ -59,20 +67,22 @@ export default class ProductoFormComponent implements OnInit {
       loteReposicion: [1, [Validators.required, Validators.min(1)]],
       estado: ['ACTIVO', Validators.required], 
       categoriaId: [null, Validators.required]
+    }, { validators: this.precioVentaMayorCostoValidator }); // <--- MENTOR: Validación Cruzada
+
+    this.categoriaForm = this.fb.group({
+        nombre: ['', [Validators.required, Validators.minLength(3)]],
+        descripcion: ['']
     });
   }
 
   ngOnInit(): void {
     this.cargarCategorias();
 
-    // MENTOR: Leemos los Query Params (para cuando venimos de "Convertir Solicitud")
     this.route.queryParams.subscribe(params => {
         if (params['solicitudId']) {
             this.solicitudIdOrigen = +params['solicitudId'];
-            console.log("Creando producto desde solicitud #" + this.solicitudIdOrigen);
         }
         if (params['nombreProducto']) {
-            // Pre-llenamos el nombre
             this.productoForm.patchValue({ nombre: params['nombreProducto'] });
             mostrarToast('Datos pre-cargados desde la solicitud.', 'info');
         }
@@ -92,6 +102,19 @@ export default class ProductoFormComponent implements OnInit {
       }
     });
   }
+
+  // --- MENTOR: VALIDACIÓN PERSONALIZADA ---
+  // Verifica que Precio Venta >= Precio Costo
+  precioVentaMayorCostoValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+    const costo = control.get('precioCosto')?.value;
+    const venta = control.get('precioVenta')?.value;
+
+    if (costo !== null && venta !== null && venta < costo) {
+        return { ventaMenorCosto: true };
+    }
+    return null;
+  }
+  // ---------------------------------------
 
   setupAutoCodigo() {
     const nombreControl = this.productoForm.get('nombre');
@@ -126,7 +149,6 @@ export default class ProductoFormComponent implements OnInit {
     this.categoriaService.listarCategorias().subscribe({ 
       next: (data) => this.categorias = data,
       error: (err: any) => {
-        console.error("Error cargando categorías", err);
         mostrarToast("Error al cargar las categorías", "danger");
       }
     });
@@ -161,18 +183,22 @@ export default class ProductoFormComponent implements OnInit {
 
   onSubmit(): void {
     this.productoForm.markAllAsTouched();
+    
     if (this.productoForm.invalid) {
-      mostrarToast("Por favor, revise los campos marcados.", "warning");
+      // Si el error es solo de precio, mostramos un toast específico
+      if (this.productoForm.errors?.['ventaMenorCosto']) {
+          mostrarToast("El precio de venta no puede ser menor al costo.", "warning");
+      } else {
+          mostrarToast("Por favor, revise los campos marcados.", "warning");
+      }
       return;
     }
 
     this.isLoading = true;
     this.errorMessage = null;
     
-    // Casting a 'any' temporal para inyectar el solicitudId sin que TS se queje si no actualizaste el modelo
     const productoData: any = this.productoForm.value;
     
-    // MENTOR: Inyectamos el ID de la solicitud si existe
     if (this.solicitudIdOrigen) {
         productoData.solicitudId = this.solicitudIdOrigen;
     }
@@ -196,6 +222,39 @@ export default class ProductoFormComponent implements OnInit {
         mostrarToast(this.errorMessage!, 'danger');
         this.isLoading = false;
       }
+    });
+  }
+
+  // --- MÉTODOS NUEVA CATEGORÍA ---
+  abrirModalCategoria() {
+    this.categoriaForm.reset();
+    this.mostrarModalCategoria = true;
+  }
+
+  cerrarModalCategoria() {
+    this.mostrarModalCategoria = false;
+  }
+
+  guardarNuevaCategoria() {
+    if (this.categoriaForm.invalid) {
+        this.categoriaForm.markAllAsTouched();
+        return;
+    }
+    this.isSavingCategoria = true;
+    
+    this.categoriaService.crear(this.categoriaForm.value).subscribe({
+        next: (nuevaCat: CategoriaDTO) => {
+            mostrarToast(`Categoría "${nuevaCat.nombre}" creada.`, 'success');
+            this.categorias = [...this.categorias, nuevaCat];
+            this.productoForm.patchValue({ categoriaId: nuevaCat.id });
+            this.isSavingCategoria = false;
+            this.cerrarModalCategoria();
+            this.intentarGenerarCodigo();
+        },
+        error: (err) => {
+            mostrarToast('Error al crear categoría.', 'danger');
+            this.isSavingCategoria = false;
+        }
     });
   }
 

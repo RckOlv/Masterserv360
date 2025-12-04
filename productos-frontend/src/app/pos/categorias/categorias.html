@@ -115,22 +115,24 @@
 </div>
 
 <div class="modal fade" id="categoriaModal" tabindex="-1" aria-labelledby="categoriaModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content masterserv-modal-content">
+      <div class="modal-header masterserv-modal-header">
         <h5 class="modal-title" id="categoriaModalLabel">{{ esEdicion ? 'Editar' : 'Nueva' }} Categoría</h5>
         <button type="button" class="btn-close btn-close-white" (click)="cerrarModal()" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body masterserv-modal-body">
         <form [formGroup]="categoriaForm" id="ngCategoriaForm" (ngSubmit)="guardarCategoria()">
           <input type="hidden" formControlName="id">
 
           <div class="mb-3">
             <label for="categoriaNombre" class="form-label masterserv-label">Nombre <span class="text-danger">*</span></label>
             <input type="text" id="categoriaNombre" class="form-control masterserv-input" formControlName="nombre"
+                   maxlength="100"
                    [ngClass]="{ 'is-invalid': f['nombre'].invalid && (f['nombre'].dirty || f['nombre'].touched) }">
             <div *ngIf="f['nombre'].invalid && (f['nombre'].dirty || f['nombre'].touched)" class="invalid-feedback">
               <div *ngIf="f['nombre'].errors?.['required']">El nombre es obligatorio.</div>
+              <div *ngIf="f['nombre'].errors?.['minlength']">Mínimo 3 caracteres.</div>
             </div>
           </div>
 
@@ -150,7 +152,7 @@
 
         </form>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer border-secondary">
         <button type="button" class="btn masterserv-btn-secondary" (click)="cerrarModal()">Cancelar</button>
         <button type="submit" form="ngCategoriaForm" class="btn masterserv-btn-primary" [disabled]="categoriaForm.invalid || isLoading">
           <span *ngIf="!isLoading">{{ esEdicion ? 'Actualizar' : 'Crear' }}</span>

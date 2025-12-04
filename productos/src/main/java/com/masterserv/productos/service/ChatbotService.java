@@ -79,18 +79,20 @@ public class ChatbotService {
         String texto = comando.toLowerCase().trim();
 
         if (usuarioOpt.isEmpty()) {
-            return "👋 ¡Hola! No te encontramos en nuestra base de datos.\nRegístrate en *masterserv.com*.";
+            return "👋 ¡Hola! No te encontramos en nuestra base de datos.\nRegístrate en *masterserv.com* o contacta a un vendedor.";
         }
 
         Usuario usuario = usuarioOpt.get();
 
-        // 1. SALUDO
+        // 1. SALUDO MEJORADO Y MÁS AMIGABLE
         if (esSaludo(texto) || texto.contains("menu") || texto.contains("ayuda")) {
             return String.format(
-                "👋 ¡Hola %s!\n\n" +
-                "📦 *Stock:* _\"precio de la bateria\"_\n" + 
-                "🎁 *Premios:* _\"mis puntos\"_\n" +
-                "📝 *Solicitar:* _\"solicitar [nombre]\"_",
+                "👋 ¡Hola %s! Bienvenido a *Masterserv360* 🏍️\n\n" +
+                "Soy tu asistente virtual. ¿Qué necesitas hoy?\n\n" +
+                "🔍 *Buscar Repuesto:* Escribe el nombre (ej: _\"precio bateria\"_)\n" + 
+                "🎁 *Mis Puntos:* Escribe _\"mis puntos\"_ para ver tu saldo y canjear\n" +
+                "📝 *Pedir algo:* Escribe _\"solicitar [producto]\"_ si no lo encuentras\n\n" +
+                "¡Escribe tu consulta y te respondo al instante!",
                 usuario.getNombre()
             );
         }
@@ -110,37 +112,36 @@ public class ChatbotService {
                 msg.append(String.format("\n🎁 %s *%s* (%d pts)", estado, r.getDescripcion(), r.getPuntosRequeridos()));
             }
 
-            msg.append("\n\n👉 Canjear: _\"canjear [premio]\"_");
+            msg.append("\n\n👉 Para canjear escribe: _\"canjear [nombre premio]\"_");
             return msg.toString();
         }
 
         // 3. CANJEAR
         if (texto.startsWith("canjear")) {
             String nombrePremio = limpiarPrefijo(texto);
-            if (nombrePremio.isEmpty()) return "⚠️ Escribe el nombre. Ej: _\"canjear gorra\"_";
+            if (nombrePremio.isEmpty()) return "⚠️ Por favor escribe el nombre del premio. Ej: _\"canjear 10% aceite\"_";
             return procesarCanje(usuario, nombrePremio);
         }
 
         // 4. SOLICITAR
         if (texto.startsWith("solicitar")) {
             String descripcion = limpiarPrefijo(texto); 
-            if (descripcion.length() < 3) return "⚠️ Dime qué necesitas. Ej: _\"solicitar espejo\"_";
+            if (descripcion.length() < 3) return "⚠️ Dime qué producto necesitas. Ej: _\"solicitar espejo retrovisor\"_";
             
             SolicitudProducto s = new SolicitudProducto(descripcion, usuario);
             solicitudProductoRepository.save(s);
-            return "✅ Solicitud anotada: '" + descripcion + "'.";
+            return "✅ ¡Listo! Hemos anotado tu pedido de: '" + descripcion + "'. Te avisaremos cuando ingrese.";
         }
 
-        // 5. STOCK (Lógica corregida)
+        // 5. STOCK Y PRECIOS
         if (texto.length() > 3 || texto.startsWith("stock") || texto.startsWith("precio")) {
             String termino = limpiarPrefijo(texto);
-            return termino.isEmpty() ? "Dime qué buscas." : buscarProducto(termino);
+            return termino.isEmpty() ? "Dime qué producto buscas." : buscarProducto(termino);
         }
 
-        return "🤔 No entendí. Escribe *ayuda*.";
+        return "🤔 No entendí tu consulta. Escribe *ayuda* para ver el menú.";
     }
 
-    // --- MENTOR: LÓGICA DE BÚSQUEDA RESTAURADA ---
     private String buscarProducto(String termino) {
         // A. Buscar por Código Exacto
         Optional<Producto> productoPorCodigo = productoRepository.findByCodigo(termino.toUpperCase());
@@ -154,8 +155,8 @@ public class ChatbotService {
 
         if (productos.isEmpty()) {
             return String.format(
-                "❌ No encontré *%s*.\n\n" +
-                "💡 ¿Quieres que lo busquemos?\n" +
+                "❌ No encontré *%s* en el catálogo.\n\n" +
+                "💡 ¿Quieres que lo pidamos para ti?\n" +
                 "Escribe: _\"solicitar %s\"_", 
                 termino, termino
             );
@@ -164,11 +165,11 @@ public class ChatbotService {
             return formatearRespuestaProducto(productos.get(0));
         
         } else {
-            StringBuilder respuesta = new StringBuilder("🔎 *Encontré estos productos:*\n");
+            StringBuilder respuesta = new StringBuilder("🔎 *Encontré estas opciones:*\n");
             for (Producto p : productos) {
                 respuesta.append(String.format("\n▪ %s ($%,.0f)", p.getNombre(), p.getPrecioVenta()));
             }
-            respuesta.append("\n\nSé más específico o escribe el código.");
+            respuesta.append("\n\nPara ver detalles, escribe el nombre exacto o el código.");
             return respuesta.toString();
         }
     }
@@ -188,22 +189,21 @@ public class ChatbotService {
             p.getNombre(), p.getCodigo(), disponibilidad, p.getPrecioVenta()
         );
     }
-    // ---------------------------------------------------
 
     private String procesarCanje(Usuario usuario, String nombrePremio) {
         Optional<Recompensa> recompensaOpt = recompensaRepository.findByDescripcionContainingIgnoreCase(nombrePremio)
                 .stream().findFirst();
 
-        if (recompensaOpt.isEmpty()) return "❌ No encontré el premio \"" + nombrePremio + "\".";
+        if (recompensaOpt.isEmpty()) return "❌ No encontré el premio \"" + nombrePremio + "\". Revisa el nombre en el menú de *puntos*.";
 
         Recompensa recompensa = recompensaOpt.get();
 
-        if (recompensa.getStock() <= 0) return "😔 El premio *" + recompensa.getDescripcion() + "* está agotado.";
+        if (recompensa.getStock() <= 0) return "😔 El premio *" + recompensa.getDescripcion() + "* está agotado por el momento.";
 
         var cuentaOpt = cuentaPuntosRepository.findByCliente(usuario);
         
         if (cuentaOpt.isEmpty() || cuentaOpt.get().getSaldoPuntos() < recompensa.getPuntosRequeridos()) {
-            return "🚫 *Puntos insuficientes*.";
+            return "🚫 *Puntos insuficientes* para canjear este premio.";
         }
 
         try {
@@ -226,12 +226,12 @@ public class ChatbotService {
             cuponRepository.save(cupon);
 
             return String.format(
-                "🎉 *¡CANJE EXITOSO!*\nPremio: *%s*\nCódigo: *%s*\nMuestralo en caja. 🛵",
+                "🎉 *¡CANJE EXITOSO!*\nPremio: *%s*\nCódigo: *%s*\n\nPresenta este código en la caja para usarlo. 🛵",
                 recompensa.getDescripcion(), cupon.getCodigo()
             );
 
         } catch (Exception e) {
-            return "🔴 Error procesando el canje.";
+            return "🔴 Ocurrió un error procesando el canje. Intenta más tarde.";
         }
     }
     

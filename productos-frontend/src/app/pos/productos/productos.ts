@@ -10,11 +10,11 @@ import { ProductoDTO } from '../../models/producto.model';
 import { ProductoFiltroDTO } from '../../models/producto-filtro.model';
 import { CategoriaDTO } from '../../models/categoria.model';
 import { mostrarToast } from '../../utils/toast';
-
-// IMPORTANTE: Importar la interfaz Page desde el modelo compartido
 import { Page } from '../../models/page.model'; 
-
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
+
+// Necesario para el modal de ajuste de stock
+declare var bootstrap: any;
 
 @Component({
   selector: 'app-productos',
@@ -23,9 +23,9 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
     CommonModule,
     HttpClientModule,
     ReactiveFormsModule,
-    FormsModule, // Necesario si usas ngModel en algún lado, aunque aquí es todo reactive
+    FormsModule, 
     HasPermissionDirective,
-    RouterLink
+    RouterLink // Importante para la navegación
   ],
   templateUrl: './productos.html',
   styleUrls: ['./productos.css']
@@ -35,15 +35,12 @@ export default class ProductosComponent implements OnInit {
   private productoService = inject(ProductoService);
   private categoriaService = inject(CategoriaService);
   private fb = inject(FormBuilder);
-  private authService = inject(AuthService);
 
   // --- Paginación y Datos ---
-  // Inicializamos como null, y se llenará con la respuesta del backend
   public productosPage: Page<ProductoDTO> | null = null;
   public categorias: CategoriaDTO[] = [];
   public filtroForm: FormGroup;
   
-  // Variables de control de paginación
   public currentPage = 0;
   public pageSize = 10;
   
@@ -52,36 +49,26 @@ export default class ProductosComponent implements OnInit {
   public isLoading = false;
   public isLoadingCategorias = false;
 
-  // --- Modal ---
-  public mostrarModal = false;
-  public modalTitle = 'Nuevo Producto';
-  public productoEditando: ProductoDTO | null = null;
-  public isSubmitting = false;
-  public modalErrorMessage: string | null = null;
-  public productoForm: FormGroup;
+  // --- AJUSTE DE STOCK (MODAL) ---
+  public ajusteForm: FormGroup;
+  public productoAjustar: ProductoDTO | null = null;
+  public isSavingAjuste = false;
+  private modalAjusteInstance: any;
 
   constructor() {
-
+    // Formulario de Filtros
     this.filtroForm = this.fb.group({
       nombre: [''],
       codigo: [''],
       categoriaId: [null],
       estado: [null],
-      // Filtro unificado de stock
       estadoStock: ['TODOS'] 
     });
 
-    this.productoForm = this.fb.group({
-      codigo: ['', [Validators.required, Validators.maxLength(50)]],
-      nombre: ['', [Validators.required, Validators.maxLength(255)]],
-      descripcion: [''],
-      precioVenta: [0, [Validators.required, Validators.min(0)]],
-      precioCosto: [0, [Validators.required, Validators.min(0)]],
-      stockMinimo: [0, [Validators.required, Validators.min(0)]],
-      loteReposicion: [0, [Validators.required, Validators.min(0)]],
-      categoriaId: [null, [Validators.required]],
-      estado: ['ACTIVO', [Validators.required]],
-      imagenUrl: ['', [Validators.maxLength(255)]]
+    // Formulario para Ajuste Manual de Stock
+    this.ajusteForm = this.fb.group({
+        cantidad: [0, [Validators.required]], 
+        motivo: ['', [Validators.required, Validators.minLength(5)]]
     });
   }
 
@@ -97,8 +84,8 @@ export default class ProductosComponent implements OnInit {
         this.categorias = categorias;
         this.isLoadingCategorias = false;
       },
-      error: (err: HttpErrorResponse) => {
-        console.error('Error al cargar categorías:', err);
+      error: (err) => {
+        console.error(err);
         this.errorMessage = 'Error al cargar filtros de categorías.';
         this.isLoadingCategorias = false;
       }
@@ -111,7 +98,6 @@ export default class ProductosComponent implements OnInit {
 
     const formValues = this.filtroForm.value;
     
-    // Mapeo al DTO del backend
     const filtro: ProductoFiltroDTO = {
         nombre: formValues.nombre,
         codigo: formValues.codigo,
@@ -122,24 +108,23 @@ export default class ProductosComponent implements OnInit {
         precioMax: null
     };
 
-    // Llamada al servicio con paginación
     this.productoService.filtrarProductos(filtro, this.currentPage, this.pageSize).subscribe({
       next: (page) => {
         this.productosPage = page;
         this.isLoading = false;
       },
-      error: (err: HttpErrorResponse) => {
-        console.error('Error al cargar productos:', err);
+      error: (err) => {
+        console.error(err);
         this.handleError(err, 'cargar');
         this.isLoading = false;
       }
     });
   }
 
-  // --- MÉTODOS DE FILTRO Y PAGINACIÓN ---
+  // --- FILTROS Y PAGINACIÓN ---
 
   aplicarFiltros(): void {
-    this.currentPage = 0; // Al filtrar, siempre volvemos a la primera página
+    this.currentPage = 0; 
     this.cargarProductos();
   }
 
@@ -175,12 +160,11 @@ export default class ProductosComponent implements OnInit {
     }
   }
   
-  // Getter para generar el array de números de página [0, 1, 2...]
   get paginas(): number[] {
       if (!this.productosPage) return [];
       const total = this.productosPage.totalPages;
       const current = this.productosPage.number;
-      const delta = 2; // Cuántas páginas mostrar a los lados de la actual
+      const delta = 2; 
       const range = [];
       for (let i = Math.max(0, current - delta); i <= Math.min(total - 1, current + delta); i++) {
           range.push(i);
@@ -188,103 +172,59 @@ export default class ProductosComponent implements OnInit {
       return range;
   }
 
-
   // ===========================
-  //   MÉTODOS DEL MODAL
+  //   MÉTODOS AJUSTE STOCK (MODAL)
   // ===========================
 
-  abrirModalNuevoProducto(): void {
-    this.modalTitle = 'Nuevo Producto';
-    this.productoEditando = null;
-    this.modalErrorMessage = null;
-
-    this.productoForm.reset({
-      codigo: '',
-      nombre: '',
-      descripcion: '',
-      precioVenta: 0,
-      precioCosto: 0,
-      stockMinimo: 0,
-      loteReposicion: 0,
-      categoriaId: null,
-      estado: 'ACTIVO',
-      imagenUrl: ''
-    });
-
-    this.mostrarModal = true;
-  }
-
-  abrirModalEditarProducto(producto: ProductoDTO): void {
-    this.modalTitle = 'Editar Producto';
-    this.productoEditando = producto;
-    this.modalErrorMessage = null;
-
-    this.productoForm.patchValue({
-      codigo: producto.codigo,
-      nombre: producto.nombre,
-      descripcion: producto.descripcion || '',
-      precioVenta: producto.precioVenta,
-      precioCosto: producto.precioCosto,
-      stockMinimo: producto.stockMinimo,
-      loteReposicion: producto.loteReposicion,
-      categoriaId: producto.categoriaId,
-      estado: producto.estado,
-      imagenUrl: producto.imagenUrl || ''
-    });
-
-    this.mostrarModal = true;
-  }
-
-  cerrarModal(): void {
-    this.mostrarModal = false;
-    this.productoEditando = null;
-    this.modalErrorMessage = null;
-    this.isSubmitting = false;
-  }
-
-  onSubmitModal(): void {
-    if (this.productoForm.invalid) {
-      this.markFormGroupTouched(this.productoForm);
-      return;
-    }
-
-    this.isSubmitting = true;
-    this.modalErrorMessage = null;
-
-    const productoData = this.productoForm.value;
-
-    if (this.productoEditando) {
-      this.productoService.actualizarProducto(this.productoEditando.id!, productoData)
-        .subscribe({
-          next: () => {
-            mostrarToast('Producto actualizado con éxito.', 'success');
-            this.cerrarModal();
-            this.cargarProductos();
-          },
-          error: (err: HttpErrorResponse) => {
-            console.error('Error al actualizar producto:', err);
-            this.handleError(err, 'actualizar (modal)');
-            this.modalErrorMessage = this.errorMessage;
-            this.isSubmitting = false;
-          }
-        });
-    } else {
-      this.productoService.crearProducto(productoData)
-        .subscribe({
-          next: () => {
-            mostrarToast('Producto creado con éxito.', 'success');
-            this.cerrarModal();
-            this.cargarProductos();
-          },
-          error: (err: HttpErrorResponse) => {
-            console.error('Error al crear producto:', err);
-            this.handleError(err, 'crear (modal)');
-            this.modalErrorMessage = this.errorMessage;
-            this.isSubmitting = false;
-          }
-        });
+  abrirModalAjuste(producto: ProductoDTO) {
+    this.productoAjustar = producto;
+    this.ajusteForm.reset({ cantidad: 0, motivo: '' });
+    
+    const modalEl = document.getElementById('modalAjusteStock');
+    if (modalEl) {
+      this.modalAjusteInstance = new bootstrap.Modal(modalEl);
+      this.modalAjusteInstance.show();
     }
   }
+
+  confirmarAjuste() {
+    if (this.ajusteForm.invalid || !this.productoAjustar?.id) {
+        this.ajusteForm.markAllAsTouched();
+        return;
+    }
+
+    const cantidad = this.ajusteForm.get('cantidad')?.value;
+    const motivo = this.ajusteForm.get('motivo')?.value;
+
+    if (cantidad === 0) {
+        mostrarToast('La cantidad debe ser distinta de 0.', 'warning');
+        return;
+    }
+
+    this.isSavingAjuste = true;
+
+    this.productoService.ajustarStock({
+        productoId: this.productoAjustar.id!, 
+        cantidad: cantidad,
+        motivo: motivo
+    }).subscribe({
+        next: () => {
+            mostrarToast('Stock ajustado correctamente.', 'success');
+            if (this.modalAjusteInstance) this.modalAjusteInstance.hide();
+            this.isSavingAjuste = false;
+            this.cargarProductos(); // Recargar tabla para ver cambios
+        },
+        error: (err) => {
+            console.error(err);
+            mostrarToast('Error al ajustar stock.', 'danger');
+            this.isSavingAjuste = false;
+        }
+    });
+  }
+
+  // ===========================
+  //   OTROS MÉTODOS
+  // ===========================
 
   eliminarProducto(id: number | undefined): void {
     if (!id) return;
@@ -315,18 +255,6 @@ export default class ProductosComponent implements OnInit {
     } else {
       this.errorMessage = err.error?.message || `Error al ${context} el producto.`;
     }
-    // Solo mostramos toast si no estamos en el modal (el modal tiene su propio mensaje)
-    if (this.errorMessage && !this.mostrarModal) mostrarToast(this.errorMessage, 'danger');
-  }
-
-  private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
-      const control = formGroup.get(key);
-      control?.markAsTouched();
-    });
-  }
-
-  get f() {
-    return this.productoForm.controls;
+    mostrarToast(this.errorMessage!, 'danger');
   }
 }

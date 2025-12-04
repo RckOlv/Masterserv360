@@ -1,6 +1,6 @@
 <div class="registro-container" *appHasPermission="'USUARIOS_MANAGE'">
   <div class="row justify-content-center">
-    <div class="col-md-8 col-lg-7"> 
+    <div class="col-md-10 col-lg-9"> 
       <div class="card masterserv-card shadow-sm">
         <div class="card-header masterserv-card-header">
           <h4 class="masterserv-title mb-0">{{ pageTitle }}</h4>
@@ -14,17 +14,22 @@
               <div class="col-md-6 mb-3">
                 <label for="nombre" class="form-label masterserv-label">Nombre <span class="text-danger">*</span></label>
                 <input type="text" id="nombre" class="form-control masterserv-input" formControlName="nombre"
+                       (input)="validarInputTexto($event)"
                        [ngClass]="{ 'is-invalid': f['nombre'].invalid && f['nombre'].touched }">
                 <div *ngIf="f['nombre'].invalid && f['nombre'].touched" class="invalid-feedback">
                   <div *ngIf="f['nombre'].errors?.['required']">Obligatorio.</div>
+                  <div *ngIf="f['nombre'].errors?.['minlength']">Mínimo 2 caracteres.</div>
+                  <div *ngIf="f['nombre'].errors?.['pattern']">Solo letras.</div>
                 </div>
               </div>
               <div class="col-md-6 mb-3">
                 <label for="apellido" class="form-label masterserv-label">Apellido <span class="text-danger">*</span></label>
                 <input type="text" id="apellido" class="form-control masterserv-input" formControlName="apellido"
+                       (input)="validarInputTexto($event)"
                        [ngClass]="{ 'is-invalid': f['apellido'].invalid && f['apellido'].touched }">
                 <div *ngIf="f['apellido'].invalid && f['apellido'].touched" class="invalid-feedback">
                   <div *ngIf="f['apellido'].errors?.['required']">Obligatorio.</div>
+                  <div *ngIf="f['apellido'].errors?.['pattern']">Solo letras.</div>
                 </div>
               </div>
             </div>
@@ -45,60 +50,88 @@
               <div class="col-md-6 mb-3">
                 <label for="documento" class="form-label masterserv-label">Documento <span class="text-danger">*</span></label>
                 <input type="text" id="documento" class="form-control masterserv-input" formControlName="documento"
+                       [maxlength]="maxDocumentoLength"
+                       (input)="validarInputNumerico($event)"
                        [ngClass]="{ 'is-invalid': f['documento'].invalid && f['documento'].touched }">
                 
                 <div *ngIf="f['documento'].touched && f['documento'].errors" class="invalid-feedback">
-                  <div *ngIf="f['documento'].errors?.['required']">El documento es obligatorio.</div>
-                  
-                  <div *ngIf="selectedTipoDocNombre === 'DNI'">
-                    <div *ngIf="f['documento'].errors?.['pattern']">El DNI solo acepta números.</div>
-                    <div *ngIf="f['documento'].errors?.['minlength'] || f['documento'].errors?.['maxlength']">
-                      El DNI debe tener entre 7 y 8 números.
-                    </div>
-                  </div>
-
-                  <div *ngIf="selectedTipoDocNombre === 'CUIT'">
-                    <div *ngIf="f['documento'].errors?.['pattern']">El CUIT solo acepta números.</div>
-                    <div *ngIf="f['documento'].errors?.['minlength'] || f['documento'].errors?.['maxlength']">
-                      El CUIT debe tener exactamente 11 números.
-                    </div>
-                  </div>
-                  
-                  </div>
+                  <div *ngIf="f['documento'].errors?.['required']">Obligatorio.</div>
+                  <div *ngIf="selectedTipoDocNombre === 'DNI' && f['documento'].errors?.['minlength']">Mínimo 7 dígitos.</div>
+                  <div *ngIf="selectedTipoDocNombre === 'CUIT' && f['documento'].errors?.['minlength']">Debe tener 11 dígitos.</div>
                 </div>
+              </div>
             </div>
 
             <hr class="my-3 border-metal">
 
-            <p class="masterserv-label-group">Acceso al Sistema y Contacto</p>
-            <div class="row">
-              <div class="col-md-7 mb-3">
-                <label for="email" class="form-label masterserv-label">Email <span class="text-danger">*</span></label>
-                <input type="email" id="email" class="form-control masterserv-input" formControlName="email"
-                       [ngClass]="{ 'is-invalid': f['email'].invalid && f['email'].touched }">
-                <div *ngIf="f['email'].invalid && f['email'].touched" class="invalid-feedback">
-                  <div *ngIf="f['email'].errors?.['required']">Obligatorio.</div>
-                  <div *ngIf="f['email'].errors?.['email']">Email no válido.</div>
-                </div>
-              </div>
-              <div class="col-md-5 mb-3">
-                <label for="telefono" class="form-label masterserv-label">Teléfono <span class="text-danger">*</span></label>
-                <input type="tel" id="telefono" class="form-control masterserv-input" formControlName="telefono"
-                       [ngClass]="{ 'is-invalid': f['telefono'].invalid && f['telefono'].touched }">
-                <div *ngIf="f['telefono'].invalid && f['telefono'].touched" class="invalid-feedback">
-                  <div *ngIf="f['telefono'].errors?.['required']">Obligatorio.</div>
-                </div>
+            <p class="masterserv-label-group">Acceso al Sistema</p>
+            
+            <div class="mb-3">
+              <label for="email" class="form-label masterserv-label">Email <span class="text-danger">*</span></label>
+              <input type="email" id="email" class="form-control masterserv-input" formControlName="email"
+                     [ngClass]="{ 'is-invalid': f['email'].invalid && f['email'].touched }">
+              <div *ngIf="f['email'].invalid && f['email'].touched" class="invalid-feedback">
+                <div *ngIf="f['email'].errors?.['required']">Obligatorio.</div>
+                <div *ngIf="f['email'].errors?.['pattern']">Formato inválido.</div>
               </div>
             </div>
+            
             <div class="mb-3">
-              <label for="password" class="form-label masterserv-label">Contraseña <span class="text-danger" *ngIf="!esEdicion">*</span></label>
-              <input type="password" id="password" class="form-control masterserv-input" formControlName="password"
-                     [placeholder]="esEdicion ? '(Dejar en blanco para no cambiar)' : ''"
-                     [ngClass]="{ 'is-invalid': f['password'].invalid && f['password'].touched }">
-              <div *ngIf="f['password'].invalid && f['password'].touched" class="invalid-feedback">
-                <div *ngIf="f['password'].errors?.['required']">Obligatoria.</div>
-                <div *ngIf="f['password'].errors?.['minlength']">Mínimo 8 caracteres.</div>
+              <label for="telefono" class="form-label masterserv-label">Teléfono <span class="text-danger">*</span></label>
+              
+              <div class="input-group">
+                  <select class="form-select masterserv-input" formControlName="codigoPais" style="max-width: 120px;">
+                      <option *ngFor="let pais of paises" [value]="pais.codigo">
+                          {{ pais.bandera }} {{ pais.codigo }}
+                      </option>
+                  </select>
+                  <input type="tel" id="telefono" class="form-control masterserv-input" formControlName="telefono"
+                         (input)="validarInputNumerico($event)"
+                         maxlength="15"
+                         placeholder="Sin 0 ni 15"
+                         [ngClass]="{ 'is-invalid': f['telefono'].invalid && f['telefono'].touched }">
               </div>
+              <div *ngIf="f['telefono'].invalid && f['telefono'].touched" class="invalid-feedback d-block">
+                <div *ngIf="f['telefono'].errors?.['required']">Obligatorio.</div>
+                <div *ngIf="f['telefono'].errors?.['minlength']">Mínimo 8 dígitos.</div>
+              </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="password" class="form-label masterserv-label">Contraseña <span class="text-danger" *ngIf="!esEdicion">*</span></label>
+                    <div class="input-group">
+                        <input [type]="hidePassword ? 'password' : 'text'" 
+                               id="password" class="form-control masterserv-input" formControlName="password"
+                               [placeholder]="esEdicion ? '(Dejar vacío para no cambiar)' : ''"
+                               [ngClass]="{ 'is-invalid': f['password'].invalid && f['password'].touched }">
+                        <button class="btn btn-outline-secondary masterserv-input" type="button" (click)="togglePasswordVisibility()">
+                            <i class="bi" [ngClass]="hidePassword ? 'bi-eye-slash' : 'bi-eye'"></i>
+                        </button>
+                        <div *ngIf="f['password'].invalid && f['password'].touched" class="invalid-feedback">
+                          <div *ngIf="f['password'].errors?.['required']">Obligatoria.</div>
+                          <div *ngIf="f['password'].errors?.['minlength']">Mínimo 8 caracteres.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3" *ngIf="!esEdicion || f['password'].value">
+                    <label for="confirmPassword" class="form-label masterserv-label">Repetir Contraseña <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input [type]="hideConfirmPassword ? 'password' : 'text'" 
+                               id="confirmPassword" class="form-control masterserv-input" formControlName="confirmPassword"
+                               [ngClass]="{ 'is-invalid': (f['confirmPassword'].invalid || userForm.errors?.['mismatch']) && f['confirmPassword'].touched }">
+                        <button class="btn btn-outline-secondary masterserv-input" type="button" (click)="toggleConfirmPasswordVisibility()">
+                            <i class="bi" [ngClass]="hideConfirmPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
+                        </button>
+                        <div class="invalid-feedback" *ngIf="f['confirmPassword'].errors?.['required']">
+                            Requerido.
+                        </div>
+                        <div class="invalid-feedback" *ngIf="userForm.errors?.['mismatch']">
+                            Las contraseñas no coinciden.
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <hr class="my-3 border-metal">

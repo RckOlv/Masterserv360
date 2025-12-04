@@ -129,6 +129,12 @@ export const routes: Routes = [
       },
 
       { 
+        path: 'auditoria', 
+        loadComponent: () => import('./pos/auditoria/auditoria'),
+        data: { roles: ['ROLE_ADMIN'] } 
+      },
+
+      { 
         path: 'mi-perfil', 
         loadComponent: () => import('./pos/perfil-usuario/perfil-usuario') 
       },
