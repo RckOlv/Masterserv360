@@ -1,14 +1,16 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, LOCALE_ID, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './interceptors/auth.interceptor';
+import localeEsAr from '@angular/common/locales/es-AR';
+import { registerLocaleData } from '@angular/common';
+import { provideCharts } from 'ng2-charts';
 
-// --- Mentor: INICIO DE LA CORRECCIÓN ---
-import { provideCharts } from 'ng2-charts'; // 1. Quitar 'withDefaultInteractions'
-// --- Mentor: FIN DE LA CORRECCIÓN ---
+// Registrar el locale para fechas en español
+registerLocaleData(localeEsAr);
 
-// URL base del backend (si querés usarla en el servicio también)
+// URL base global (opcional, si la usas en otros lados)
 export const API_URL = 'http://localhost:8080';
 
 export const appConfig: ApplicationConfig = {
@@ -16,9 +18,11 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
-
-    // --- Mentor: INICIO DE LA CORRECCIÓN ---
-    provideCharts() // 2. Llamar a la función sin argumentos
-    // --- Mentor: FIN DE LA CORRECCIÓN ---
+    
+    // Configuración de Gráficos (ng2-charts)
+    provideCharts(),
+    
+    // Configuración Regional (Español Argentina)
+    { provide: LOCALE_ID, useValue: 'es-AR' }
   ]
 };

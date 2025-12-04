@@ -10,7 +10,7 @@
             <label for="productoSelect" class="form-label visually-hidden">Producto</label>
             <ng-select
               id="productoSelect"
-              class="masterserv-input" 
+              class="masterserv-select-dark custom-dark-select" 
               formControlName="productoSeleccionado"
               [items]="(productos$ | async) ?? []"
               [typeahead]="productoSearch$"
@@ -18,17 +18,17 @@
               placeholder="Escriba nombre o código del producto..."
               [loading]="isLoadingProductos">
               <ng-template ng-option-tmp let-item="item">
-                <div>{{item.nombre}}</div>
+                <div class="text-white">{{item.nombre}}</div>
                 <small class="text-muted">Código: {{item.codigo}} | Precio: {{item.precioVenta | currency:'ARS':'symbol':'1.2-2'}} | Stock: {{item.stockActual}}</small>
               </ng-template>
               <ng-template ng-notfound-tmp let-searchTerm="searchTerm">
-                <div class="ng-option-disabled">No se encontraron productos para "{{searchTerm}}"</div>
+                <div class="ng-option-disabled text-white-50">No se encontraron productos para "{{searchTerm}}"</div>
               </ng-template>
             </ng-select>
           </div>
           <div class="col-sm-2">
             <label for="cantidadAgregar" class="form-label visually-hidden">Cantidad</label>
-            <input type="number" id="cantidadAgregar" class="form-control text-center masterserv-input"
+            <input type="number" id="cantidadAgregar" class="form-control text-center masterserv-input-dark"
                    formControlName="cantidadAgregar" min="1">
           </div>
           <div class="col-sm-2 d-grid">
@@ -74,20 +74,28 @@
                 <tbody>
                   <tr *ngFor="let item of carrito.items" class="masterserv-table-row">
                     <td class="masterserv-name ps-3">
-                      <div>{{ item.productoNombre }}</div>
-                      <small class="masterserv-code">{{ item.productoCodigo }}</small>
+                      <div class="text-white fw-bold">{{ item.productoNombre }}</div>
+                      <small class="masterserv-code text-white-50">{{ item.productoCodigo }}</small>
                     </td>
-                    <td class="masterserv-price text-end">{{ item.precioUnitarioVenta | currency:'ARS':'symbol':'1.2-2' }}</td>
+                    
+                    <td class="text-end text-warning font-monospace">
+                        {{ item.precioUnitarioVenta | currency:'ARS':'symbol':'1.2-2' }}
+                    </td>
+                    
                     <td class="text-center">
                       <input type="number"
-                             class="form-control form-control-sm text-center masterserv-input"
+                             class="form-control form-control-sm text-center masterserv-input-dark"
                              [value]="item.cantidad"
                              min="0"
                              (change)="actualizarCantidadCarrito(item, $event)"
                              [disabled]="isLoadingCarrito || isFinalizandoVenta"
                              style="width: 80px; display: inline-block;">
                     </td>
-                    <td class="masterserv-price text-end fw-bold">{{ item.subtotal | currency:'ARS':'symbol':'1.2-2' }}</td>
+                    
+                    <td class="text-end fw-bold text-white fs-6 font-monospace">
+                        {{ item.subtotal | currency:'ARS':'symbol':'1.2-2' }}
+                    </td>
+                    
                     <td class="text-center">
                       <span class="badge masterserv-badge" [ngClass]="item.cantidad > item.stockDisponible ? 'masterserv-badge-danger' : 'masterserv-badge-success'">
                         {{ item.stockDisponible }}
@@ -199,7 +207,7 @@
           <div class="p-3 rounded" style="background-color: #2c2c2c;" *ngIf="carrito && carrito.items && carrito.items.length > 0">
             
             <div class="d-flex justify-content-between mb-2">
-              <span class="text-muted">Subtotal:</span>
+              <span class="text-white-50">Subtotal:</span>
               <span class="fw-bold text-white">{{ carrito.totalCarrito | currency:'ARS':'symbol':'1.2-2' }}</span>
             </div>
 
@@ -214,7 +222,7 @@
               <span class="h5 mb-0 text-white opacity-75">TOTAL:</span>
               <span class="h2 mb-0 text-danger fw-bold">{{ totalFinal | currency:'ARS':'symbol':'1.2-2' }}</span>
             </div>
-            <p class="text-end text-muted small mb-0 mt-1">Items: {{ carrito.cantidadItems }}</p>
+            <p class="text-end text-white-50 small mb-0 mt-1">Items: {{ carrito.cantidadItems }}</p>
 
           </div>
 
@@ -258,11 +266,11 @@
             <div class="row g-2">
               <div class="col-6">
                 <label class="small text-white">Nombre *</label>
-                <input type="text" class="form-control masterserv-input-dark" formControlName="nombre">
+                <input type="text" class="form-control masterserv-input-dark" formControlName="nombre" (input)="validarInputTexto($event)">
               </div>
               <div class="col-6">
                 <label class="small text-white">Apellido *</label>
-                <input type="text" class="form-control masterserv-input-dark" formControlName="apellido">
+                <input type="text" class="form-control masterserv-input-dark" formControlName="apellido" (input)="validarInputTexto($event)">
               </div>
             </div>
   
@@ -278,7 +286,7 @@
                 </div>
                 <div class="col-8">
                     <label class="small text-white">Número *</label>
-                    <input type="text" class="form-control masterserv-input-dark" formControlName="documento">
+                    <input type="text" class="form-control masterserv-input-dark" formControlName="documento" (input)="validarInputNumerico($event)">
                 </div>
             </div>
   
@@ -288,8 +296,19 @@
             </div>
             
             <div class="mt-2">
-              <label class="small text-white">Teléfono *</label>
-              <input type="text" class="form-control masterserv-input-dark" formControlName="telefono">
+              <label class="small text-white">Teléfono / Celular *</label>
+              <div class="input-group input-group-sm">
+                  <select class="form-control masterserv-input-dark" formControlName="codigoPais" style="max-width: 90px;">
+                      <option *ngFor="let pais of paises" [value]="pais.codigo">
+                          {{ pais.bandera }} {{ pais.codigo }}
+                      </option>
+                  </select>
+                  <input type="text" class="form-control masterserv-input-dark" 
+                         formControlName="telefono" 
+                         placeholder="Sin 0 ni 15"
+                         maxlength="15"
+                         (input)="validarInputNumerico($event)">
+              </div>
             </div>
             
             <div class="mt-3 p-2 rounded" style="background-color: #2c2c2c; font-size: 0.8rem; color: #aaa;">
@@ -309,4 +328,4 @@
   
       </div>
     </div>
-  </div>
+</div>

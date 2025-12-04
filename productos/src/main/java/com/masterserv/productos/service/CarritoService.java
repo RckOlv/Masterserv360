@@ -11,7 +11,6 @@ import com.masterserv.productos.repository.ItemCarritoRepository;
 import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.masterserv.productos.exceptions.StockInsuficienteException;
@@ -65,6 +64,7 @@ public class CarritoService {
         if (itemExistenteOpt.isPresent()) {
             ItemCarrito itemExistente = itemExistenteOpt.get();
             int nuevaCantidad = itemExistente.getCantidad() + itemDTO.getCantidad();
+            
             if (producto.getStockActual() < nuevaCantidad) {
                 throw new StockInsuficienteException("Stock insuficiente");
             }
@@ -99,6 +99,7 @@ public class CarritoService {
     @Transactional
     public CarritoDTO actualizarCantidadItem(String vendedorEmail, Long itemCarritoId, int nuevaCantidad) {
         if (nuevaCantidad <= 0) return quitarItem(vendedorEmail, itemCarritoId);
+        
         Carrito carrito = findCarritoByVendedorEmailOrFail(vendedorEmail);
         ItemCarrito item = itemCarritoRepository.findById(itemCarritoId)
                 .orElseThrow(() -> new RuntimeException("Item no encontrado"));
@@ -126,7 +127,7 @@ public class CarritoService {
                 .orElseThrow(() -> new RuntimeException("Carrito no encontrado"));
     }
 
-    // --- MENTOR: MÉTODO CORREGIDO PARA RECORDS ---
+    // --- MÉTODO SIN SETTERS DE FECHA ---
     private CarritoDTO mapAndCalculateTotals(Carrito carrito) {
         BigDecimal total = BigDecimal.ZERO;
         int cantidadTotalItems = 0;
@@ -136,15 +137,12 @@ public class CarritoService {
 
         for (ItemCarrito item : items) {
             BigDecimal sub = item.getProducto().getPrecioVenta().multiply(BigDecimal.valueOf(item.getCantidad()));
-            
-            // Calculamos totales
             total = total.add(sub);
             cantidadTotalItems += item.getCantidad();
 
-            // Extraemos ID Categoría
             Long catId = (item.getProducto().getCategoria() != null) ? item.getProducto().getCategoria().getId() : null;
 
-            // Construimos DTO manualmente (Record no tiene setters)
+            // Construimos ItemDTO
             ItemCarritoDTO itemDto = new ItemCarritoDTO(
                 item.getId(),
                 item.getProducto().getId(),
@@ -154,12 +152,13 @@ public class CarritoService {
                 item.getCantidad(),
                 sub,
                 item.getProducto().getStockActual(),
-                catId // <--- AQUÍ VA EL ID QUE NECESITAMOS
+                catId 
             );
             itemDTOs.add(itemDto);
         }
 
-        // Construimos CarritoDTO manualmente
+        // MENTOR: Aquí usamos el constructor de CarritoDTO.
+        // NO llamamos a setFechaCreacion ni setFechaModificacion para evitar el error 500.
         return new CarritoDTO(
             carrito.getId(),
             carrito.getVendedor().getId(),

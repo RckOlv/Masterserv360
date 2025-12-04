@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormArray } from '@angular/forms'; 
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormArray, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms'; 
 import { CommonModule } from '@angular/common'; 
 import { RouterModule } from '@angular/router';
 import { RolService } from '../../service/rol.service'; 
@@ -41,11 +41,12 @@ export default class RolesComponent implements OnInit {
   private permisoService = inject(PermisoService); 
 
   constructor() {
+    // MENTOR: Validación de nombre (empieza con ROLE_) y validación de permisos
     this.rolForm = this.fb.group({
       id: [null], 
-      nombreRol: ['', [Validators.required, Validators.maxLength(50)]], 
+      nombreRol: ['', [Validators.required, Validators.minLength(5), Validators.pattern(/^ROLE_[A-Z_]+$/)]], 
       descripcion: ['', [Validators.maxLength(255)]],
-      permisos: this.fb.array([])
+      permisos: this.fb.array([], this.atLeastOnePermissionValidator) // Validador personalizado
     });
   } 
 
@@ -55,6 +56,13 @@ export default class RolesComponent implements OnInit {
 
   get permisosArray(): FormArray {
     return this.rolForm.get('permisos') as FormArray;
+  }
+
+  // MENTOR: Validador para asegurar que al menos un permiso esté seleccionado
+  atLeastOnePermissionValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+      const formArray = control as FormArray;
+      const hasPermission = formArray.controls.some(ctrl => ctrl.value === true);
+      return hasPermission ? null : { noPermissionSelected: true };
   }
 
   cargarRolesYPermisos() {
@@ -94,7 +102,7 @@ export default class RolesComponent implements OnInit {
     this.editMode = false;
     this.rolEditId = null;
     this.rolForm.reset({
-      nombreRol: '',
+      nombreRol: 'ROLE_', // Pre-llenamos el prefijo para ayudar al usuario
       descripcion: ''
     });
     this.setupPermisosCheckboxes(); 
@@ -120,8 +128,14 @@ export default class RolesComponent implements OnInit {
 
   guardarRol() {
     this.rolForm.markAllAsTouched();
+    
     if (this.rolForm.invalid) {
-      mostrarToast("El nombre del rol es obligatorio.", "warning");
+      // Si el error es de permisos vacíos, mostramos mensaje específico
+      if (this.permisosArray.errors?.['noPermissionSelected']) {
+          mostrarToast("Debe asignar al menos un permiso al rol.", "warning");
+      } else {
+          mostrarToast("Revise los campos obligatorios.", "warning");
+      }
       return;
     }
 
@@ -138,8 +152,6 @@ export default class RolesComponent implements OnInit {
         permisos: permisosSeleccionados 
     };
     
-    // --- Mentor: INICIO DE LA CORRECCIÓN DE UX ---
-    // 1. Determinar el mensaje de éxito antes de la llamada asíncrona
     const successMessage = this.editMode ? 'Rol actualizado con éxito.' : 'Rol creado con éxito.';
     
     const obs = this.editMode
@@ -151,7 +163,6 @@ export default class RolesComponent implements OnInit {
         this.resetForm();
         this.cargarRolesYPermisos();
         this.cerrarModal();
-        // 2. Usar el mensaje predefinido
         mostrarToast(successMessage, 'success'); 
         this.isLoading = false;
       },
@@ -162,7 +173,6 @@ export default class RolesComponent implements OnInit {
         this.isLoading = false;
       }
     });
-    // --- Mentor: FIN DE LA CORRECCIÓN DE UX ---
   }
 
   eliminarRol(id: number | undefined) {
@@ -200,6 +210,5 @@ export default class RolesComponent implements OnInit {
     }
   }
 
-  // Helper para validación
   get f() { return this.rolForm.controls; }
 }

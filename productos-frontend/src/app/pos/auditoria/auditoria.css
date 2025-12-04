@@ -1,0 +1,54 @@
+.masterserv-card {
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Scrollbar personalizado para la tabla */
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.table-responsive::-webkit-scrollbar-track {
+    background: #121212;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #dc3545;
+}
+
+.table-dark {
+    --bs-table-bg: #1e1e1e;
+    --bs-table-hover-bg: #252525;
+    border-color: #333;
+}
+
+thead th {
+    z-index: 10;
+}
+
+/* Scroll horizontal para toda la tabla AUDITORÍA */
+.table-responsive {
+    overflow-x: auto !important;
+    overflow-y: auto;
+    display: block;
+}
+
+/* Que las celdas no corten texto */
+.table-responsive table td,
+.table-responsive table th {
+    white-space: nowrap;
+}
+
+.code-block {
+    background: rgba(0,0,0,0.3);
+    padding: 4px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    cursor: help; /* Para indicar que hay tooltip */
+}

@@ -75,7 +75,21 @@ export default class PuntoVentaComponent implements OnInit {
   public clienteSearch$ = new Subject<string>();
   public isLoadingClientes = false;
 
+  // Validaciones dinámicas
+  public maxDocumentoLength: number = 8; // Default DNI
+
+  public paises = [
+    { nombre: 'Argentina', codigo: '+54', bandera: '🇦🇷' },
+    { nombre: 'Brasil', codigo: '+55', bandera: '🇧🇷' },
+    { nombre: 'Paraguay', codigo: '+595', bandera: '🇵🇾' },
+    { nombre: 'Uruguay', codigo: '+598', bandera: '🇺🇾' },
+    { nombre: 'Chile', codigo: '+56', bandera: '🇨🇱' },
+    { nombre: 'Bolivia', codigo: '+591', bandera: '🇧🇴' }
+  ];
+
   constructor() {
+    const textPattern = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+
     this.productoSearchForm = this.fb.group({
       productoSeleccionado: [null, Validators.required],
       cantidadAgregar: [1, [Validators.required, Validators.min(1)]]
@@ -87,12 +101,14 @@ export default class PuntoVentaComponent implements OnInit {
     });
 
     this.nuevoClienteForm = this.fb.group({
-      nombre: ['', Validators.required],
-      apellido: ['', Validators.required],
+      nombre: ['', [Validators.required, Validators.pattern(textPattern)]],
+      apellido: ['', [Validators.required, Validators.pattern(textPattern)]],
       tipoDocumentoBusqueda: ['DNI', Validators.required], 
-      documento: ['', Validators.required],
+      // Validación inicial para DNI
+      documento: ['', [Validators.required, Validators.pattern(/^[0-9]+$/), Validators.minLength(7), Validators.maxLength(8)]],
       email: ['', [Validators.required, Validators.email]],
-      telefono: ['', Validators.required] 
+      codigoPais: ['+54', Validators.required], 
+      telefono: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]] 
     });
   }
 
@@ -100,6 +116,9 @@ export default class PuntoVentaComponent implements OnInit {
     this.cargarCarrito();
     this.initProductoSearch();
     this.initClienteSearch();
+    
+    // MENTOR: Iniciar escucha de cambios en tipo de documento
+    this.setupDocumentValidation();
   }
 
   abrirModalCliente() {
@@ -110,6 +129,79 @@ export default class PuntoVentaComponent implements OnInit {
     }
   }
 
+  // --- VALIDACIONES DINÁMICAS ---
+  setupDocumentValidation() {
+      const tipoControl = this.nuevoClienteForm.get('tipoDocumentoBusqueda');
+      const docControl = this.nuevoClienteForm.get('documento');
+      
+      if (!tipoControl || !docControl) return;
+
+      tipoControl.valueChanges.subscribe(tipo => {
+          docControl.clearValidators();
+          docControl.setValue(''); // Limpiar al cambiar tipo para evitar inconsistencias
+          
+          // Validadores base
+          const validators = [Validators.required];
+
+          switch(tipo) {
+              case 'DNI':
+                  this.maxDocumentoLength = 8;
+                  validators.push(Validators.pattern(/^[0-9]+$/));
+                  validators.push(Validators.minLength(7));
+                  validators.push(Validators.maxLength(8));
+                  break;
+              case 'CUIT':
+              case 'CUIL':
+                  this.maxDocumentoLength = 11;
+                  validators.push(Validators.pattern(/^[0-9]+$/));
+                  validators.push(Validators.minLength(11));
+                  validators.push(Validators.maxLength(11));
+                  break;
+              case 'PAS': // Pasaporte
+                  this.maxDocumentoLength = 20;
+                  validators.push(Validators.pattern(/^[a-zA-Z0-9]+$/)); // Alfanumérico
+                  validators.push(Validators.minLength(6));
+                  validators.push(Validators.maxLength(20));
+                  break;
+              default:
+                  this.maxDocumentoLength = 20;
+          }
+          
+          docControl.setValidators(validators);
+          docControl.updateValueAndValidity();
+      });
+  }
+
+  // Bloqueo de teclas para documento (permite letras solo si es PAS)
+  validarInputDocumento(event: any): void {
+      const tipo = this.nuevoClienteForm.get('tipoDocumentoBusqueda')?.value;
+      const input = event.target;
+      
+      if (tipo === 'PAS') {
+          input.value = input.value.replace(/[^a-zA-Z0-9]/g, '');
+      } else {
+          input.value = input.value.replace(/[^0-9]/g, '');
+      }
+      
+      const controlName = input.getAttribute('formControlName');
+      if (controlName) this.nuevoClienteForm.get(controlName)?.setValue(input.value);
+  }
+
+  validarInputNumerico(event: any): void {
+      const input = event.target;
+      input.value = input.value.replace(/[^0-9]/g, '');
+      const controlName = input.getAttribute('formControlName');
+      if (controlName) this.nuevoClienteForm.get(controlName)?.setValue(input.value);
+  }
+
+  validarInputTexto(event: any): void {
+      const input = event.target;
+      input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+      const controlName = input.getAttribute('formControlName');
+      if (controlName) this.nuevoClienteForm.get(controlName)?.setValue(input.value);
+  }
+  // ------------------------------
+
   guardarNuevoCliente() {
     if (this.nuevoClienteForm.invalid) {
       this.nuevoClienteForm.markAllAsTouched();
@@ -117,7 +209,28 @@ export default class PuntoVentaComponent implements OnInit {
     }
 
     this.isGuardandoCliente = true;
-    const datosCliente = this.nuevoClienteForm.value;
+    
+    const formValues = this.nuevoClienteForm.value;
+    
+    let telefonoFinal = '';
+    let numeroLimpio = formValues.telefono ? formValues.telefono.trim() : '';
+    
+    if (numeroLimpio) {
+        if (formValues.codigoPais === '+54' && !numeroLimpio.startsWith('9')) {
+            telefonoFinal = `${formValues.codigoPais}9${numeroLimpio}`;
+        } else {
+            telefonoFinal = `${formValues.codigoPais}${numeroLimpio}`;
+        }
+    }
+
+    const datosCliente = {
+        nombre: formValues.nombre,
+        apellido: formValues.apellido,
+        tipoDocumentoBusqueda: formValues.tipoDocumentoBusqueda, 
+        documento: formValues.documento,
+        email: formValues.email,
+        telefono: telefonoFinal
+    };
 
     this.usuarioService.crearClienteRapido(datosCliente).subscribe({
       next: (nuevoUsuario: UsuarioDTO) => {
@@ -131,7 +244,13 @@ export default class PuntoVentaComponent implements OnInit {
         
         this.clienteForm.patchValue({ clienteId: nuevoUsuario.id });
         this.clientes$ = of([nuevoUsuario]);
-        this.nuevoClienteForm.reset({ tipoDocumentoBusqueda: 'DNI' });
+        
+        this.nuevoClienteForm.reset({ 
+            tipoDocumentoBusqueda: 'DNI',
+            codigoPais: '+54'
+        });
+        // Restaurar max length a DNI por defecto visualmente
+        this.maxDocumentoLength = 8;
       },
       error: (err) => {
         this.isGuardandoCliente = false;
@@ -141,6 +260,8 @@ export default class PuntoVentaComponent implements OnInit {
     });
   }
 
+  // ... (Resto de métodos del carrito sin cambios: cargarCarrito, calcularTotales, etc.)
+  
   cargarCarrito(): void {
     this.isLoadingCarrito = true;
     this.errorMessage = null;
@@ -158,7 +279,6 @@ export default class PuntoVentaComponent implements OnInit {
     });
   }
 
-  // --- MENTOR: CÁLCULO DE TOTALES CORREGIDO ---
   calcularTotales(): void {
     if (!this.carrito) return;
 
@@ -166,35 +286,27 @@ export default class PuntoVentaComponent implements OnInit {
     this.montoDescuento = 0;
 
     if (this.cuponAplicado) {
-      
       if (this.cuponAplicado.tipoDescuento === 'FIJO') {
          this.montoDescuento = this.cuponAplicado.valor;
       } 
       else if (this.cuponAplicado.tipoDescuento === 'PORCENTAJE') {
-         
          if (this.cuponAplicado.categoriaId) {
              let montoElegible = 0;
-             
              this.carrito.items.forEach(item => {
-                 // Conversión a Number para evitar error de tipos o string vs int
                  const prodCatId = Number(item.productoCategoriaId);
                  const cupCatId = Number(this.cuponAplicado!.categoriaId);
-                 
                  if (prodCatId === cupCatId) {
                      montoElegible += item.subtotal;
                  }
              });
-             
              this.montoDescuento = (montoElegible * this.cuponAplicado.valor) / 100;
          } else {
              this.montoDescuento = (subtotal * this.cuponAplicado.valor) / 100;
          }
       }
     }
-
     this.totalFinal = Math.max(0, subtotal - this.montoDescuento);
   }
-  // ---------------------------------------------
 
   aplicarCupon(): void {
     const clienteId = this.clienteForm.get('clienteId')?.value;

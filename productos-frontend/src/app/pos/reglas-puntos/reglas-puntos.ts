@@ -17,7 +17,6 @@ import { TipoDescuento } from '../../models/enums/tipo-descuento.enum';
 import { mostrarToast } from '../../utils/toast';
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
 
-// Declarar bootstrap para el modal
 declare var bootstrap: any;
 
 @Component({
@@ -44,44 +43,39 @@ export default class ReglasPuntosComponent implements OnInit {
   public historialReglas: ReglaPuntosDTO[] = [];
   public categorias: CategoriaDTO[] = []; 
   public isLoading = true; 
-  public isSubmitting = false; // Para el form de Regla
-  public isSubmittingRecompensa = false; // Para el form del Modal
+  public isSubmitting = false; 
+  public isSubmittingRecompensa = false; 
   public errorMessage: string | null = null;
   public modalErrorMessage: string | null = null;
-  public tipoDescuentoEnum = TipoDescuento; // Para usar en el HTML
+  public tipoDescuentoEnum = TipoDescuento; 
 
   // --- Formularios ---
-  public reglaForm: FormGroup; // Form de "Ganar Puntos"
-  public recompensaForm: FormGroup; // Form del Modal "Crear Recompensa"
+  public reglaForm: FormGroup; 
+  public recompensaForm: FormGroup; 
   
-  private recompensaModal: any; // Instancia del Modal de Bootstrap
+  private recompensaModal: any; 
   public esEdicionRecompensa = false;
   public recompensaEditandoId: number | null = null;
 
-  // --- MENTOR: Variable visual para los Radio Buttons ---
   public aplicarA: 'TODO' | 'CATEGORIA' = 'TODO'; 
 
   constructor() {
-    // Formulario para "Ganar Puntos"
+    // MENTOR: Validaciones estrictas para Regla
     this.reglaForm = this.fb.group({
-      descripcion: ['', [Validators.required, Validators.maxLength(100)]],
+      descripcion: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(100)]],
       montoGasto: [1000, [Validators.required, Validators.min(1)]],
       puntosGanados: [100, [Validators.required, Validators.min(1)]],
-      equivalenciaPuntos: [1, [Validators.min(0.01)]], // (Solo informativo)
-      caducidadPuntosMeses: [12, [Validators.required, Validators.min(1)]]
+      equivalenciaPuntos: [1, [Validators.min(0.01)]], 
+      caducidadPuntosMeses: [12, [Validators.required, Validators.min(1), Validators.max(60)]]
     });
 
-    // Formulario para "Canjear Puntos" (el nuevo modal)
+    // MENTOR: Validaciones estrictas para Recompensa
     this.recompensaForm = this.fb.group({
-      descripcion: ['', [Validators.required, Validators.maxLength(100)]],
+      descripcion: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(100)]],
       puntosRequeridos: [null, [Validators.required, Validators.min(1)]],
-      
-      // --- MENTOR: AGREGADO STOCK ---
       stock: [null, [Validators.required, Validators.min(0)]], 
-      // -----------------------------
-
       tipoDescuento: [TipoDescuento.FIJO, [Validators.required]],
-      valor: [null, [Validators.required, Validators.min(1)]],
+      valor: [null, [Validators.required, Validators.min(0.1)]],
       categoriaId: [{ value: null, disabled: true }] 
     });
   }
@@ -95,7 +89,6 @@ export default class ReglasPuntosComponent implements OnInit {
       this.recompensaModal = new bootstrap.Modal(modalElement);
     }
     
-    // Lógica para habilitar/deshabilitar según TipoDescuento
     this.recompensaForm.get('tipoDescuento')?.valueChanges
       .pipe(distinctUntilChanged())
       .subscribe(tipo => {
@@ -104,7 +97,6 @@ export default class ReglasPuntosComponent implements OnInit {
         if (tipo === TipoDescuento.PORCENTAJE) {
           categoriaControl?.enable();
         } else {
-          // Si es FIJO, siempre es TODO
           this.aplicarA = 'TODO';
           categoriaControl?.disable();
           categoriaControl?.setValue(null);
@@ -119,7 +111,6 @@ export default class ReglasPuntosComponent implements OnInit {
      });
   }
 
-  /** Carga la regla activa y el historial */
   cargarDatos(): void {
     this.isLoading = true;
     this.errorMessage = null;
@@ -143,7 +134,7 @@ export default class ReglasPuntosComponent implements OnInit {
           this.errorMessage = "Error al cargar la regla activa.";
           if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
         } else {
-          console.warn("No se encontró regla activa (esperado si es la primera vez).");
+          console.warn("No se encontró regla activa.");
           this.reglaActiva = null;
         }
         this.isLoading = false;
@@ -158,11 +149,10 @@ export default class ReglasPuntosComponent implements OnInit {
     });
   }
 
-  /** Guarda los cambios de la Regla de "Ganar Puntos" */
   onSubmitRegla(): void {
     this.reglaForm.markAllAsTouched();
     if (this.reglaForm.invalid) {
-      mostrarToast('Formulario inválido. Revise los campos.', 'warning');
+      mostrarToast('Revise los campos obligatorios de la regla.', 'warning');
       return;
     }
 
@@ -213,20 +203,22 @@ export default class ReglasPuntosComponent implements OnInit {
     });
   }
 
-  // --- INICIO DE LÓGICA CRUD RECOMPENSAS (MODAL) ---
+  // --- RECOMPENSAS ---
 
   abrirModalNuevaRecompensa(): void {
     this.esEdicionRecompensa = false;
     this.recompensaEditandoId = null;
     this.modalErrorMessage = null;
     
-    // MENTOR: Reset visual a "TODO"
     this.aplicarA = 'TODO';
 
     this.recompensaForm.reset({
-      stock: 10, // Valor por defecto sugerido
+      stock: 10, 
       tipoDescuento: TipoDescuento.FIJO,
-      categoriaId: null
+      categoriaId: null,
+      puntosRequeridos: null,
+      valor: null,
+      descripcion: ''
     });
     this.recompensaForm.get('categoriaId')?.disable(); 
     this.recompensaModal.show();
@@ -237,7 +229,6 @@ export default class ReglasPuntosComponent implements OnInit {
     this.recompensaEditandoId = recompensa.id!;
     this.modalErrorMessage = null;
 
-    // --- MENTOR: DEDUCIR VISUALMENTE ---
     if (recompensa.categoriaId) {
         this.aplicarA = 'CATEGORIA';
     } else {
@@ -247,13 +238,12 @@ export default class ReglasPuntosComponent implements OnInit {
     this.recompensaForm.patchValue({
       descripcion: recompensa.descripcion,
       puntosRequeridos: recompensa.puntosRequeridos,
-      stock: recompensa.stock, // MENTOR: Cargar Stock
+      stock: recompensa.stock, 
       tipoDescuento: recompensa.tipoDescuento,
       valor: recompensa.valor,
       categoriaId: recompensa.categoriaId || null
     });
     
-    // Estado enable/disable
     if (recompensa.tipoDescuento === TipoDescuento.PORCENTAJE) {
       this.recompensaForm.get('categoriaId')?.enable();
     } else {
@@ -269,10 +259,17 @@ export default class ReglasPuntosComponent implements OnInit {
   }
 
   guardarRecompensa(): void {
+    this.recompensaForm.markAllAsTouched();
+
     if (this.recompensaForm.invalid) {
-      this.recompensaForm.markAllAsTouched();
-      mostrarToast("Formulario de recompensa inválido.", "warning");
+      mostrarToast("Formulario inválido.", "warning");
       return;
+    }
+    
+    // MENTOR: Validación extra para categoría obligatoria
+    if (this.aplicarA === 'CATEGORIA' && !this.recompensaForm.get('categoriaId')?.value) {
+        mostrarToast("Debe seleccionar una categoría.", "warning");
+        return;
     }
     
     if (!this.reglaActiva) {
@@ -286,7 +283,6 @@ export default class ReglasPuntosComponent implements OnInit {
     const recompensaData = this.recompensaForm.getRawValue() as RecompensaDTO;
     recompensaData.reglaPuntosId = this.reglaActiva.id;
     
-    // MENTOR: Validar consistencia. Si dice 'TODO' o es FIJO, limpiamos categoría.
     if (this.aplicarA === 'TODO' || recompensaData.tipoDescuento === TipoDescuento.FIJO) {
         recompensaData.categoriaId = null; 
     }
@@ -305,10 +301,7 @@ export default class ReglasPuntosComponent implements OnInit {
       error: (err: HttpErrorResponse) => {
         this.isSubmittingRecompensa = false;
         this.modalErrorMessage = err.error?.message || "Error al guardar la recompensa.";
-        
-        if (this.modalErrorMessage) {
-            mostrarToast(this.modalErrorMessage, 'danger');
-        }
+        if (this.modalErrorMessage) mostrarToast(this.modalErrorMessage, 'danger');
       }
     });
   }

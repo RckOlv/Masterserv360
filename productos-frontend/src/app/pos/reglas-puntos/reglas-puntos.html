@@ -22,13 +22,12 @@
               <div class="col-12">
                 <label for="descripcion" class="form-label masterserv-label">Descripción de la Regla <span class="text-danger">*</span></label>
                 <input type="text" id="descripcion" class="form-control masterserv-input"
-                       placeholder="Ej: Promoción Día del Padre 2025"
+                       placeholder="Ej: Promoción Verano 2025"
                        formControlName="descripcion"
                        [ngClass]="{ 'is-invalid': fRegla['descripcion'].invalid && fRegla['descripcion'].touched }">
-                <div *ngIf="fRegla['descripcion'].invalid && fRegla['descripcion'].touched" class="invalid-feedback d-block">
-                  La descripción es obligatoria.
-                </div>
+                <div class="invalid-feedback">Requerido (mín 5 letras).</div>
               </div>
+              
               <div class="col-sm-6">
                 <label for="montoGasto" class="form-label masterserv-label">Por cada (ARS) <span class="text-danger">*</span></label>
                 <div class="input-group">
@@ -37,9 +36,9 @@
                          formControlName="montoGasto" min="1" step="50"
                          [ngClass]="{ 'is-invalid': fRegla['montoGasto'].invalid && fRegla['montoGasto'].touched }">
                 </div>
-                 <div *ngIf="fRegla['montoGasto'].invalid && fRegla['montoGasto'].touched" class="invalid-feedback d-block">
-                   El monto debe ser positivo.
-                 </div>
+                <div class="invalid-feedback d-block" *ngIf="fRegla['montoGasto'].invalid && fRegla['montoGasto'].touched">
+                    Debe ser mayor a 0.
+                </div>
               </div>
 
               <div class="col-sm-6">
@@ -50,21 +49,21 @@
                           [ngClass]="{ 'is-invalid': fRegla['puntosGanados'].invalid && fRegla['puntosGanados'].touched }">
                    <span class="input-group-text masterserv-input"><i class="bi bi-star-fill"></i></span>
                  </div>
-                 <div *ngIf="fRegla['puntosGanados'].invalid && fRegla['puntosGanados'].touched" class="invalid-feedback d-block">
-                   Los puntos deben ser al menos 1.
+                 <div class="invalid-feedback d-block" *ngIf="fRegla['puntosGanados'].invalid && fRegla['puntosGanados'].touched">
+                    Debe ser mayor a 0.
                  </div>
               </div>
               
               <div class="col-sm-6">
                   <label for="caducidadPuntosMeses" class="form-label masterserv-label">Caducidad (Meses) <span class="text-danger">*</span></label>
                   <div class="input-group">
-                     <input type="number" id="caducidadPuntosMeses" class="form-control masterserv-input"
-                            formControlName="caducidadPuntosMeses" min="1"
-                            [ngClass]="{ 'is-invalid': fRegla['caducidadPuntosMeses'].invalid && fRegla['caducidadPuntosMeses'].touched }">
-                     <span class="input-group-text masterserv-input"><i class="bi bi-calendar-x"></i></span>
+                      <input type="number" id="caducidadPuntosMeses" class="form-control masterserv-input"
+                             formControlName="caducidadPuntosMeses" min="1"
+                             [ngClass]="{ 'is-invalid': fRegla['caducidadPuntosMeses'].invalid && fRegla['caducidadPuntosMeses'].touched }">
+                      <span class="input-group-text masterserv-input"><i class="bi bi-calendar-x"></i></span>
                   </div>
-                  <div *ngIf="fRegla['caducidadPuntosMeses'].invalid && fRegla['caducidadPuntosMeses'].touched" class="invalid-feedback d-block">
-                      La caducidad debe ser al menos 1 mes.
+                  <div class="invalid-feedback d-block" *ngIf="fRegla['caducidadPuntosMeses'].invalid && fRegla['caducidadPuntosMeses'].touched">
+                      Mínimo 1 mes.
                   </div>
               </div>
 
@@ -138,7 +137,7 @@
           
             <ul class="list-group list-group-flush" *ngIf="regla.recompensas && regla.recompensas.length > 0">
               <li *ngFor="let rec of regla.recompensas" class="list-group-item">
-            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-center">
                   <div>
                     <strong class="d-block masterserv-name">{{ rec.descripcion }}</strong>
                     
@@ -196,9 +195,6 @@
                    {{ regla.fechaInicioVigencia | date:'dd/MM/yy' }}
                  </small>
                </div>
-               <small class="text-info d-block" *ngIf="regla.equivalenciaPuntos">
-                 (1 Pt = {{ regla.equivalenciaPuntos | currency:'ARS':'symbol':'1.2-2' }})
-               </small>
              </li>
            </ul>
         </div>
@@ -210,12 +206,12 @@
 
 <div class="modal fade" id="recompensaModal" tabindex="-1" aria-labelledby="recompensaModalLabel" aria-hidden="true">
   <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
+    <div class="modal-content masterserv-modal-content">
+      <div class="modal-header masterserv-modal-header">
         <h5 class="modal-title" id="recompensaModalLabel">{{ esEdicionRecompensa ? 'Editar' : 'Nueva' }} Recompensa</h5>
         <button type="button" class="btn-close btn-close-white" (click)="cerrarModalRecompensa()" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body masterserv-modal-body">
         
         <div *ngIf="modalErrorMessage" class="alert masterserv-alert-danger">
           {{ modalErrorMessage }}
@@ -228,9 +224,7 @@
             <input type="text" id="recDescripcion" class="form-control masterserv-input" 
                    formControlName="descripcion" placeholder="Ej: 20% OFF en Neumáticos"
                    [ngClass]="{ 'is-invalid': fRec['descripcion'].invalid && fRec['descripcion'].touched }">
-            <div *ngIf="fRec['descripcion'].invalid && fRec['descripcion'].touched" class="invalid-feedback">
-              Obligatorio.
-            </div>
+            <div class="invalid-feedback">Requerido (mín 5 letras).</div>
           </div>
 
           <div class="row">
@@ -239,21 +233,15 @@
               <input type="number" id="recPuntos" class="form-control masterserv-input" 
                      formControlName="puntosRequeridos"
                      [ngClass]="{ 'is-invalid': fRec['puntosRequeridos'].invalid && fRec['puntosRequeridos'].touched }">
-              <div *ngIf="fRec['puntosRequeridos'].invalid && fRec['puntosRequeridos'].touched" class="invalid-feedback">
-                <div *ngIf="fRec['puntosRequeridos'].errors?.['required']">Obligatorio.</div>
-                <div *ngIf="fRec['puntosRequeridos'].errors?.['min']">Debe ser > 0.</div>
-              </div>
+              <div class="invalid-feedback">Requerido (mín 1).</div>
             </div>
             
             <div class="col-md-6 mb-3">
               <label for="recStock" class="form-label masterserv-label">Stock <span class="text-danger">*</span></label>
               <input type="number" id="recStock" class="form-control masterserv-input" 
-                     formControlName="stock"
-                     placeholder="Ej: 50"
+                     formControlName="stock" placeholder="Ej: 50"
                      [ngClass]="{ 'is-invalid': fRec['stock'].invalid && fRec['stock'].touched }">
-              <div *ngIf="fRec['stock'].invalid && fRec['stock'].touched" class="invalid-feedback">
-                Requerido (>= 0).
-              </div>
+              <div class="invalid-feedback">Requerido (mín 0).</div>
             </div>
           </div>
           
@@ -276,9 +264,8 @@
                        formControlName="valor"
                        [ngClass]="{ 'is-invalid': fRec['valor'].invalid && fRec['valor'].touched }">
               </div>
-              <div *ngIf="fRec['valor'].invalid && fRec['valor'].touched" class="invalid-feedback d-block">
-                 <div *ngIf="fRec['valor'].errors?.['required']">Obligatorio.</div>
-                 <div *ngIf="fRec['valor'].errors?.['min']">Debe ser > 0.</div>
+              <div class="invalid-feedback d-block" *ngIf="fRec['valor'].invalid && fRec['valor'].touched">
+                  Requerido (mín 0.1).
               </div>
             </div>
           </div>
@@ -311,13 +298,14 @@
 
               <div *ngIf="aplicarA === 'CATEGORIA'">
                 <select id="recCategoria" class="form-select masterserv-input" 
-                        formControlName="categoriaId">
+                        formControlName="categoriaId"
+                        [ngClass]="{ 'is-invalid': aplicarA === 'CATEGORIA' && !fRec['categoriaId'].value && fRec['categoriaId'].touched }">
                   <option [ngValue]="null">Seleccione...</option>
                   <option *ngFor="let cat of categorias" [ngValue]="cat.id">{{ cat.nombre }}</option>
                 </select>
                 
-                <div *ngIf="aplicarA === 'CATEGORIA' && !fRec['categoriaId'].value" class="text-warning small mt-1">
-                  <i class="bi bi-exclamation-circle"></i> Seleccione una categoría.
+                <div *ngIf="aplicarA === 'CATEGORIA' && !fRec['categoriaId'].value" class="text-danger small mt-1">
+                  Debe seleccionar una categoría.
                 </div>
               </div>
 
@@ -326,7 +314,7 @@
 
         </form>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer border-secondary">
         <button type="button" class="btn masterserv-btn-secondary" (click)="cerrarModalRecompensa()" [disabled]="isSubmittingRecompensa">Cancelar</button>
         <button type="submit" form="ngRecompensaForm" class="btn masterserv-btn-primary" 
                 [disabled]="recompensaForm.invalid || isSubmittingRecompensa || (aplicarA === 'CATEGORIA' && !fRec['categoriaId'].value)">

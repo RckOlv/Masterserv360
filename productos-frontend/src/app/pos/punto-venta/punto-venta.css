@@ -61,7 +61,7 @@
   animation: headerShine 3s ease-in-out infinite;
 }
 
-/* --- Mentor: INICIO DE LA CORRECCIÓN DEL SCROLL --- */
+/* --- CORRECCIÓN DEL SCROLL --- */
 .masterserv-card-body {
   background: #1a1a1a;
   color: #E0E0E0;
@@ -77,7 +77,7 @@
 .table-responsive {
   flex-grow: 1;
   overflow-y: auto; 
-  overflow-x: auto; /* <-- CORREGIDO de 'hidden' a 'auto' */
+  overflow-x: auto; 
   min-height: 200px;
 }
 
@@ -85,8 +85,22 @@
   border: none;
   border-radius: 0;
 }
-/* --- Mentor: FIN DE LA CORRECCIÓN DEL SCROLL --- */
 
+/* Estilos de Scrollbar General */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #1a1a1a; 
+}
+::-webkit-scrollbar-thumb {
+    background: #555; 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #E41E26; 
+}
 
 .masterserv-title {
   color: #E41E26;
@@ -181,7 +195,7 @@
   letter-spacing: 0.5px;
 }
 
-/* Inputs y Selects */
+/* Inputs y Selects Generales */
 .masterserv-input {
   background: #121212;
   border: 1px solid #9E9E9E;
@@ -194,25 +208,108 @@
   box-shadow: 0 0 0 0.2rem rgba(228, 30, 38, 0.25);
 }
 
-/* Estilos para ng-select */
-:host ::ng-deep .masterserv-input.ng-select .ng-select-container {
-  background: #121212;
-  border: 1px solid #9E9E9E;
-  color: #E0E0E0;
+/* =========================================================
+   CORRECCIÓN DEFINITIVA NG-SELECT (DARK MODE FIXED)
+   ========================================================= */
+
+/* 1. El contenedor principal (la caja del input) */
+:host ::ng-deep ng-select .ng-select-container {
+    background-color: #2c2c2c !important; /* Fondo Gris Oscuro */
+    color: #ffffff !important;             /* Texto Blanco */
+    border: 1px solid #9E9E9E !important;  /* Borde gris para empezar */
+    min-height: 45px !important;
+    border-radius: 6px !important;
 }
-:host ::ng-deep .masterserv-input.ng-select .ng-input>input {
-  color: #E0E0E0;
+
+/* Estado Foco (borde rojo) */
+:host ::ng-deep ng-select.ng-select-focused .ng-select-container {
+    border-color: #E41E26 !important;
+    box-shadow: 0 0 0 0.2rem rgba(228, 30, 38, 0.25) !important;
 }
-:host ::ng-deep .masterserv-input.ng-select .ng-value-container .ng-value {
-  color: #E0E0E0;
+
+/* 2. El texto del elemento seleccionado */
+:host ::ng-deep ng-select .ng-select-container .ng-value-container .ng-value {
+    color: #ffffff !important;
 }
-:host ::ng-deep .masterserv-input.ng-select .ng-placeholder {
-  color: #9E9E9E;
+
+/* 3. El input donde escribes para buscar */
+:host ::ng-deep ng-select .ng-select-container .ng-value-container .ng-input > input {
+    color: #ffffff !important;
 }
-:host ::ng-deep .masterserv-input.ng-select.ng-select-focused .ng-select-container {
-  border-color: #E41E26;
-  box-shadow: 0 0 0 0.2rem rgba(228, 30, 38, 0.25);
+
+/* 4. El texto "Placeholder" */
+:host ::ng-deep ng-select .ng-select-container .ng-placeholder {
+    color: #bbbbbb !important;
 }
+
+/* 5. La flechita y la X */
+:host ::ng-deep ng-select .ng-arrow-wrapper .ng-arrow {
+    border-color: #999 transparent transparent !important;
+}
+:host ::ng-deep ng-select .ng-clear-wrapper {
+    color: #999 !important;
+}
+
+/* =========================================================
+   MENÚ DESPLEGABLE (LA LISTA DE OPCIONES)
+   ========================================================= */
+
+/* Fondo del menú desplegable */
+:host ::ng-deep .ng-dropdown-panel {
+    background-color: #2c2c2c !important;
+    border: 1px solid #E41E26 !important; /* Borde rojo para resaltar */
+    z-index: 1050 !important;
+}
+
+/* Asegurar fondo en los items container */
+:host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items {
+    background-color: #2c2c2c !important;
+}
+
+/* ESTILO DE CADA OPCIÓN INDIVIDUAL */
+:host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option {
+    background-color: #2c2c2c !important;
+    color: #cccccc !important;
+    border-bottom: 1px solid #444 !important;
+    padding: 10px !important; /* Más espacio */
+    
+    /* CLAVE: Para ver nombres largos completos */
+    white-space: normal !important; 
+    height: auto !important;
+    min-height: 40px;
+}
+
+/* HOVER y SELECCIONADO (Rojo) */
+:host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option:hover,
+:host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option.ng-option-marked,
+:host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option.ng-option-selected {
+    background-color: #E41E26 !important;
+    color: #ffffff !important;
+}
+
+/* TEXTOS INTERNOS (Forzar color blanco/heredado) */
+/* Esto arregla que los <small> o .text-muted no se vean en el fondo rojo/negro */
+:host ::ng-deep .ng-dropdown-panel .ng-option span,
+:host ::ng-deep .ng-dropdown-panel .ng-option div,
+:host ::ng-deep .ng-dropdown-panel .ng-option small {
+    color: inherit !important; /* Hereda el color de la opción (blanco o gris claro) */
+}
+
+/* Scrollbar del dropdown para que se vea en modo oscuro */
+:host ::ng-deep .ng-dropdown-panel .scroll-host::-webkit-scrollbar {
+    width: 8px;
+}
+:host ::ng-deep .ng-dropdown-panel .scroll-host::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+:host ::ng-deep .ng-dropdown-panel .scroll-host::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+:host ::ng-deep .ng-dropdown-panel .scroll-host::-webkit-scrollbar-thumb:hover {
+    background: #E41E26;
+}
+
 
 /* Tabla */
 .masterserv-table {
@@ -270,6 +367,14 @@
   font-family: 'Courier New', monospace;
 }
 
+/* Corrección Texto Largo en Tabla */
+:host ::ng-deep .masterserv-table th.masterserv-header-producto,
+:host ::ng-deep .masterserv-table td.masterserv-name {
+  white-space: normal;
+  word-break: break-word;
+  min-width: 250px;
+}
+
 /* Badges */
 .masterserv-badge {
   font-size: 0.75rem;
@@ -310,92 +415,4 @@
   0% { left: -100%; }
   50% { left: 100%; }
   100% { left: 100%; }
-}
-
-/* --- Mentor: INICIO DE LA MODIFICACIÓN (Arreglo de Texto Largo) --- */
-
-/* Anulamos el 'nowrap' solo para la columna de nombre de producto
-  para permitir que el texto se divida en varias líneas.
-*/
-:host ::ng-deep .masterserv-table th.masterserv-header-producto,
-:host ::ng-deep .masterserv-table td.masterserv-name {
-  white-space: normal; /* Permite que el texto salte a la siguiente línea */
-  word-break: break-word; /* Rompe palabras largas si es necesario */
-  min-width: 250px; /* Le da un ancho mínimo razonable */
-}
-/* --- Mentor: FIN DE LA MODIFICACIÓN --- */
-
-/* =========================================================
-   CORRECCIÓN DEFINITIVA NG-SELECT (SOLUCIÓN NUCLEAR)
-   ========================================================= */
-
-/* 1. El contenedor principal (la caja) */
-:host ::ng-deep ng-select .ng-select-container {
-    background-color: #2c2c2c !important; /* Fondo Gris Oscuro */
-    color: #ffffff !important;             /* Texto Blanco */
-    border: 1px solid #dc3545 !important;  /* Borde Rojo */
-    min-height: 45px !important;           /* Un poco más alto para que se vea bien */
-    border-radius: 6px !important;
-}
-
-/* 2. El texto del elemento seleccionado (Cuando ya elegiste a Ricky) */
-:host ::ng-deep ng-select .ng-select-container .ng-value-container .ng-value {
-    color: #ffffff !important;
-}
-
-/* 3. El texto del elemento seleccionado (Label específico) */
-:host ::ng-deep ng-select .ng-select-container .ng-value-container .ng-value .ng-value-label {
-    color: #ffffff !important;
-    font-weight: bold !important;
-}
-
-/* 4. El input donde escribes para buscar */
-:host ::ng-deep ng-select .ng-select-container .ng-value-container .ng-input > input {
-    color: #ffffff !important;
-}
-
-/* 5. El texto "Placeholder" (ej: Buscar cliente...) */
-:host ::ng-deep ng-select .ng-select-container .ng-placeholder {
-    color: #bbbbbb !important; /* Gris claro */
-}
-
-/* 6. La flechita de la derecha */
-:host ::ng-deep ng-select .ng-arrow-wrapper .ng-arrow {
-    border-color: #dc3545 transparent transparent !important; /* Flecha Roja */
-}
-
-/* 7. La "X" para borrar la selección */
-:host ::ng-deep ng-select .ng-clear-wrapper {
-    color: #dc3545 !important; /* X Roja */
-}
-
-/* =========================================================
-   MENÚ DESPLEGABLE (LA LISTA DE OPCIONES)
-   ========================================================= */
-
-/* Fondo del menú desplegable */
-:host ::ng-deep .ng-dropdown-panel {
-    background-color: #2c2c2c !important;
-    border: 1px solid #dc3545 !important;
-}
-
-/* Cada opción de la lista */
-:host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option {
-    background-color: #2c2c2c !important;
-    color: #cccccc !important; /* Texto gris claro */
-    border-bottom: 1px solid #444 !important;
-}
-
-/* Opción al pasar el mouse o seleccionada */
-:host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option:hover,
-:host ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items .ng-option.ng-option-marked {
-    background-color: #dc3545 !important; /* Fondo Rojo */
-    color: #ffffff !important;             /* Texto Blanco */
-}
-
-/* Texto resaltado dentro de las opciones */
-:host ::ng-deep .ng-dropdown-panel .ng-option span,
-:host ::ng-deep .ng-dropdown-panel .ng-option div,
-:host ::ng-deep .ng-dropdown-panel .ng-option small {
-    color: inherit !important; /* Que hereden el color blanco al hacer hover */
 }

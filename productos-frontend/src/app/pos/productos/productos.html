@@ -8,7 +8,7 @@
       
       <a *appHasPermission="'PRODUCTOS_MANAGE'" 
          routerLink="/pos/productos/nuevo" 
-         class="btn masterserv-btn-success btn-sm">
+         class="btn masterserv-btn-success btn-sm text-white text-decoration-none">
         <i class="bi bi-plus-lg"></i> Nuevo Producto
       </a>
     </div>
@@ -131,12 +131,17 @@
                 <td *appHasPermission="'PRODUCTOS_MANAGE'" class="text-center text-nowrap pe-3">
                   <div class="btn-group btn-group-sm" role="group">
                     
+                    <button class="btn masterserv-btn-outline-warning btn-action" 
+                            (click)="abrirModalAjuste(prod)" 
+                            title="Ajustar Stock Manual">
+                        <i class="bi bi-sliders"></i>
+                    </button>
+                    
                     <a [routerLink]="['/pos/productos/editar', prod.id]" 
                        class="btn masterserv-btn-outline-primary btn-action" 
                        title="Editar">
                       <i class="bi bi-pencil-square"></i>
                     </a>
-                    
                     <button *ngIf="prod.estado === 'ACTIVO'" 
                             class="btn masterserv-btn-outline-danger btn-action" 
                             (click)="eliminarProducto(prod.id)" 
@@ -183,4 +188,70 @@
       </div>
     </div>
   </div>
+</div>
+
+<div class="modal fade" id="modalAjusteStock" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="background-color: #1e1e1e; border: 1px solid #ffc107; color: white;">
+        
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-warning">
+              <i class="bi bi-boxes me-2"></i>Ajuste Manual de Stock
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        
+        <div class="modal-body">
+          <div *ngIf="productoAjustar" class="mb-3 p-2 border border-secondary rounded bg-dark">
+              <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                      <small class="text-muted d-block">Producto</small>
+                      <strong>{{ productoAjustar.nombre }}</strong>
+                  </div>
+                  <div class="text-end">
+                      <small class="text-muted d-block">Stock Actual</small>
+                      <span class="badge bg-secondary fs-6">{{ productoAjustar.stockActual }}</span>
+                  </div>
+              </div>
+          </div>
+  
+          <form [formGroup]="ajusteForm">
+              
+              <div class="mb-3">
+                  <label class="form-label small text-white-50">Cantidad a Ajustar *</label>
+                  <div class="input-group">
+                      <span class="input-group-text bg-dark border-secondary text-white">
+                          <i class="bi bi-plus-slash-minus"></i>
+                      </span>
+                      <input type="number" class="form-control masterserv-input" formControlName="cantidad" placeholder="Ej: -5 (Resta) o 10 (Suma)">
+                  </div>
+                  
+                  <div class="form-text mt-2 small" [ngClass]="ajusteForm.get('cantidad')?.value < 0 ? 'text-danger' : 'text-success'">
+                      <span *ngIf="ajusteForm.get('cantidad')?.value < 0"><i class="bi bi-arrow-down"></i> Se descontarán unidades.</span>
+                      <span *ngIf="ajusteForm.get('cantidad')?.value > 0"><i class="bi bi-arrow-up"></i> Se agregarán unidades.</span>
+                  </div>
+              </div>
+  
+              <div class="mb-3">
+                  <label class="form-label small text-white-50">Motivo / Justificación *</label>
+                  <textarea class="form-control masterserv-input" rows="3" formControlName="motivo" placeholder="Ej: Rotura en depósito, conteo erróneo..."></textarea>
+                  <div *ngIf="ajusteForm.get('motivo')?.invalid && ajusteForm.get('motivo')?.touched" class="text-danger small mt-1">
+                      Debe especificar un motivo (mínimo 5 letras).
+                  </div>
+              </div>
+  
+          </form>
+        </div>
+        
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-warning text-dark fw-bold" (click)="confirmarAjuste()" 
+                  [disabled]="ajusteForm.invalid || isSavingAjuste || ajusteForm.get('cantidad')?.value === 0">
+              <span *ngIf="isSavingAjuste" class="spinner-border spinner-border-sm me-1"></span>
+              Confirmar Ajuste
+          </button>
+        </div>
+  
+      </div>
+    </div>
 </div>

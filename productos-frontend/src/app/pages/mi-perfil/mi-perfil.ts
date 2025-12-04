@@ -1,12 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { ClienteService } from '../../service/cliente.service';
 import { TipoDocumentoService } from '../../service/tipo-documento.service';
 import { ClientePerfilUpdateDTO } from '../../models/cliente-perfil-update.model';
 import { TipoDocumentoDTO } from '../../models/tipo-documento.model';
 import { mostrarToast } from '../../utils/toast';
 import { HttpErrorResponse } from '@angular/common/http';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   selector: 'app-mi-perfil',
@@ -28,18 +29,36 @@ export default class MiPerfilComponent implements OnInit {
   public isLoading = true;
   public isSubmitting = false;
   public isSubmittingPass = false;
+  
+  public maxDocumentoLength: number = 20;
+
+  public hideActual = true;
+  public hideNueva = true;
+  public hideRepetir = true;
+
+  public paises = [
+    { nombre: 'Argentina', codigo: '+54', bandera: '🇦🇷' },
+    { nombre: 'Brasil', codigo: '+55', bandera: '🇧🇷' },
+    { nombre: 'Paraguay', codigo: '+595', bandera: '🇵🇾' },
+    { nombre: 'Uruguay', codigo: '+598', bandera: '🇺🇾' },
+    { nombre: 'Chile', codigo: '+56', bandera: '🇨🇱' },
+    { nombre: 'Bolivia', codigo: '+591', bandera: '🇧🇴' }
+  ];
 
   constructor() {
-    // Formulario Datos
+    const textPattern = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+
     this.perfilForm = this.fb.group({
-      nombre: ['', [Validators.required, Validators.maxLength(100)]],
-      apellido: ['', [Validators.required, Validators.maxLength(100)]],
-      telefono: ['', [Validators.maxLength(20)]],
+      nombre: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(textPattern)]],
+      apellido: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(textPattern)]],
+      
+      codigoPais: ['+54'],
+      telefono: ['', [Validators.maxLength(15), Validators.minLength(8)]],
+      
       tipoDocumentoId: [null, [Validators.required]],
-      documento: ['', [Validators.required, Validators.maxLength(20)]]
+      documento: ['', [Validators.required]]
     });
     
-    // Formulario Password
     this.passwordForm = this.fb.group({
       passwordActual: ['', Validators.required],
       passwordNueva: ['', [Validators.required, Validators.minLength(6)]],
@@ -50,12 +69,37 @@ export default class MiPerfilComponent implements OnInit {
   ngOnInit(): void {
     this.loadTiposDocumento();
     this.loadPerfil();
+    this.setupDocumentValidation();
   }
 
-  passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
-    const passwordNueva = control.get('passwordNueva')?.value;
-    const passwordRepetir = control.get('passwordRepetir')?.value;
-    return passwordNueva === passwordRepetir ? null : { mismatch: true };
+  toggleActual() { this.hideActual = !this.hideActual; }
+  toggleNueva() { this.hideNueva = !this.hideNueva; }
+  toggleRepetir() { this.hideRepetir = !this.hideRepetir; }
+
+  passwordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+    const pass = control.get('passwordNueva')?.value;
+    const confirm = control.get('passwordRepetir')?.value;
+    if (!pass && !confirm) return null;
+    return pass === confirm ? null : { mismatch: true };
+  }
+  
+  validarInputNumerico(event: any): void {
+      const input = event.target;
+      input.value = input.value.replace(/[^0-9]/g, '');
+      this.actualizarControl(input, this.perfilForm);
+  }
+
+  validarInputTexto(event: any): void {
+      const input = event.target;
+      input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+      this.actualizarControl(input, this.perfilForm);
+  }
+  
+  private actualizarControl(input: any, form: FormGroup) {
+      const controlName = input.getAttribute('formControlName');
+      if (controlName && form.get(controlName)) {
+          form.get(controlName)?.setValue(input.value);
+      }
   }
 
   loadTiposDocumento(): void {
@@ -64,16 +108,70 @@ export default class MiPerfilComponent implements OnInit {
       error: () => mostrarToast('Error al cargar tipos de documento', 'danger')
     });
   }
+  
+  private setupDocumentValidation(): void {
+    const tipoDocControl = this.perfilForm.get('tipoDocumentoId');
+    const docControl = this.perfilForm.get('documento');
+
+    if (!tipoDocControl || !docControl) return;
+
+    tipoDocControl.valueChanges.pipe(
+      debounceTime(100),
+      distinctUntilChanged()
+    ).subscribe(tipoId => {
+      docControl.clearValidators();
+      let validadores = [Validators.required];
+      const idNumerico = +tipoId;
+      const tipoSeleccionado = this.tiposDocumento.find(t => t.id === idNumerico);
+      const nombreTipo = tipoSeleccionado ? tipoSeleccionado.nombreCorto.toUpperCase() : '';
+      
+      switch (nombreTipo) {
+        case 'DNI':
+          this.maxDocumentoLength = 8;
+          validadores.push(Validators.minLength(7), Validators.maxLength(8));
+          break;  
+        case 'CUIT':
+          this.maxDocumentoLength = 11;
+          validadores.push(Validators.minLength(11), Validators.maxLength(11));
+          break;
+        case 'PAS':
+          this.maxDocumentoLength = 20; 
+          validadores.push(Validators.minLength(6));
+          break;
+        default:
+          this.maxDocumentoLength = 20;
+      }
+      docControl.setValidators(validadores);
+      docControl.updateValueAndValidity();
+    });
+  }
 
   loadPerfil(): void {
     this.isLoading = true;
     this.perfilForm.disable(); 
     this.clienteService.getMiPerfil().subscribe({
       next: (data) => {
+        // --- MENTOR: LÓGICA INTELIGENTE DE SEPARACIÓN (+549) ---
+        let telefonoFull = data.telefono || '';
+        let codigo = '+54';
+        let numero = telefonoFull;
+
+        if (telefonoFull.startsWith('+549')) { 
+            codigo = '+54';
+            numero = telefonoFull.substring(4); // Quitamos +549
+        } else {
+            const pais = this.paises.find(p => telefonoFull.startsWith(p.codigo));
+            if (pais) {
+                codigo = pais.codigo;
+                numero = telefonoFull.substring(codigo.length);
+            }
+        }
+
         this.perfilForm.patchValue({
           nombre: data.nombre,
           apellido: data.apellido,
-          telefono: data.telefono,
+          telefono: numero,
+          codigoPais: codigo, 
           tipoDocumentoId: data.tipoDocumentoId,
           documento: data.documento
         });
@@ -88,13 +186,33 @@ export default class MiPerfilComponent implements OnInit {
   }
 
   onSubmit(): void {
+    this.perfilForm.markAllAsTouched();
     if (this.perfilForm.invalid) {
-      this.perfilForm.markAllAsTouched();
+      mostrarToast('Revise los datos personales.', 'warning');
       return;
     }
 
     this.isSubmitting = true;
-    const updateDTO: ClientePerfilUpdateDTO = this.perfilForm.value;
+    const formValue = this.perfilForm.value;
+    
+    // --- MENTOR: LÓGICA INTELIGENTE DE UNIÓN (+549) ---
+    let telefonoFinal = '';
+    let numeroLimpio = formValue.telefono ? formValue.telefono.trim() : '';
+    let codigoPais = formValue.codigoPais;
+
+    if (numeroLimpio) {
+        if (codigoPais === '+54' && !numeroLimpio.startsWith('9')) {
+            telefonoFinal = `${codigoPais}9${numeroLimpio}`;
+        } else {
+            telefonoFinal = `${codigoPais}${numeroLimpio}`;
+        }
+    }
+    // -------------------------------------------------
+
+    const updateDTO: ClientePerfilUpdateDTO = {
+        ...formValue,
+        telefono: telefonoFinal
+    };
 
     this.clienteService.updateMiPerfil(updateDTO).subscribe({
       next: () => {
@@ -126,5 +244,14 @@ export default class MiPerfilComponent implements OnInit {
         mostrarToast(msg, 'danger');
       }
     });
+  }
+  
+  get f() { return this.perfilForm.controls; }
+  
+  get selectedTipoDocNombre(): string {
+    const tipoId = this.perfilForm.get('tipoDocumentoId')?.value;
+    if (!tipoId || !this.tiposDocumento.length) return '';
+    const tipo = this.tiposDocumento.find(t => t.id === +tipoId);
+    return tipo ? tipo.nombreCorto.toUpperCase() : '';
   }
 }

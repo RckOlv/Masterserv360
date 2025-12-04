@@ -1,14 +1,15 @@
 package com.masterserv.productos.dto;
 
-// (No necesita imports si usas 'record')
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-/**
- * DTO para transportar los productos más vendidos.
- * 'record' es una forma moderna de Java para crear clases de datos inmutables.
- */
-public record TopProductoDTO(
-    Long productoId,
-    String nombre,
-    Long cantidadVendida // El SUM(cantidad) de SQL devuelve un Long
-) {
+@Data // Genera getters y setters (getNombre, getCantidadVendida)
+@AllArgsConstructor // Constructor con argumentos para la query JPQL
+@NoArgsConstructor // Constructor vacío por si acaso
+public class TopProductoDTO {
+    
+    private Long productoId;
+    private String nombre;
+    private Long cantidadVendida;
 }

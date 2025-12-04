@@ -1,5 +1,6 @@
 package com.masterserv.productos.controller;
 
+import com.masterserv.productos.dto.MovimientoStockDTO;
 import com.masterserv.productos.dto.ProductoDTO;
 import com.masterserv.productos.dto.ProductoFiltroDTO;
 import com.masterserv.productos.service.ProductoService;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -95,5 +97,13 @@ public class ProductoController {
     ) {
         Page<ProductoDTO> pagina = productoService.searchByProveedor(proveedorId, search, pageable);
         return ResponseEntity.ok(pagina);
+    }
+
+    @PostMapping("/ajuste-stock")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<Void> realizarAjusteStock(@RequestBody @Valid MovimientoStockDTO dto, Principal principal) {
+        // Pasamos el DTO y el email del usuario logueado (sacado del token)
+        productoService.ajustarStock(dto, principal.getName());
+        return ResponseEntity.ok().build();
     }
 }

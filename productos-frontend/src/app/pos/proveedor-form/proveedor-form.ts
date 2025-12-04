@@ -8,7 +8,7 @@ import { ProveedorDTO } from '../../models/proveedor.model';
 import { CategoriaDTO } from '../../models/categoria.model';
 import { mostrarToast } from '../../utils/toast';
 import { HttpErrorResponse } from '@angular/common/http';
-import { forkJoin, of } from 'rxjs'; // Importamos of
+import { forkJoin, of } from 'rxjs';
 
 @Component({
   selector: 'app-proveedor-form',
@@ -19,14 +19,12 @@ import { forkJoin, of } from 'rxjs'; // Importamos of
 })
 export default class ProveedorFormComponent implements OnInit {
 
-  // Inyección de dependencias
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private route = inject(ActivatedRoute); 
   private proveedorService = inject(ProveedorService);
   private categoriaService = inject(CategoriaService);
   
-  // Estado
   public proveedorForm: FormGroup;
   public pageTitle = 'Crear Nuevo Proveedor';
   public esEdicion = false;
@@ -34,25 +32,35 @@ export default class ProveedorFormComponent implements OnInit {
   public isLoading = false;
   public errorMessage: string | null = null;
 
-  // Datos para Checkboxes
   public categorias: CategoriaDTO[] = [];
 
+  // Lista de Países
+  public paises = [
+    { nombre: 'Argentina', codigo: '+54', bandera: '🇦🇷' },
+    { nombre: 'Brasil', codigo: '+55', bandera: '🇧🇷' },
+    { nombre: 'Paraguay', codigo: '+595', bandera: '🇵🇾' },
+    { nombre: 'Uruguay', codigo: '+598', bandera: '🇺🇾' },
+    { nombre: 'Chile', codigo: '+56', bandera: '🇨🇱' },
+    { nombre: 'Bolivia', codigo: '+591', bandera: '🇧🇴' }
+  ];
+
   constructor() {
-    // Inicialización del Formulario Reactivo
     this.proveedorForm = this.fb.group({
-      razonSocial: ['', [Validators.required, Validators.maxLength(255)]],
-      cuit: ['', [Validators.required, Validators.maxLength(20)]],
-      email: ['', [Validators.email, Validators.maxLength(100)]],
-      telefono: ['', [Validators.maxLength(20)]],
+      razonSocial: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
+      cuit: ['', [Validators.required, Validators.pattern(/^[0-9]{11}$/)]], 
+      email: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
+      
+      // Campos para el teléfono compuesto
+      codigoPais: ['+54'], 
+      telefono: ['', [Validators.minLength(8), Validators.maxLength(15)]], 
+      
       direccion: ['', [Validators.maxLength(255)]],
       estado: ['ACTIVO', [Validators.required]],
-      // Campo especial para los checkboxes, es un FormArray de booleanos
       categoriaIds: this.fb.array([]) 
     });
   }
 
   ngOnInit(): void {
-    // 1. Obtener ID si estamos editando
     this.route.params.subscribe(params => {
       if (params['id']) {
         this.proveedorId = +params['id'];
@@ -63,64 +71,83 @@ export default class ProveedorFormComponent implements OnInit {
     });
   }
 
-  // Getter para el FormArray de categorías (simplifica el HTML)
   get categoriaIdsArray(): FormArray {
     return this.proveedorForm.get('categoriaIds') as FormArray;
   }
-
-  // --- Lógica de Carga y Edición ---
+  
+  // Bloqueo de teclas no numéricas
+  validarInputNumerico(event: any): void {
+      const input = event.target;
+      input.value = input.value.replace(/[^0-9]/g, '');
+      const controlName = input.getAttribute('formControlName');
+      if (controlName) this.proveedorForm.get(controlName)?.setValue(input.value);
+  }
 
   cargarDatos(): void {
     this.isLoading = true;
     this.errorMessage = null;
 
-    // forkJoin espera a que TODAS las llamadas asíncronas terminen
     forkJoin({
       categorias: this.categoriaService.listarCategorias('ACTIVO'),
       proveedor: this.esEdicion && this.proveedorId ? this.proveedorService.getById(this.proveedorId) : of(null)
     }).subscribe({
       next: (results) => {
         this.categorias = results.categorias;
-        this.setupCategoriasCheckboxes(results.proveedor?.categoriaIds); // 2. Configura los checkboxes
+        this.setupCategoriasCheckboxes(results.proveedor?.categoriaIds);
 
         if (this.esEdicion && results.proveedor) {
-          // 3. Rellena el resto del formulario
-          this.proveedorForm.patchValue(results.proveedor);
-          this.proveedorForm.get('estado')?.enable(); // Habilita el estado solo en edición
+          
+          // --- LÓGICA INTELIGENTE DE SEPARACIÓN ---
+          let telefonoFull = results.proveedor.telefono || '';
+          let codigo = '+54';
+          let numero = telefonoFull;
+
+          // 1. Si es Argentina con 9 (+549...), lo detectamos y limpiamos
+          if (telefonoFull.startsWith('+549')) {
+              codigo = '+54';
+              numero = telefonoFull.substring(4); // Quitamos el +549
+          } 
+          // 2. Caso estándar para otros países o Argentina sin 9
+          else {
+              const paisEncontrado = this.paises.find(p => telefonoFull.startsWith(p.codigo));
+              if (paisEncontrado) {
+                  codigo = paisEncontrado.codigo;
+                  numero = telefonoFull.substring(codigo.length);
+              }
+          }
+          // ----------------------------------------
+
+          this.proveedorForm.patchValue({
+              ...results.proveedor,
+              codigoPais: codigo,
+              telefono: numero
+          });
+          this.proveedorForm.get('estado')?.enable();
         } else {
-          this.proveedorForm.get('estado')?.disable(); // Deshabilita el estado en modo creación
+          this.proveedorForm.get('estado')?.disable();
         }
 
         this.isLoading = false;
       },
       error: (err: HttpErrorResponse) => {
         console.error('Error cargando datos:', err);
-        this.errorMessage = err.error?.message || 'Error al cargar los datos del formulario.';
+        this.errorMessage = err.error?.message || 'Error al cargar los datos.';
         this.isLoading = false;
       }
     });
   }
 
-  /**
-   * 🔹 Crea un FormArray de booleanos para cada categoría, marcando las que ya tiene el proveedor.
-   */
   setupCategoriasCheckboxes(idsSeleccionados: number[] = []): void {
-    // 1. Limpiamos el FormArray
     this.categoriaIdsArray.clear();
-    
-    // 2. Para cada categoría disponible, creamos un FormControl
     this.categorias.forEach(cat => {
-      // Si el ID de la categoría está en la lista del proveedor, es true.
-      const isSelected = idsSeleccionados.includes(cat.id!);
+      const isSelected = idsSeleccionados ? idsSeleccionados.includes(cat.id!) : false;
       this.categoriaIdsArray.push(this.fb.control(isSelected));
     });
   }
 
-  // --- Lógica de Submit ---
-
   onSubmit(): void {
-    this.proveedorForm.markAllAsTouched();
     if (this.proveedorForm.invalid) {
+      this.proveedorForm.markAllAsTouched();
       mostrarToast('Revise los campos obligatorios.', 'warning');
       return;
     }
@@ -128,20 +155,37 @@ export default class ProveedorFormComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
 
-    // 1. Obtener los IDs seleccionados del FormArray
+    // Obtener categorías seleccionadas
     const categoriasSeleccionadas = this.categoriaIdsArray.controls
       .map((control, i) => control.value ? this.categorias[i].id : null)
-      .filter((id): id is number => id !== null); // Filtra los nulos y asegura el tipo
+      .filter((id): id is number => id !== null);
 
-    // 2. Construir el DTO de envío
-    const formValue = this.proveedorForm.getRawValue(); // Incluye el estado deshabilitado
+    // --- CORRECCIÓN CRÍTICA: DESTRUCTURING ---
+    // Extraemos 'codigoPais' para NO enviarlo suelto en el DTO (porque el backend no lo espera)
+    // 'datosLimpios' tendrá todo lo demás (razonSocial, email, etc.)
+    const { codigoPais, ...datosLimpios } = this.proveedorForm.getRawValue();
+
+    // --- LÓGICA INTELIGENTE DE UNIÓN ---
+    let telefonoFinal = '';
+    let numeroLimpio = datosLimpios.telefono ? datosLimpios.telefono.trim() : '';
+
+    if (numeroLimpio) {
+        // Si es Argentina (+54) y el número NO empieza con 9, se lo agregamos
+        if (codigoPais === '+54' && !numeroLimpio.startsWith('9')) {
+            telefonoFinal = `${codigoPais}9${numeroLimpio}`;
+        } else {
+            telefonoFinal = `${codigoPais}${numeroLimpio}`;
+        }
+    }
+    // -----------------------------------
+
     const proveedorData: ProveedorDTO = {
-      ...formValue,
-      id: this.proveedorId, // Solo se envía en edición
-      categoriaIds: categoriasSeleccionadas, // Sobreescribimos el FormArray con la lista limpia
+      ...datosLimpios, // Aquí ya NO está codigoPais
+      telefono: telefonoFinal, // Sobreescribimos el teléfono con el formateado
+      id: this.proveedorId,
+      categoriaIds: categoriasSeleccionadas,
     };
 
-    // 3. Llamar al servicio
     const obs = this.esEdicion
       ? this.proveedorService.actualizar(this.proveedorId!, proveedorData)
       : this.proveedorService.crear(proveedorData);
@@ -149,17 +193,19 @@ export default class ProveedorFormComponent implements OnInit {
     obs.subscribe({
       next: () => {
         mostrarToast(`Proveedor ${this.esEdicion ? 'actualizado' : 'creado'} con éxito.`, 'success');
-        this.router.navigate(['/pos/proveedores']); // Navegar de vuelta a la lista
+        this.router.navigate(['/pos/proveedores']);
       },
       error: (err: HttpErrorResponse) => {
         console.error('Error al guardar proveedor:', err);
         this.errorMessage = err.error?.message || 'Error al guardar el proveedor.';
-        if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+        if (this.errorMessage?.includes('violates unique constraint')) {
+             this.errorMessage = 'Error: El CUIT o Razón Social ya existen.';
+        }
+        mostrarToast(this.errorMessage!, 'danger');
         this.isLoading = false;
       }
     });
   }
   
-  // Helper para validación
   get f() { return this.proveedorForm.controls; }
 }

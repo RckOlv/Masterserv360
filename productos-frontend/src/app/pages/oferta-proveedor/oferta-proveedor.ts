@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 
@@ -37,9 +37,17 @@ export default class OfertaProveedorComponent implements OnInit {
   public isSuccess = false; 
   public errorMessage: string | null = null;
 
+  // Validaciones
+  public minDate: string = ''; // Fecha mínima para el HTML
+
   constructor() {
+    // Calcular fecha de hoy para el min del calendario (YYYY-MM-DD)
+    const today = new Date();
+    const tzOffset = today.getTimezoneOffset() * 60000; // Ajuste zona horaria
+    this.minDate = (new Date(today.getTime() - tzOffset)).toISOString().split("T")[0];
+
     this.form = this.fb.group({
-      fechaEntregaOfertada: [null, [Validators.required]],
+      fechaEntregaOfertada: [null, [Validators.required, this.fechaMinimaValidator(this.minDate)]],
       items: this.fb.array([])
     });
   }
@@ -73,6 +81,15 @@ export default class OfertaProveedorComponent implements OnInit {
     });
   }
 
+  // Validador personalizado para la fecha
+  fechaMinimaValidator(minDateStr: string): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+        if (!control.value) return null;
+        // Comparación simple de strings YYYY-MM-DD funciona bien
+        return control.value < minDateStr ? { fechaPasada: true } : null;
+    };
+  }
+
   private buildForm(cotizacion: CotizacionPublicaDTO): void {
     cotizacion.items.forEach(item => {
       this.itemsFormArray.push(this.createItemControl(item));
@@ -86,11 +103,13 @@ export default class OfertaProveedorComponent implements OnInit {
       productoCodigo: [item.productoCodigo],
       cantidadSolicitada: [item.cantidadSolicitada],
       
-      // MENTOR: Campos Nuevos
-      // Iniciamos cantidad ofertada con la solicitada por defecto
-      cantidadOfertada: [item.cantidadSolicitada, [Validators.required, Validators.min(1)]],
+      // MENTOR: Agregado Validators.max con la cantidad solicitada
+      cantidadOfertada: [
+          item.cantidadSolicitada, 
+          [Validators.required, Validators.min(1), Validators.max(item.cantidadSolicitada)]
+      ],
       precioUnitarioOfertado: [null, [Validators.required, Validators.min(0.01)]],
-      disponible: [true] // Checkbox activado por defecto
+      disponible: [true] 
     });
   }
 
@@ -98,7 +117,9 @@ export default class OfertaProveedorComponent implements OnInit {
     return this.form.get('items') as FormArray;
   }
 
-  // MENTOR: Lógica para habilitar/deshabilitar según disponibilidad
+  // Getter para el template
+  get f() { return this.form.controls; }
+
   toggleDisponibilidad(index: number) {
     const group = this.itemsFormArray.at(index) as FormGroup;
     const isDisponible = group.get('disponible')?.value;
@@ -106,7 +127,6 @@ export default class OfertaProveedorComponent implements OnInit {
     if (isDisponible) {
         group.get('precioUnitarioOfertado')?.enable();
         group.get('cantidadOfertada')?.enable();
-        // Restaurar cantidad solicitada por defecto si estaba vacío
         if (!group.get('cantidadOfertada')?.value) {
              const cantSol = group.get('cantidadSolicitada')?.value;
              group.get('cantidadOfertada')?.setValue(cantSol);
@@ -114,15 +134,15 @@ export default class OfertaProveedorComponent implements OnInit {
     } else {
         group.get('precioUnitarioOfertado')?.disable();
         group.get('cantidadOfertada')?.disable();
-        // Limpiamos valores para que no validen error
         group.get('precioUnitarioOfertado')?.setValue(null);
     }
   }
 
   onSubmit(): void {
+    this.form.markAllAsTouched();
+
     if (this.form.invalid) {
-      mostrarToast('Por favor, complete todos los campos requeridos.', 'warning');
-      this.form.markAllAsTouched(); 
+      mostrarToast('Por favor, verifique los datos ingresados (fechas o cantidades).', 'warning');
       return;
     }
     
@@ -130,7 +150,6 @@ export default class OfertaProveedorComponent implements OnInit {
 
     this.isSubmitting = true;
 
-    // Usamos getRawValue() para incluir los campos disabled (aunque aquí no los enviamos al back si no están disponibles, es buena práctica)
     const rawValue = this.form.getRawValue(); 
     
     const ofertaDTO: OfertaProveedorDTO = {
@@ -138,7 +157,6 @@ export default class OfertaProveedorComponent implements OnInit {
       items: rawValue.items.map((item: any) => ({
         itemCotizacionId: item.itemCotizacionId,
         precioUnitarioOfertado: item.precioUnitarioOfertado,
-        // Enviamos los nuevos campos al DTO
         cantidadOfertada: item.cantidadOfertada,
         disponible: item.disponible
       }))

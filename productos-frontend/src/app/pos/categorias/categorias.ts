@@ -4,12 +4,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } 
 import { CategoriaService } from '../../service/categoria.service';
 import { CategoriaDTO } from '../../models/categoria.model';
 import { mostrarToast } from '../../utils/toast';
-
-// Mentor: Imports actualizados
-// import { AuthService } from '../../service/auth.service'; // Mentor: ELIMINADO
 import { HttpErrorResponse } from '@angular/common/http';
-
-// Mentor: Import de la directiva (ya lo tenías)
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
 
 declare var bootstrap: any;
@@ -23,29 +18,24 @@ declare var bootstrap: any;
     CommonModule, 
     ReactiveFormsModule, 
     FormsModule,
-    HasPermissionDirective // Mentor: Import de la directiva (ya lo tenías)
+    HasPermissionDirective 
   ], 
 })
 export default class CategoriasComponent implements OnInit {
 
   private fb = inject(FormBuilder);
   private categoriaService = inject(CategoriaService);
-  // Mentor: ELIMINADA la inyección de AuthService
-  // private authService = inject(AuthService);
 
   // Estado
   categorias: CategoriaDTO[] = [];
   
   filtroForm: FormGroup;
+  categoriaForm: FormGroup; 
   
-  categoriaForm: FormGroup; // Formulario del modal
   esEdicion = false;
   categoriaSeleccionadaId: number | null = null;
   isLoading = false;
   errorMessage: string | null = null;
-
-  // Mentor: ELIMINADA la propiedad 'isAdmin'
-  // public isAdmin = false;
 
   constructor() {
     this.filtroForm = this.fb.group({
@@ -53,22 +43,19 @@ export default class CategoriasComponent implements OnInit {
       estado: ['ACTIVO']
     });
 
+    // MENTOR: Validaciones estrictas
     this.categoriaForm = this.fb.group({
       id: [null],
-      nombre: ['', [Validators.required, Validators.maxLength(100)]],
+      nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
       descripcion: ['', [Validators.maxLength(255)]],
       estado: ['ACTIVO'] 
     });
   }
 
   ngOnInit() {
-    // Mentor: ELIMINADO el chequeo de rol
-    // this.isAdmin = this.authService.hasRole('ROLE_ADMIN');
-    
     this.listarCategorias();
   }
 
-  /** 🔹 Obtener categorías del backend (filtradas por estado y nombre) */
   listarCategorias() {
     this.isLoading = true;
     this.errorMessage = null;
@@ -95,19 +82,17 @@ export default class CategoriasComponent implements OnInit {
     });
   }
 
-  /** 🔹 Se llama CADA VEZ que un filtro cambia */
   aplicarFiltros(): void {
     this.listarCategorias();
   }
 
-  /** 🔹 Reiniciar filtros */
   reiniciarFiltros() {
     this.filtroForm.reset({
       nombre: '',
       estado: 'ACTIVO'
     });
     this.listarCategorias();
-    mostrarToast('Filtros reiniciados');
+    mostrarToast('Filtros reiniciados', 'info');
   }
 
   abrirModalNuevo() {
@@ -134,7 +119,11 @@ export default class CategoriasComponent implements OnInit {
 
   guardarCategoria() {
     this.categoriaForm.markAllAsTouched();
-    if (this.categoriaForm.invalid) return;
+    
+    if (this.categoriaForm.invalid) {
+        mostrarToast('Revise los campos obligatorios.', 'warning');
+        return;
+    }
 
     this.isLoading = true; 
     this.errorMessage = null;
@@ -220,6 +209,5 @@ export default class CategoriasComponent implements OnInit {
     if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
   }
 
-  // Helper para el formulario del modal
   get f() { return this.categoriaForm.controls; }
 }

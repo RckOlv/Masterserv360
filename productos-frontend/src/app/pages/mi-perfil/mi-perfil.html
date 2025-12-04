@@ -5,7 +5,7 @@
       <div class="card card-dark">
         <div class="card-header card-header-dark d-flex align-items-center">
           <i class="bi bi-person-vcard-fill text-danger fs-4 me-2"></i>
-          <h4 class="card-title">Datos Personales</h4>
+          <h4 class="card-title mb-0">Datos Personales</h4>
         </div>
         
         <div class="card-body card-body-dark">
@@ -21,14 +21,16 @@
                 <div class="col-md-6">
                   <label class="form-label">Nombre</label>
                   <input type="text" class="form-control" formControlName="nombre"
+                         (input)="validarInputTexto($event)"
                          [class.is-invalid]="perfilForm.get('nombre')?.invalid && perfilForm.get('nombre')?.touched">
-                  <div class="invalid-feedback">Requerido.</div>
+                  <div class="invalid-feedback">Requerido (solo letras).</div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Apellido</label>
                   <input type="text" class="form-control" formControlName="apellido"
+                         (input)="validarInputTexto($event)"
                          [class.is-invalid]="perfilForm.get('apellido')?.invalid && perfilForm.get('apellido')?.touched">
-                  <div class="invalid-feedback">Requerido.</div>
+                  <div class="invalid-feedback">Requerido (solo letras).</div>
                 </div>
               </div>
 
@@ -42,17 +44,34 @@
                       {{ tipo.nombreCorto }}
                     </option>
                   </select>
+                  <div class="invalid-feedback">Seleccione uno.</div>
                 </div>
                 <div class="col-md-7">
                   <label class="form-label">N° Documento</label>
                   <input type="text" class="form-control" formControlName="documento"
+                         [maxlength]="maxDocumentoLength"
+                         (input)="validarInputNumerico($event)"
                          [class.is-invalid]="perfilForm.get('documento')?.invalid && perfilForm.get('documento')?.touched">
+                  
+                  <div *ngIf="f['documento'].touched && f['documento'].errors" class="invalid-feedback">
+                    <div *ngIf="f['documento'].errors?.['required']">Requerido.</div>
+                    <div *ngIf="selectedTipoDocNombre === 'DNI' && (f['documento'].errors?.['minlength'] || f['documento'].errors?.['maxlength'])">
+                        El DNI debe tener entre 7 y 8 números.
+                    </div>
+                    <div *ngIf="selectedTipoDocNombre === 'CUIT' && (f['documento'].errors?.['minlength'] || f['documento'].errors?.['maxlength'])">
+                        El CUIT debe tener 11 números.
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div class="mb-4">
                  <label class="form-label">Teléfono / Celular</label>
-                 <input type="tel" class="form-control" formControlName="telefono" placeholder="+54 9 ...">
+                 <input type="tel" class="form-control" formControlName="telefono" placeholder="+54 9 ..."
+                        maxlength="15"
+                        (input)="validarInputNumerico($event)"
+                        [class.is-invalid]="perfilForm.get('telefono')?.invalid && perfilForm.get('telefono')?.touched">
+                 <div class="invalid-feedback">Solo números (mín 8).</div>
               </div>
 
               <div class="d-grid">
@@ -70,7 +89,7 @@
       <div class="card card-dark mt-4">
         <div class="card-header card-header-dark d-flex align-items-center">
           <i class="bi bi-shield-lock-fill text-danger fs-4 me-2"></i>
-          <h4 class="card-title">Seguridad</h4>
+          <h4 class="card-title mb-0">Seguridad</h4>
         </div>
         <div class="card-body card-body-dark">
           
@@ -78,24 +97,36 @@
             
             <div class="mb-3">
               <label class="form-label">Contraseña Actual</label>
-              <input type="password" class="form-control" formControlName="passwordActual">
+              <div class="input-group">
+                  <input [type]="hideActual ? 'password' : 'text'" class="form-control" formControlName="passwordActual">
+                  <button class="btn btn-outline-secondary" type="button" (click)="toggleActual()">
+                      <i class="bi" [ngClass]="hideActual ? 'bi-eye-slash' : 'bi-eye'"></i>
+                  </button>
+              </div>
             </div>
 
             <div class="row g-3 mb-4">
               <div class="col-md-6">
                 <label class="form-label">Nueva Contraseña</label>
-                <input type="password" class="form-control" formControlName="passwordNueva">
-                <div *ngIf="passwordForm.errors?.['samePassword'] && passwordForm.get('passwordNueva')?.touched" 
-                     class="text-danger small mt-1">
-                   La nueva contraseña no puede ser igual a la actual.
+                <div class="input-group">
+                    <input [type]="hideNueva ? 'password' : 'text'" class="form-control" formControlName="passwordNueva"
+                           [class.is-invalid]="passwordForm.get('passwordNueva')?.invalid && passwordForm.get('passwordNueva')?.touched">
+                    <button class="btn btn-outline-secondary" type="button" (click)="toggleNueva()">
+                        <i class="bi" [ngClass]="hideNueva ? 'bi-eye-slash' : 'bi-eye'"></i>
+                    </button>
+                    <div class="invalid-feedback">Mínimo 6 caracteres.</div>
                 </div>
               </div>
+              
               <div class="col-md-6">
                 <label class="form-label">Repetir Nueva</label>
-                <input type="password" class="form-control" formControlName="passwordRepetir">
-                <div *ngIf="passwordForm.errors?.['mismatch'] && passwordForm.get('passwordRepetir')?.touched" 
-                     class="text-danger small mt-1">
-                   Las contraseñas no coinciden.
+                <div class="input-group">
+                    <input [type]="hideRepetir ? 'password' : 'text'" class="form-control" formControlName="passwordRepetir"
+                           [class.is-invalid]="passwordForm.errors?.['mismatch'] && passwordForm.get('passwordRepetir')?.touched">
+                    <button class="btn btn-outline-secondary" type="button" (click)="toggleRepetir()">
+                        <i class="bi" [ngClass]="hideRepetir ? 'bi-eye-slash' : 'bi-eye'"></i>
+                    </button>
+                    <div class="invalid-feedback">Las contraseñas no coinciden.</div>
                 </div>
               </div>
             </div>
