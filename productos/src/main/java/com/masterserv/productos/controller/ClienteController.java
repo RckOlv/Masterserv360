@@ -1,9 +1,11 @@
 package com.masterserv.productos.controller;
 
-import com.masterserv.productos.dto.CambioPasswordDTO; // Nuevo DTO
+import com.masterserv.productos.dto.CambioPasswordDTO;
+import com.masterserv.productos.dto.ClienteDTO; // <--- Importar
 import com.masterserv.productos.dto.ClientePerfilDTO;
 import com.masterserv.productos.dto.ClientePerfilUpdateDTO;
 import com.masterserv.productos.dto.VentaResumenDTO;
+import com.masterserv.productos.entity.Usuario; // <--- Importar
 import com.masterserv.productos.service.ClienteService;
 import com.masterserv.productos.service.VentaService;
 import jakarta.validation.Valid;
@@ -25,6 +27,8 @@ public class ClienteController {
     @Autowired
     private VentaService ventaService;
 
+    // --- ENDPOINTS DE PERFIL (Cliente) ---
+
     @GetMapping("/mi-perfil")
     @PreAuthorize("hasRole('CLIENTE')")
     public ResponseEntity<ClientePerfilDTO> getMiPerfil(Principal principal) {
@@ -44,7 +48,6 @@ public class ClienteController {
         return ResponseEntity.ok(perfilActualizado);
     }
     
-    // --- MENTOR: NUEVO ENDPOINT CAMBIAR PASSWORD ---
     @PatchMapping("/cambiar-password")
     @PreAuthorize("hasRole('CLIENTE')")
     public ResponseEntity<Void> cambiarPassword(
@@ -54,9 +57,8 @@ public class ClienteController {
         String userEmail = principal.getName();
         clienteService.cambiarPassword(userEmail, dto);
         
-        return ResponseEntity.noContent().build(); // 204 No Content (Éxito)
+        return ResponseEntity.noContent().build();
     }
-    // -----------------------------------------------
 
     @GetMapping("/mis-compras")
     @PreAuthorize("hasRole('CLIENTE')")
@@ -67,5 +69,14 @@ public class ClienteController {
         String userEmail = principal.getName();
         Page<VentaResumenDTO> historial = ventaService.findVentasByClienteEmail(userEmail, pageable);
         return ResponseEntity.ok(historial);
+    }
+
+    // --- NUEVO ENDPOINT: REGISTRO DESDE POS (Admin/Vendedor) ---
+    @PostMapping("/registro-pos")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<Usuario> registrarDesdePos(@RequestBody ClienteDTO dto) {
+        // Llamamos al servicio nuevo
+        Usuario nuevoUsuario = clienteService.registrarClienteDesdePos(dto);
+        return ResponseEntity.ok(nuevoUsuario);
     }
 }

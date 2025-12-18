@@ -2,177 +2,118 @@ import { Routes } from '@angular/router';
 import { AuthGuard } from './guards/auth.guard';
 import { LoginGuard } from './guards/login.guard';
 
-// Importamos los 3 layouts
+// Importamos los layouts
 import { AdminLayoutComponent } from './layouts/admin-layout/admin-layout';
 import { PublicLayoutComponent } from './layouts/public-layout/public-layout';
-import AuthLayoutComponent from './layouts/auth-layout/auth-layout';
+import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout'; 
 
 export const routes: Routes = [
 
-  // --- MUNDO PÚBLICO (LOGIN / REGISTER) ---
+  // 1. MUNDO PÚBLICO / CLIENTE (Layout de Tienda)
   {
-    path: '', 
-    component: AuthLayoutComponent, 
-    canActivate: [LoginGuard], 
+    path: '',
+    component: PublicLayoutComponent,
     children: [
-      { path: 'login', loadComponent: () => import('./pages/login/login') },
-      { path: 'register', loadComponent: () => import('./pages/reg-cli/reg-cli') },
-      { path: '', redirectTo: 'login', pathMatch: 'full' }
+      { path: '', redirectTo: 'catalogo', pathMatch: 'full' },
+      
+      // Rutas ABIERTAS
+      { path: 'catalogo', loadComponent: () => import('./pages/catalogo/catalogo') },
+      
+      // Rutas PROTEGIDAS DE CLIENTE
+      { 
+        path: 'portal',
+        canActivate: [AuthGuard], 
+        children: [
+           { path: 'mi-perfil', loadComponent: () => import('./pages/mi-perfil/mi-perfil') },
+           { path: 'mis-compras', loadComponent: () => import('./pages/mis-compras/mis-compras') },
+           { path: 'mis-puntos', loadComponent: () => import('./pages/mis-puntos/mis-puntos').then(m => m.MisPuntosComponent) }
+        ]
+      }
     ]
   },
 
-  // --- MUNDO INTERNO (ADMIN / VENDEDOR) ---
+  // 2. AUTH (Login / Registro / Cambio Pass) - Layout limpio
   {
-    path: 'pos', 
-    component: AdminLayoutComponent, 
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
-    data: { 
-      // Esta es la regla "padre": Vendedor puede entrar a /pos
-      roles: ['ROLE_ADMIN', 'ROLE_VENDEDOR'] 
-    },
+    path: 'auth',
+    component: AuthLayoutComponent, 
     children: [
-      // --- Rutas de VENDEDOR (y Admin) ---
+      { 
+        path: 'login', 
+        loadComponent: () => import('./pages/login/login'),
+        canActivate: [LoginGuard] 
+      },
+      { 
+        path: 'register', 
+        loadComponent: () => import('./pages/reg-cli/reg-cli'),
+        canActivate: [LoginGuard] 
+      },
+      // --- MENTOR: NUEVA RUTA AQUÍ ---
+      { 
+        path: 'cambiar-password-force', 
+        loadComponent: () => import('./pages/change-password-force/change-password-force'),
+        // No le ponemos AuthGuard estricto todavía para simplificar, 
+        // pero idealmente debería tener uno que verifique si realmente debe cambiarla.
+        // Por ahora confiamos en la redirección del login.
+      },
+      // --------------------------------
+      { 
+        path: 'oferta/:token', 
+        loadComponent: () => import('./pages/oferta-proveedor/oferta-proveedor')
+      }
+    ]
+  },
+  
+  // Redirecciones cortas
+  { path: 'login', redirectTo: 'auth/login' },
+  { path: 'register', redirectTo: 'auth/register' },
+
+  // 3. MUNDO ADMIN (POS) - Layout de Gestión
+  {
+    path: 'pos',
+    component: AdminLayoutComponent,
+    canActivate: [AuthGuard], 
+    data: { roles: ['ROLE_ADMIN', 'ROLE_VENDEDOR'] }, 
+    children: [
       { path: 'dashboard', loadComponent: () => import('./pos/dashboard/dashboard') },
       { path: 'punto-venta', loadComponent: () => import('./pos/punto-venta/punto-venta') },
       { path: 'ventas-historial', loadComponent: () => import('./pos/ventas-list/ventas-list') },
       { path: 'ventas/:id', loadComponent: () => import('./pos/venta-detalle/venta-detalle') },
       
-      // --- PRODUCTOS (Lista y Formulario) ---
       { path: 'productos', loadComponent: () => import('./pos/productos/productos') },
-      { 
-        path: 'productos/nuevo', 
-        loadComponent: () => import('./pos/producto-form/producto-form') 
-      },
-      { 
-        path: 'productos/editar/:id', 
-        loadComponent: () => import('./pos/producto-form/producto-form') 
-      },
-      
+      { path: 'productos/nuevo', loadComponent: () => import('./pos/producto-form/producto-form') },
+      { path: 'productos/editar/:id', loadComponent: () => import('./pos/producto-form/producto-form') },
       { path: 'categorias', loadComponent: () => import('./pos/categorias/categorias') },
 
-      // --- Rutas EXCLUSIVAS DE ADMIN ---
-      
-      // MENTOR: NUEVA RUTA DE SOLICITUDES DE CHATBOT
-      { 
-        path: 'solicitudes', 
-        loadComponent: () => import('./pos/solicitudes-list/solicitudes-list'),
-        data: { roles: ['ROLE_ADMIN'] } 
-      },
-      // ----------------------------------------------
-
-      { 
-        path: 'proveedores', 
-        loadComponent: () => import('./pos/proveedores/proveedores'),
-        data: { roles: ['ROLE_ADMIN'] } 
-      },
-      { 
-        path: 'proveedores/nuevo', 
-        loadComponent: () => import('./pos/proveedor-form/proveedor-form'),
-        data: { roles: ['ROLE_ADMIN'] }
-      },
-      { 
-        path: 'proveedores/editar/:id', 
-        loadComponent: () => import('./pos/proveedor-form/proveedor-form'),
-        data: { roles: ['ROLE_ADMIN'] }
-      },
-      
-      { 
-        path: 'pedidos', 
-        loadComponent: () => import('./pos/pedidos-list/pedidos-list'),
-        data: { roles: ['ROLE_ADMIN'] } 
-      },
-      { 
-        path: 'pedidos/nuevo', 
-        loadComponent: () => import('./pos/pedido-form/pedido-form'),
-        data: { roles: ['ROLE_ADMIN'] } 
-      },
+      // Rutas solo ADMIN
       { 
         path: 'usuarios', 
         loadComponent: () => import('./pos/usuarios-list/usuarios-list'),
-        data: { roles: ['ROLE_ADMIN'] }
-      },
-      { 
-        path: 'usuarios/nuevo', 
-        loadComponent: () => import('./layouts/admin-layout/registro/registro'),
-        data: { roles: ['ROLE_ADMIN'] }
-      },
-      { 
-        path: 'usuarios/editar/:id', 
-        loadComponent: () => import('./layouts/admin-layout/registro/registro'),
-        data: { roles: ['ROLE_ADMIN'] }
-      },
-      { 
-        path: 'permisos', 
-        loadComponent: () => import('./pos/permisos/permisos'),
-        data: { roles: ['ROLE_ADMIN'] }
-      },
-      { 
-        path: 'roles', 
-        loadComponent: () => import('./pos/roles/roles'),
-        data: { roles: ['ROLE_ADMIN'] }
-      },
-      { 
-        path: 'reglas-puntos', 
-        loadComponent: () => import('./pos/reglas-puntos/reglas-puntos'),
         data: { roles: ['ROLE_ADMIN'] } 
       },
-      { 
-        path: 'cotizaciones', 
-        loadComponent: () => import('./pos/cotizaciones-list/cotizaciones-list'),
-        data: { roles: ['ROLE_ADMIN'] } 
-      },
-      { 
-        path: 'cotizaciones/:id', 
-        loadComponent: () => import('./pos/cotizacion-detalle/cotizacion-detalle'),
-        data: { roles: ['ROLE_ADMIN'] } 
-      },
-
-      { 
-        path: 'auditoria', 
-        loadComponent: () => import('./pos/auditoria/auditoria'),
-        data: { roles: ['ROLE_ADMIN'] } 
-      },
-
-      { 
-        path: 'mi-perfil', 
-        loadComponent: () => import('./pos/perfil-usuario/perfil-usuario') 
-      },
-        
+      { path: 'usuarios/nuevo', loadComponent: () => import('./layouts/admin-layout/registro/registro') },
+      { path: 'usuarios/editar/:id', loadComponent: () => import('./layouts/admin-layout/registro/registro') },
+      
+      { path: 'proveedores', loadComponent: () => import('./pos/proveedores/proveedores') },
+      { path: 'proveedores/nuevo', loadComponent: () => import('./pos/proveedor-form/proveedor-form') },
+      { path: 'proveedores/editar/:id', loadComponent: () => import('./pos/proveedor-form/proveedor-form') },
+      
+      { path: 'pedidos', loadComponent: () => import('./pos/pedidos-list/pedidos-list') },
+      { path: 'pedidos/nuevo', loadComponent: () => import('./pos/pedido-form/pedido-form') },
+      
+      { path: 'cotizaciones', loadComponent: () => import('./pos/cotizaciones-list/cotizaciones-list') },
+      { path: 'cotizaciones/:id', loadComponent: () => import('./pos/cotizacion-detalle/cotizacion-detalle') },
+      
+      { path: 'solicitudes', loadComponent: () => import('./pos/solicitudes-list/solicitudes-list') },
+      { path: 'permisos', loadComponent: () => import('./pos/permisos/permisos') },
+      { path: 'roles', loadComponent: () => import('./pos/roles/roles') },
+      { path: 'reglas-puntos', loadComponent: () => import('./pos/reglas-puntos/reglas-puntos') },
+      { path: 'auditoria', loadComponent: () => import('./pos/auditoria/auditoria') },
+      
+      { path: 'mi-perfil', loadComponent: () => import('./pos/perfil-usuario/perfil-usuario') },
+      
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },
 
-  // --- MUNDO DEL CLIENTE (PORTAL) ---
-  {
-    path: 'portal', 
-    component: PublicLayoutComponent, 
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuard],
-    data: {
-      roles: ['ROLE_CLIENTE']
-    },
-    children: [
-        { path: 'catalogo', loadComponent: () => import('./pages/catalogo/catalogo') }, 
-        { path: 'mi-perfil', loadComponent: () => import('./pages/mi-perfil/mi-perfil') }, 
-        { path: 'mis-compras', loadComponent: () => import('./pages/mis-compras/mis-compras') }, 
-        { path: 'mis-puntos', loadComponent: () => import('./pages/mis-puntos/mis-puntos').then(m => m.MisPuntosComponent) },
-        { path: '', redirectTo: 'catalogo', pathMatch: 'full' }
-    ]
-  },
-
-  // --- RUTA PÚBLICA PARA EL PROVEEDOR ---
-  {
-    path: 'oferta',
-    component: AuthLayoutComponent,
-    children: [
-      { 
-        path: ':token',
-        loadComponent: () => import('./pages/oferta-proveedor/oferta-proveedor')
-      }
-    ]
-  },
-
-  // Redirección general
-  { path: '**', redirectTo: 'login' }
+  { path: '**', redirectTo: '' }
 ];

@@ -15,18 +15,15 @@ import { Observable, BehaviorSubject, switchMap, of, catchError, map } from 'rxj
 })
 export class PublicLayoutComponent implements OnInit {
 
-  private authService = inject(AuthService);
+  public authService = inject(AuthService); // Público para el HTML
   private puntosService = inject(PuntosService);
   private catalogoService = inject(CatalogoService);
   private router = inject(Router);
 
   public isLoggedIn$: Observable<boolean>;
   public userEmail$ = new BehaviorSubject<string | null>(null);
-  
-  // MENTOR: Nuevos observables para Nombre y Rol visual
   public userName$ = new BehaviorSubject<string | null>(null);
   public userRoleLabel$ = new BehaviorSubject<string | null>(null);
-  
   public saldoPuntos$ = new BehaviorSubject<number>(0);
   public userRole$ = new BehaviorSubject<string | null>(null);
 
@@ -40,20 +37,16 @@ export class PublicLayoutComponent implements OnInit {
         if (isLoggedIn) {
           const token = this.authService.getDecodedToken();
           if (token) {
-            // 1. Determinamos el nombre a mostrar
-            // Si el token tiene claims 'nombre' y 'apellido', los usamos. Si no, el email.
-            // (Nota: Para que aparezca nombre real, el backend debe incluirlo en el JWT)
             const nombreDisplay = (token.nombre && token.apellido) 
-                                  ? `${token.nombre} ${token.apellido}` 
-                                  : token.sub;
+                                ? `${token.nombre} ${token.apellido}` 
+                                : token.sub;
             
             this.userEmail$.next(token.sub); 
             this.userName$.next(nombreDisplay);
 
-            // 2. Determinamos el Rol y su Etiqueta amigable
             if (this.authService.hasRole('ROLE_CLIENTE')) {
               this.userRole$.next('CLIENTE');
-              this.userRoleLabel$.next('Cliente'); // Etiqueta bonita
+              this.userRoleLabel$.next('Cliente');
               return this.puntosService.getMiSaldo().pipe(
                 map(saldo => saldo.saldoPuntos),
                 catchError(() => of(0))
@@ -69,7 +62,7 @@ export class PublicLayoutComponent implements OnInit {
             }
           }
         }
-        // Reset si no hay sesión
+        // Si no está logueado, limpiamos
         this.userEmail$.next(null);
         this.userName$.next(null);
         this.userRole$.next(null);
@@ -83,11 +76,11 @@ export class PublicLayoutComponent implements OnInit {
 
   logout(): void {
     this.authService.logout();
-    this.router.navigate(['/login']);
+    this.router.navigate(['/auth/login']);
   }
 
   onBuscar(termino: string): void {
     this.catalogoService.setSearchTerm(termino);
-    this.router.navigate(['/portal/catalogo']);
+    this.router.navigate(['/catalogo']);
   }
 }

@@ -6,7 +6,5 @@ export interface AuthResponseDTO {
   email: string;
   roles: string[];
   permisos: string[];
-
-  // Mentor: El campo 'tipo' (ej: "Bearer") ya no es necesario
-  // ya que el token se guarda y se usa con el interceptor.
+  debeCambiarPassword: boolean;
 }

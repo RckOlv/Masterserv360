@@ -44,17 +44,17 @@ public class AuthService {
 
     public AuthResponseDTO login(LoginRequestDTO request) {
         
+        // 1. Autenticar (Esto verifica si el usuario y pass coinciden)
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-        // Buscar Usuario Real para datos extra
+        // 2. Buscar datos completos del usuario (incluyendo la bandera de cambio de pass)
         Usuario usuario = usuarioRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
-        // CORRECCIÓN: Generar token enriquecido
         String token = jwtTokenUtil.generateToken(usuario);
 
         List<String> roles = userDetails.getAuthorities().stream()
@@ -67,7 +67,16 @@ public class AuthService {
                 .filter(auth -> !auth.startsWith("ROLE_"))
                 .collect(Collectors.toList());
 
-        return new AuthResponseDTO(token, usuario.getId(), usuario.getEmail(), roles, permisos);
+        // --- CORRECCIÓN AQUÍ ---
+        // Pasamos el 6to argumento: usuario.isDebeCambiarPassword()
+        return new AuthResponseDTO(
+            token, 
+            usuario.getId(), 
+            usuario.getEmail(), 
+            roles, 
+            permisos,
+            usuario.isDebeCambiarPassword() // <--- ¡AQUÍ ESTABA EL FALTANTE!
+        );
     }
 
     @Transactional
@@ -76,7 +85,7 @@ public class AuthService {
             throw new RuntimeException("Error: El email ya está registrado.");
         }
 
-        Rol rolPorDefecto = rolRepository.findByNombreRol("ROLE_CLIENTE")
+        Rol rolPorDefecto = rolRepository.findByNombreRol("ROLE_CLIENTE") // Verifica si tu método se llama findByNombre o findByNombreRol
                 .orElseThrow(() -> new RuntimeException("Error: Rol 'ROLE_CLIENTE' no encontrado."));
 
         TipoDocumento tipoDoc = null;
@@ -94,7 +103,21 @@ public class AuthService {
         nuevoUsuario.setTipoDocumento(tipoDoc);
         nuevoUsuario.setRoles(Set.of(rolPorDefecto));
         nuevoUsuario.setEstado(EstadoUsuario.ACTIVO);
+        
+        // Registro normal por web no obliga cambio de pass (por defecto es false)
 
         usuarioRepository.save(nuevoUsuario);
+    }
+
+    // --- NUEVO MÉTODO PARA EL CAMBIO OBLIGATORIO ---
+    @Transactional
+    public void cambiarPasswordInicial(String email, String nuevaPassword) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        usuario.setPasswordHash(passwordEncoder.encode(nuevaPassword));
+        usuario.setDebeCambiarPassword(false); // Apagamos la alerta
+        
+        usuarioRepository.save(usuario);
     }
 }

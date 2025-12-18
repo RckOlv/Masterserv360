@@ -1,8 +1,6 @@
 package com.masterserv.productos.entity;
 
-// Importamos el Enum que acabamos de crear
 import com.masterserv.productos.enums.EstadoUsuario;
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,15 +10,15 @@ import java.util.Set;
 @Entity
 @Table(name = "usuarios",
     uniqueConstraints = {
-        // Clave única compuesta que discutimos
         @UniqueConstraint(columnNames = {"tipo_documento_id", "documento"})
     }
 )
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Usuario extends AuditableEntity{
+public class Usuario extends AuditableEntity {
 
+    // ... (Tus campos id, nombre, apellido, email, passwordHash, documento, telefono existentes) ...
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -35,33 +33,35 @@ public class Usuario extends AuditableEntity{
     private String email;
 
     @Column(name = "password_hash", nullable = false, length = 100)
-    private String passwordHash; // Almacenará el hash de bcrypt
+    private String passwordHash;
 
-    @Column(length = 30) // Anulable
+    @Column(length = 30)
     private String documento;
 
-    @Column(length = 20) // Anulable
+    @Column(length = 20)
     private String telefono;
 
-    @Enumerated(EnumType.STRING) // ¡La clave! Guarda "ACTIVO", "INACTIVO", etc.
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 25)
     private EstadoUsuario estado;
 
-    // --- Relaciones ---
+    // --- NUEVO CAMPO ---
+    // Indica si el usuario debe cambiar su contraseña al próximo login
+    @Column(name = "debe_cambiar_password")
+    private boolean debeCambiarPassword = false; 
+    // -------------------
 
-    @ManyToOne(fetch = FetchType.LAZY) // Un usuario tiene UN tipo de documento
-    @JoinColumn(name = "tipo_documento_id") // FK, anulable por defecto
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tipo_documento_id")
     private TipoDocumento tipoDocumento;
 
-    @ManyToMany(fetch = FetchType.EAGER) // Un usuario tiene MUCHOS roles
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-        name = "usuarios_roles", // Nombre de la tabla de unión
-        joinColumns = @JoinColumn(name = "usuario_id"), // FK a esta entidad
-        inverseJoinColumns = @JoinColumn(name = "rol_id") // FK a la otra entidad
+        name = "usuarios_roles",
+        joinColumns = @JoinColumn(name = "usuario_id"),
+        inverseJoinColumns = @JoinColumn(name = "rol_id")
     )
     private Set<Rol> roles;
     
-    // NOTA: No necesitamos las relaciones inversas (@OneToMany)
-    // a Ventas, Pedidos, etc. aquí. Las mantendremos simples
-    // por ahora para acelerar el desarrollo.
+    // Lombok genera automáticamente: isDebeCambiarPassword() y setDebeCambiarPassword()
 }

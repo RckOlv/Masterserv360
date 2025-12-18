@@ -10,6 +10,7 @@ import { VentaService } from '../../service/venta.service';
 import { UsuarioService } from '../../service/usuario.service';
 import { ProductoService } from '../../service/producto.service';
 import { RolService } from '../../service/rol.service';
+import { ClienteService } from '../../service/cliente.service'; // <--- (1) Importar ClienteService
 
 // --- Modelos ---
 import { CarritoDTO } from '../../models/carrito.model';
@@ -22,6 +23,7 @@ import { ProductoDTO } from '../../models/producto.model';
 import { AddItemCarritoDTO } from '../../models/add-item-carrito.model';
 import { Page } from '../../models/page.model';
 import { CuponDTO } from '../../models/cupon.model';
+import { ClienteDTO } from '../../models/cliente.dto'; // <--- (2) Importar ClienteDTO
 
 // --- RxJS y ng-select ---
 import { NgSelectModule } from '@ng-select/ng-select';
@@ -48,6 +50,7 @@ export default class PuntoVentaComponent implements OnInit {
   private usuarioService = inject(UsuarioService);
   private productoService = inject(ProductoService);
   private rolService = inject(RolService);
+  private clienteService = inject(ClienteService); // <--- (3) Inyectar ClienteService
   private router = inject(Router);
   private fb = inject(FormBuilder);
 
@@ -75,8 +78,7 @@ export default class PuntoVentaComponent implements OnInit {
   public clienteSearch$ = new Subject<string>();
   public isLoadingClientes = false;
 
-  // Validaciones dinámicas
-  public maxDocumentoLength: number = 8; // Default DNI
+  public maxDocumentoLength: number = 8; 
 
   public paises = [
     { nombre: 'Argentina', codigo: '+54', bandera: '🇦🇷' },
@@ -104,7 +106,6 @@ export default class PuntoVentaComponent implements OnInit {
       nombre: ['', [Validators.required, Validators.pattern(textPattern)]],
       apellido: ['', [Validators.required, Validators.pattern(textPattern)]],
       tipoDocumentoBusqueda: ['DNI', Validators.required], 
-      // Validación inicial para DNI
       documento: ['', [Validators.required, Validators.pattern(/^[0-9]+$/), Validators.minLength(7), Validators.maxLength(8)]],
       email: ['', [Validators.required, Validators.email]],
       codigoPais: ['+54', Validators.required], 
@@ -116,8 +117,6 @@ export default class PuntoVentaComponent implements OnInit {
     this.cargarCarrito();
     this.initProductoSearch();
     this.initClienteSearch();
-    
-    // MENTOR: Iniciar escucha de cambios en tipo de documento
     this.setupDocumentValidation();
   }
 
@@ -138,9 +137,8 @@ export default class PuntoVentaComponent implements OnInit {
 
       tipoControl.valueChanges.subscribe(tipo => {
           docControl.clearValidators();
-          docControl.setValue(''); // Limpiar al cambiar tipo para evitar inconsistencias
+          docControl.setValue(''); 
           
-          // Validadores base
           const validators = [Validators.required];
 
           switch(tipo) {
@@ -157,9 +155,9 @@ export default class PuntoVentaComponent implements OnInit {
                   validators.push(Validators.minLength(11));
                   validators.push(Validators.maxLength(11));
                   break;
-              case 'PAS': // Pasaporte
+              case 'PAS': 
                   this.maxDocumentoLength = 20;
-                  validators.push(Validators.pattern(/^[a-zA-Z0-9]+$/)); // Alfanumérico
+                  validators.push(Validators.pattern(/^[a-zA-Z0-9]+$/)); 
                   validators.push(Validators.minLength(6));
                   validators.push(Validators.maxLength(20));
                   break;
@@ -172,7 +170,6 @@ export default class PuntoVentaComponent implements OnInit {
       });
   }
 
-  // Bloqueo de teclas para documento (permite letras solo si es PAS)
   validarInputDocumento(event: any): void {
       const tipo = this.nuevoClienteForm.get('tipoDocumentoBusqueda')?.value;
       const input = event.target;
@@ -200,8 +197,8 @@ export default class PuntoVentaComponent implements OnInit {
       const controlName = input.getAttribute('formControlName');
       if (controlName) this.nuevoClienteForm.get(controlName)?.setValue(input.value);
   }
-  // ------------------------------
 
+  // --- (4) AQUÍ ESTÁ EL CAMBIO CLAVE ---
   guardarNuevoCliente() {
     if (this.nuevoClienteForm.invalid) {
       this.nuevoClienteForm.markAllAsTouched();
@@ -223,7 +220,8 @@ export default class PuntoVentaComponent implements OnInit {
         }
     }
 
-    const datosCliente = {
+    // Usamos el DTO correcto
+    const datosCliente: ClienteDTO = {
         nombre: formValues.nombre,
         apellido: formValues.apellido,
         tipoDocumentoBusqueda: formValues.tipoDocumentoBusqueda, 
@@ -232,24 +230,27 @@ export default class PuntoVentaComponent implements OnInit {
         telefono: telefonoFinal
     };
 
-    this.usuarioService.crearClienteRapido(datosCliente).subscribe({
-      next: (nuevoUsuario: UsuarioDTO) => {
+    // Llamamos al NUEVO servicio (que manda el email y activa la bandera)
+    this.clienteService.registrarDesdePos(datosCliente).subscribe({
+      next: (nuevoUsuario: any) => { // Usamos any o UsuarioDTO
         this.isGuardandoCliente = false;
         
         if (this.modalClienteInstance) {
           this.modalClienteInstance.hide();
         }
         
-        mostrarToast(`Cliente ${nuevoUsuario.nombre} registrado con éxito.`, 'success');
+        mostrarToast(`Cliente ${nuevoUsuario.nombre} registrado con éxito. Se envió email de bienvenida.`, 'success');
         
+        // Asignar al select
+        // Nota: ng-select necesita que el item esté en la lista [items]
+        // Creamos un array temporal con ese usuario para que ng-select lo muestre
+        this.clientes$ = of([nuevoUsuario]); 
         this.clienteForm.patchValue({ clienteId: nuevoUsuario.id });
-        this.clientes$ = of([nuevoUsuario]);
         
         this.nuevoClienteForm.reset({ 
             tipoDocumentoBusqueda: 'DNI',
             codigoPais: '+54'
         });
-        // Restaurar max length a DNI por defecto visualmente
         this.maxDocumentoLength = 8;
       },
       error: (err) => {
@@ -260,7 +261,7 @@ export default class PuntoVentaComponent implements OnInit {
     });
   }
 
-  // ... (Resto de métodos del carrito sin cambios: cargarCarrito, calcularTotales, etc.)
+  // ... (Resto de métodos del carrito igual) ...
   
   cargarCarrito(): void {
     this.isLoadingCarrito = true;

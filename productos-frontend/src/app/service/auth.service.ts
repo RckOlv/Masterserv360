@@ -38,10 +38,12 @@ export class AuthService {
   constructor() { }
 
   login(credentials: LoginRequestDTO): Observable<AuthResponseDTO> {
-    // --- Mentor: ¡CORRECCIÓN AQUÍ! ---
-    // Cambiado 'this->apiUrl' por 'this.apiUrl'
     return this.http.post<AuthResponseDTO>(`${this.apiUrl}/login`, credentials).pipe(
       tap(response => {
+        // Solo guardamos el token y estado si NO es un cambio de contraseña obligatorio
+        // O podemos guardarlo igual, pero el Guard impedirá la navegación.
+        // En este caso, lo guardamos para que el usuario esté "autenticado" 
+        // y pueda llamar al endpoint de cambiar password.
         this.saveToken(response.token);
         this.savePermissions(response.permisos);
 
@@ -54,10 +56,16 @@ export class AuthService {
   }
 
   register(data: RegisterRequestDTO): Observable<any> {
-    // --- Mentor: ¡CORRECCIÓN AQUÍ! ---
-    // Cambiado 'this->apiUrl' por 'this.apiUrl'
     return this.http.post<any>(`${this.apiUrl}/register`, data);
   }
+
+  // --- MÉTODO NUEVO AGREGADO ---
+  cambiarPasswordInicial(nuevaPassword: string): Observable<any> {
+    // El token se envía automáticamente por el interceptor (auth.interceptor.ts)
+    // El cuerpo debe coincidir con el DTO del backend: { "nuevaPassword": "..." }
+    return this.http.post(`${this.apiUrl}/cambiar-password-inicial`, { nuevaPassword });
+  }
+  // -----------------------------
 
   logout(): void {
     localStorage.removeItem(this.TOKEN_KEY);
@@ -67,7 +75,7 @@ export class AuthService {
     this.currentUserEmail.next(null);
     this.currentUserRole.next(null);
     this.currentUserPermissions.next([]);
-    this.router.navigate(['/login']);
+    this.router.navigate(['/auth/login']);
   }
 
   private saveToken(token: string): void {
@@ -125,10 +133,6 @@ export class AuthService {
     return token.roles.includes(roleName);
   }
 
-  /**
-   * Verifica si el usuario logueado tiene un PERMISO específico.
-   * Lee la lista de permisos guardada en localStorage.
-   */
   public hasPermission(permissionName: string): boolean {
     return this.currentUserPermissions.value.includes(permissionName);
   }

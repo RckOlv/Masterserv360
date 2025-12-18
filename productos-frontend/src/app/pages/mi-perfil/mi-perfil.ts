@@ -195,7 +195,7 @@ export default class MiPerfilComponent implements OnInit {
     this.isSubmitting = true;
     const formValue = this.perfilForm.value;
     
-    // --- MENTOR: LÓGICA INTELIGENTE DE UNIÓN (+549) ---
+    // 1. Lógica de unión de teléfono
     let telefonoFinal = '';
     let numeroLimpio = formValue.telefono ? formValue.telefono.trim() : '';
     let codigoPais = formValue.codigoPais;
@@ -207,20 +207,27 @@ export default class MiPerfilComponent implements OnInit {
             telefonoFinal = `${codigoPais}${numeroLimpio}`;
         }
     }
-    // -------------------------------------------------
 
+    // 2. CREAMOS EL OBJETO LIMPIO (Solución al Error 500)
+    // Mapeamos campo a campo para evitar enviar 'codigoPais'
     const updateDTO: ClientePerfilUpdateDTO = {
-        ...formValue,
-        telefono: telefonoFinal
+        nombre: formValue.nombre,
+        apellido: formValue.apellido,
+        telefono: telefonoFinal, // Usamos el procesado
+        tipoDocumentoId: formValue.tipoDocumentoId,
+        documento: formValue.documento
     };
 
     this.clienteService.updateMiPerfil(updateDTO).subscribe({
       next: () => {
         mostrarToast('¡Perfil actualizado!', 'success');
         this.isSubmitting = false;
+        // Opcional: recargar los datos para asegurar sincronización
+        this.loadPerfil(); 
       },
-      error: () => {
+      error: (err) => {
         this.isSubmitting = false;
+        console.error(err);
         mostrarToast('Error al actualizar perfil', 'danger');
       }
     });
