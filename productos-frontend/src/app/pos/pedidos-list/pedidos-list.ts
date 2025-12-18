@@ -1,18 +1,15 @@
+// src/app/pos/pedidos-list/pedidos-list.ts
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common'; // Para *ngFor, *ngIf, etc.
-import { RouterModule } from '@angular/router'; // Para [routerLink]
+import { CommonModule } from '@angular/common'; 
+import { RouterModule } from '@angular/router'; 
+import { HttpErrorResponse } from '@angular/common/http';
+
 import { PedidoService } from '../../service/pedido.service';
 import { PedidoDTO } from '../../models/pedido.model';
+import { PedidoDetallado } from '../../models/pedido-detallado.model'; 
 import { Page } from '../../models/page.model';
 import { mostrarToast } from '../../utils/toast';
-
-// --- Mentor: Imports Agregados ---
-// import { AuthService } from '../../service/auth.service'; // Mentor: ELIMINADO
-import { HttpErrorResponse } from '@angular/common/http';
-// --- Mentor: INICIO DE LA MODIFICACIÓN ---
-// 1. Importar la nueva directiva de permisos
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
-// --- Mentor: FIN DE LA MODIFICACIÓN ---
 
 @Component({
   selector: 'app-pedidos-list',
@@ -20,46 +17,29 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   imports: [
     CommonModule, 
     RouterModule,
-    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
-    // 2. Añadir la directiva a los imports del componente
     HasPermissionDirective
-    // --- Mentor: FIN DE LA MODIFICACIÓN ---
   ], 
   templateUrl: './pedidos-list.html',
-  styleUrls: ['./pedidos-list.css'] // Usará el nuevo CSS
+  styleUrls: ['./pedidos-list.css'] 
 })
 export default class PedidosListComponent implements OnInit {
 
-  // Inyección de dependencias
   private pedidoService = inject(PedidoService);
-  // --- Mentor: ELIMINADA la inyección de AuthService ---
-  // private authService = inject(AuthService);
 
-  // Estado del componente
   public pedidosPage: Page<PedidoDTO> | null = null;
   public currentPage = 0;
   public pageSize = 10;
   public errorMessage: string | null = null;
   public isLoading = false;
   
-  // --- Mentor: INICIO DE LA MODIFICACIÓN ---
-  // 3. 'isAdmin' se elimina por completo
-  // public isAdmin = false; 
-  // --- Mentor: FIN DE LA MODIFICACIÓN ---
+  public pedidoSeleccionado: PedidoDetallado | null = null; 
 
   constructor() {}
 
   ngOnInit(): void {
-    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
-    // 4. Esta línea se elimina
-    // this.isAdmin = this.authService.hasRole('ROLE_ADMIN');
-    // --- Mentor: FIN DE LA MODIFICACIÓN ---
-    this.cargarPedidos(); // Carga inicial
+    this.cargarPedidos(); 
   }
 
-  /**
-   * Llama al servicio para cargar los pedidos paginados
-   */
   cargarPedidos(): void {
     this.isLoading = true;
     this.errorMessage = null;
@@ -77,9 +57,42 @@ export default class PedidosListComponent implements OnInit {
     });
   }
 
-  /**
-   * Marcar un pedido como COMPLETADO (Ingresa Stock)
-   */
+  verDetalles(id: number | undefined): void {
+    if (!id) return;
+
+    this.pedidoService.obtenerDetalles(id).subscribe({
+      next: (data) => {
+        this.pedidoSeleccionado = data;
+      },
+      error: (err) => {
+        console.error('Error al cargar detalles:', err);
+        mostrarToast('No se pudieron cargar los detalles.', 'danger');
+      }
+    });
+  }
+
+  cerrarModal(): void {
+    this.pedidoSeleccionado = null;
+  }
+
+  // --- NUEVO: Descargar PDF ---
+  descargarPdf(id: number | undefined): void {
+    if (!id) return;
+    
+    // Opcional: mostrar un mini spinner o aviso de "Generando..."
+    this.pedidoService.descargarPdf(id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        window.open(url); // Abre el PDF en nueva pestaña
+      },
+      error: (err) => {
+        console.error('Error al descargar PDF:', err);
+        mostrarToast('Error al generar el PDF.', 'danger');
+      }
+    });
+  }
+  // ---------------------------
+
   marcarCompletado(id: number | undefined): void {
     if (!id) return;
 
@@ -88,7 +101,8 @@ export default class PedidosListComponent implements OnInit {
       this.pedidoService.marcarCompletado(id).subscribe({
         next: () => {
           mostrarToast('Pedido completado. Stock actualizado.', 'success');
-          this.cargarPedidos(); // Recargar la lista
+          this.cargarPedidos(); 
+          if (this.pedidoSeleccionado?.id === id) this.cerrarModal(); 
         },
         error: (err: HttpErrorResponse) => {
           console.error('Error al completar pedido:', err);
@@ -99,9 +113,6 @@ export default class PedidosListComponent implements OnInit {
     }
   }
 
-  /**
-   * Marcar un pedido como CANCELADO
-   */
   marcarCancelado(id: number | undefined): void {
     if (!id) return;
 
@@ -110,7 +121,8 @@ export default class PedidosListComponent implements OnInit {
       this.pedidoService.marcarCancelado(id).subscribe({
         next: () => {
           mostrarToast('Pedido cancelado.', 'warning');
-          this.cargarPedidos(); // Recargar la lista
+          this.cargarPedidos(); 
+          if (this.pedidoSeleccionado?.id === id) this.cerrarModal();
         },
         error: (err: HttpErrorResponse) => {
           console.error('Error al cancelar pedido:', err);
@@ -121,8 +133,6 @@ export default class PedidosListComponent implements OnInit {
     }
   }
 
-  // --- Métodos de Paginación ---
-  
   irAPagina(pageNumber: number): void {
     if (pageNumber >= 0 && (!this.pedidosPage || pageNumber < this.pedidosPage.totalPages)) {
       this.currentPage = pageNumber;

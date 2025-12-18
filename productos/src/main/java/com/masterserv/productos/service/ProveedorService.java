@@ -3,6 +3,7 @@ package com.masterserv.productos.service;
 import com.masterserv.productos.dto.ProveedorDTO;
 import com.masterserv.productos.entity.Categoria; 
 import com.masterserv.productos.entity.Proveedor;
+import com.masterserv.productos.enums.EstadoUsuario; // <--- IMPORTANTE: Importar el Enum
 import com.masterserv.productos.mapper.ProveedorMapper;
 import com.masterserv.productos.repository.CategoriaRepository; 
 import com.masterserv.productos.repository.ProveedorRepository;
@@ -25,31 +26,28 @@ public class ProveedorService {
     private ProveedorMapper proveedorMapper;
 
     /**
-     * CORREGIDO: Lista proveedores filtrando por estado
+     * CORREGIDO: Lista proveedores filtrando por estado usando ENUMS
      */
     @Transactional(readOnly = true)
-    public List<ProveedorDTO> findAll(String estado) {
+    public List<ProveedorDTO> findAll(String estadoStr) {
         List<Proveedor> proveedores;
 
-        if ("TODOS".equalsIgnoreCase(estado)) {
-            // Llama al findAll() que sobreescribimos
+        // Convertimos el String que llega del Controller a lógica de Enum
+        if ("TODOS".equalsIgnoreCase(estadoStr)) {
             proveedores = proveedorRepository.findAll(); 
-        } else if ("INACTIVO".equalsIgnoreCase(estado)) {
-            // Llama al findByEstado() con @EntityGraph
-            proveedores = proveedorRepository.findByEstado("INACTIVO"); 
+        } else if ("INACTIVO".equalsIgnoreCase(estadoStr)) {
+            // Pasamos el ENUM, no el String
+            proveedores = proveedorRepository.findByEstado(EstadoUsuario.INACTIVO); 
         } else {
-            // Por defecto, trae solo activos
-            proveedores = proveedorRepository.findByEstado("ACTIVO"); 
+            // Por defecto, trae solo activos (pasando el ENUM)
+            proveedores = proveedorRepository.findByEstado(EstadoUsuario.ACTIVO); 
         }
         return proveedorMapper.toProveedorDTOList(proveedores);
     }
 
-    /**
-     * CORREGIDO: Usa el findById() que sobreescribimos
-     */
     @Transactional(readOnly = true)
     public ProveedorDTO findById(Long id) {
-        Proveedor proveedor = proveedorRepository.findById(id) // Llama al findById() con @EntityGraph
+        Proveedor proveedor = proveedorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado con id: " + id));
         return proveedorMapper.toProveedorDTO(proveedor);
     }
@@ -61,9 +59,11 @@ public class ProveedorService {
         });
 
         Proveedor proveedor = proveedorMapper.toProveedor(proveedorDTO);
-        proveedor.setEstado("ACTIVO");
         
-        // Lógica M:N para Categorías
+        // CORREGIDO: Setear Enum, no String
+        // (Asegúrate que tu Entidad Proveedor tenga el campo: private EstadoUsuario estado;)
+        proveedor.setEstado(EstadoUsuario.ACTIVO); 
+        
         if (proveedorDTO.getCategoriaIds() != null && !proveedorDTO.getCategoriaIds().isEmpty()) {
             Set<Categoria> categorias = proveedorDTO.getCategoriaIds().stream()
                 .map(id -> categoriaRepository.findById(id)
@@ -78,7 +78,6 @@ public class ProveedorService {
 
     @Transactional
     public ProveedorDTO update(Long id, ProveedorDTO proveedorDTO) {
-        // Usamos findById normal aquí, ya que el 'update' necesita el objeto base
         Proveedor proveedorExistente = proveedorRepository.findById(id) 
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado con id: " + id));
 
@@ -90,7 +89,6 @@ public class ProveedorService {
 
         proveedorMapper.updateProveedorFromDto(proveedorDTO, proveedorExistente);
         
-        // Lógica M:N para Categorías
         if (proveedorDTO.getCategoriaIds() != null) {
              Set<Categoria> categorias = proveedorDTO.getCategoriaIds().stream()
                 .map(catId -> categoriaRepository.findById(catId)
@@ -98,15 +96,22 @@ public class ProveedorService {
                 .collect(Collectors.toSet());
             proveedorExistente.setCategorias(categorias);
         } else {
-             proveedorExistente.getCategorias().clear(); // Si manda lista vacía, se quitan
+             proveedorExistente.getCategorias().clear(); 
         }
 
+        // CORREGIDO: Manejo de Enum en update
         if (proveedorDTO.getEstado() != null) {
-            proveedorExistente.setEstado(proveedorDTO.getEstado());
+            try {
+                // Asumiendo que el DTO trae el estado como String, lo convertimos a Enum
+                EstadoUsuario nuevoEstado = EstadoUsuario.valueOf(proveedorDTO.getEstado().toUpperCase());
+                proveedorExistente.setEstado(nuevoEstado);
+            } catch (IllegalArgumentException e) {
+                // Si mandan un estado inválido, lo ignoramos o lanzamos error
+                // System.out.println("Estado inválido: " + proveedorDTO.getEstado());
+            }
         }
         
         Proveedor actualizado = proveedorRepository.save(proveedorExistente);
-        // Devolvemos el DTO (cargará las categorías gracias al @EntityGraph de findById)
         return this.findById(actualizado.getId()); 
     }
 
@@ -114,7 +119,8 @@ public class ProveedorService {
     public void softDelete(Long id) {
         Proveedor proveedor = proveedorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado con id: " + id));
-        proveedor.setEstado("INACTIVO");
+        // CORREGIDO: Usar Enum
+        proveedor.setEstado(EstadoUsuario.INACTIVO); 
         proveedorRepository.save(proveedor);
     }
     
@@ -122,7 +128,8 @@ public class ProveedorService {
      public void reactivar(Long id) {
          Proveedor proveedor = proveedorRepository.findById(id)
                  .orElseThrow(() -> new RuntimeException("Proveedor no encontrado con id: " + id));
-         proveedor.setEstado("ACTIVO");
+         // CORREGIDO: Usar Enum
+         proveedor.setEstado(EstadoUsuario.ACTIVO);
          proveedorRepository.save(proveedor);
      }
 }

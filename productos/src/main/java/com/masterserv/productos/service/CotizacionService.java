@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -81,31 +82,22 @@ public class CotizacionService {
                 throw new SecurityException("Intento de cotizar un item inválido.");
             }
 
-            // --- MENTOR: LÓGICA DE DISPONIBILIDAD ---
-            
-            // Caso A: Proveedor marca "No tengo stock"
+            // Lógica de Disponibilidad
             if (!itemOferta.isDisponible()) {
-                // NOTA: Asegúrate de tener RECHAZADO_PROVEEDOR en tu Enum EstadoItemCotizacion.
-                // Si no, usa CANCELADO_ADMIN temporalmente.
-                itemDB.setEstado(EstadoItemCotizacion.CANCELADO_ADMIN); 
+                itemDB.setEstado(EstadoItemCotizacion.NO_DISPONIBLE_PROVEEDOR);
                 itemDB.setPrecioUnitarioOfertado(BigDecimal.ZERO);
-                // itemDB.setCantidadOfertada(0); // (Si agregaste el campo a la entidad)
-                continue; // No suma al total
+                continue; 
             }
 
-            // Caso B: Proveedor cotiza (verificamos cantidad parcial)
+            // Proveedor cotiza
             itemDB.setPrecioUnitarioOfertado(itemOferta.getPrecioUnitarioOfertado());
             itemDB.setEstado(EstadoItemCotizacion.COTIZADO);
             
-            // Usamos la cantidad ofertada por el proveedor, o la solicitada si no especificó
+            // Cantidad final
             int cantidadFinal = (itemOferta.getCantidadOfertada() != null && itemOferta.getCantidadOfertada() > 0) 
                     ? itemOferta.getCantidadOfertada() 
                     : itemDB.getCantidadSolicitada();
             
-            // (Si tu entidad ItemCotizacion tuviera el campo, lo guardaríamos aquí)
-            // itemDB.setCantidadOfertada(cantidadFinal);
-
-            // Calculamos subtotal REAL (Precio x Cantidad que me van a dar)
             BigDecimal subtotal = itemOferta.getPrecioUnitarioOfertado()
                     .multiply(new BigDecimal(cantidadFinal));
             
@@ -118,7 +110,6 @@ public class CotizacionService {
 
         cotizacionRepository.save(cotizacion);
         
-        // --- LLAMADA AL ALGORITMO ---
         recalcularRecomendacion(cotizacion);
     }
 
@@ -164,6 +155,10 @@ public class CotizacionService {
         cotizacionRepository.save(cotizacion);
     }
     
+    /**
+     * Confirma una cotización, genera el pedido y cancela items en otras cotizaciones.
+     * Si una cotización rival se queda sin items activos, se cancela completamente.
+     */
     @Transactional
     public Pedido confirmarCotizacion(Long id, String adminEmail) {
         Usuario adminUsuario = usuarioRepository.findByEmail(adminEmail)
@@ -185,13 +180,21 @@ public class CotizacionService {
         Set<DetallePedido> detallesPedido = new HashSet<>();
         BigDecimal totalPedido = BigDecimal.ZERO;
 
+        // Definimos qué items de la competencia están "vivos" y deben morir
+        List<EstadoItemCotizacion> estadosVivosCompetencia = Arrays.asList(
+                EstadoItemCotizacion.PENDIENTE,
+                EstadoItemCotizacion.COTIZADO
+        );
+
         for (ItemCotizacion itemGanador : cotizacionGanadora.getItems()) {
+            
+            // Solo procesamos lo que el proveedor cotizó
             if (itemGanador.getEstado() == EstadoItemCotizacion.COTIZADO) {
+                
+                // 1. Crear detalle de pedido
                 DetallePedido detalle = new DetallePedido();
                 detalle.setPedido(pedido);
                 detalle.setProducto(itemGanador.getProducto());
-                // MENTOR: Aquí deberíamos usar la cantidadOfertada si la guardaste en BD
-                // Por ahora usamos la solicitada original si no cambiaste la entidad ItemCotizacion
                 detalle.setCantidad(itemGanador.getCantidadSolicitada());
                 detalle.setPrecioUnitario(itemGanador.getPrecioUnitarioOfertado()); 
                 
@@ -200,6 +203,31 @@ public class CotizacionService {
                 BigDecimal subtotal = itemGanador.getPrecioUnitarioOfertado()
                         .multiply(new BigDecimal(itemGanador.getCantidadSolicitada()));
                 totalPedido = totalPedido.add(subtotal);
+
+                // 2. Marcar el item ganador como CONFIRMADO
+                itemGanador.setEstado(EstadoItemCotizacion.CONFIRMADO);
+
+                // 3. BUSCAR Y ELIMINAR LA COMPETENCIA
+                List<ItemCotizacion> itemsPerdedores = itemCotizacionRepository.findItemsRivales(
+                        itemGanador.getProducto().getId(),
+                        cotizacionGanadora.getId(),
+                        estadosVivosCompetencia
+                );
+
+                if (!itemsPerdedores.isEmpty()) {
+                    // Usamos un Set para identificar las cotizaciones padres afectadas sin repetir
+                    Set<Cotizacion> cotizacionesAfectadas = new HashSet<>();
+
+                    itemsPerdedores.forEach(perdedor -> {
+                        perdedor.setEstado(EstadoItemCotizacion.CANCELADO_SISTEMA);
+                        cotizacionesAfectadas.add(perdedor.getCotizacion());
+                    });
+                    
+                    itemCotizacionRepository.saveAll(itemsPerdedores);
+                    
+                    // 4. VERIFICAR SI LAS COTIZACIONES AFECTADAS DEBEN MORIR
+                    verificarYAutoCancelarCotizaciones(cotizacionesAfectadas);
+                }
             }
         }
         
@@ -212,16 +240,45 @@ public class CotizacionService {
 
         pedidoRepository.save(pedido);
 
+        // Actualizamos la cotización ganadora
         cotizacionGanadora.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
         cotizacionRepository.save(cotizacionGanadora);
         
+        // Guardamos los cambios de estado de los items ganadores
+        itemCotizacionRepository.saveAll(cotizacionGanadora.getItems());
+        
         return pedido;
+    }
+    
+    /**
+     * Verifica si una lista de cotizaciones se ha quedado sin items activos.
+     * Si no tienen items pendientes ni cotizados, se marcan como CANCELADA_SISTEMA.
+     */
+    private void verificarYAutoCancelarCotizaciones(Set<Cotizacion> cotizaciones) {
+        for (Cotizacion cot : cotizaciones) {
+            // Buscamos si queda ALGÚN item vivo
+            boolean tieneItemsVivos = cot.getItems().stream()
+                .anyMatch(i -> 
+                    i.getEstado() == EstadoItemCotizacion.PENDIENTE || 
+                    i.getEstado() == EstadoItemCotizacion.COTIZADO
+                );
+
+            if (!tieneItemsVivos) {
+                // Si está vacía de items útiles, la cerramos
+                cot.setEstado(EstadoCotizacion.CANCELADA_SISTEMA);
+                cotizacionRepository.save(cot);
+            } else {
+                // Si aún vive, actualizamos su total por si acaso bajó de precio
+                recalcularTotalCotizacion(cot);
+            }
+        }
     }
     
     private void recalcularTotalCotizacion(Cotizacion cotizacion) {
         BigDecimal nuevoTotal = BigDecimal.ZERO;
         for (ItemCotizacion item : cotizacion.getItems()) {
-            if (item.getEstado() == EstadoItemCotizacion.COTIZADO && item.getPrecioUnitarioOfertado() != null) {
+            if ((item.getEstado() == EstadoItemCotizacion.COTIZADO || item.getEstado() == EstadoItemCotizacion.CONFIRMADO) 
+                    && item.getPrecioUnitarioOfertado() != null) {
                 nuevoTotal = nuevoTotal.add(
                     item.getPrecioUnitarioOfertado().multiply(new BigDecimal(item.getCantidadSolicitada()))
                 );

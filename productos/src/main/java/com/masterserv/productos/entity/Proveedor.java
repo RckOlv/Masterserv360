@@ -1,5 +1,6 @@
 package com.masterserv.productos.entity;
 
+import com.masterserv.productos.enums.EstadoUsuario; // <--- 1. Importar el Enum
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.HashSet;
@@ -11,28 +12,34 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-// --- CORRECCIÓN: Quitamos "productos" del exclude ---
-@ToString(exclude = "categorias") // 👈 Solo excluimos categorias
+@ToString(exclude = "categorias") 
 public class Proveedor extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ... (razonSocial, cuit, email, telefono, etc.) ...
     @Column(nullable = false, unique = true, length = 255)
     private String razonSocial;
-    // ... (resto de tus campos) ...
+
     @Column(nullable = false, unique = true, length = 20)
     private String cuit;
+
     @Column(length = 100)
     private String email;
+
     @Column(length = 20)
     private String telefono;
+
     @Column(length = 255)
     private String direccion;
+
+    // --- CORRECCIÓN CRÍTICA AQUÍ ---
+    // Cambiamos String por el Enum.
+    // @Enumerated(EnumType.STRING) le dice a JPA: "Guarda el texto 'ACTIVO' en la base de datos, pero en Java úsalo como Enum".
+    @Enumerated(EnumType.STRING) 
     @Column(length = 50)
-    private String estado;
+    private EstadoUsuario estado; 
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -42,10 +49,6 @@ public class Proveedor extends AuditableEntity {
     )
     private Set<Categoria> categorias = new HashSet<>();
 
-    // --- ¡ELIMINADO! ---
-    // El Set<Producto> que te pedí añadir era incorrecto. Lo quitamos.
-
-    // ... (Tu equals y hashCode están perfectos) ...
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

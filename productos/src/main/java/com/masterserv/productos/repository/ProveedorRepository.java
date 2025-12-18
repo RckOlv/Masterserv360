@@ -1,7 +1,8 @@
 package com.masterserv.productos.repository;
 
 import com.masterserv.productos.entity.Proveedor;
-import org.springframework.data.jpa.repository.EntityGraph; // Importar
+import com.masterserv.productos.enums.EstadoUsuario; // Asegúrate de importar tu Enum
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,27 +16,25 @@ public interface ProveedorRepository extends JpaRepository<Proveedor, Long> {
     Optional<Proveedor> findByCuit(String cuit);
     Optional<Proveedor> findByRazonSocial(String razonSocial);
 
-    // --- MÉTODOS OPTIMIZADOS CON @EntityGraph ---
-    // (Sobreescribimos los métodos estándar de JpaRepository)
+    // --- MÉTODOS OPTIMIZADOS ---
 
     /**
      * Busca TODOS los proveedores y carga sus categorías (EAGER).
-     * Override del método de JpaRepository.
+     * Útil para listados completos de administración.
      */
     @Override
     @EntityGraph(attributePaths = {"categorias"})
     List<Proveedor> findAll(); 
 
     /**
-     * Busca proveedores por estado y carga sus categorías (EAGER).
-     * Este es un método derivado VÁLIDO.
+     * Busca proveedores por ESTADO y carga sus categorías (EAGER).
+     * Usamos el Enum EstadoUsuario para tipo seguro.
      */
     @EntityGraph(attributePaths = {"categorias"})
-    List<Proveedor> findByEstado(String estado); 
+    List<Proveedor> findByEstado(EstadoUsuario estado); 
 
     /**
-     * Busca un proveedor por ID y carga sus categorías (EAGER).
-     * Override del método de JpaRepository.
+     * Busca un proveedor por ID y carga sus categorías.
      */
     @Override
     @EntityGraph(attributePaths = {"categorias"})

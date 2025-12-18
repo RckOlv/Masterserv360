@@ -1,6 +1,5 @@
 /* ================================
    ESTILOS MASTERSERV360 - PEDIDOS
-   (Copiado de Productos.css)
    ================================ */
 
 :host {
@@ -8,7 +7,7 @@
   width: 100%;
 }
 
-.pedidos-container { /* Mentor: Nombre cambiado */
+.pedidos-container {
   height: 100%;
   width: 100%;
   display: flex;
@@ -130,7 +129,6 @@
   transform: translateY(-2px);
 }
 
-
 /* CONTENEDOR PRINCIPAL */
 .content-main {
   flex: 1;
@@ -225,7 +223,6 @@
   color: #121212;
 }
 
-
 /* Alertas */
 .masterserv-alert-danger {
   background: rgba(220, 53, 69, 0.1);
@@ -291,4 +288,118 @@
   0% { left: -100%; }
   50% { left: 100%; }
   100% { left: 100%; }
+}
+
+/* --- Estilos para el Modal (EN PANTALLA) --- */
+.modal {
+  background: rgba(0, 0, 0, 0.7); /* Fondo oscuro semitransparente */
+  overflow-y: auto; /* Permitir scroll */
+}
+
+.modal-backdrop {
+  z-index: 1040;
+}
+
+.modal.show {
+  z-index: 1050;
+  padding-right: 0 !important; 
+}
+
+.btn-close-white {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.font-monospace {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+/* --- CORRECCIÓN VISUAL: Texto gris legible en fondo oscuro --- */
+.text-dim {
+  color: #cccccc !important; /* Gris claro para pantalla */
+}
+
+/* =========================================================
+   ESTILOS DE IMPRESIÓN - CLEAN PRINT
+   ========================================================= */
+@media print {
+  
+  /* 1. ELIMINAR ENCABEZADOS Y PIES DE PÁGINA DEL NAVEGADOR */
+  @page {
+    margin: 0;      /* Borra márgenes, fecha y URL */
+    size: auto;     
+  }
+
+  /* 2. OCULTAR TODO LO QUE NO SEA EL MODAL */
+  body > * {
+    display: none !important; /* Oculta la app principal */
+  }
+
+  /* 3. FORZAR VISIBILIDAD DEL MODAL */
+  .modal.show {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 20px; 
+    background: white !important; /* Fondo BLANCO para papel */
+    visibility: visible;
+    overflow: visible;
+  }
+
+  .modal-dialog {
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .modal-content {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* 4. LIMPIEZA DE COLORES (Todo a blanco y negro) */
+  .masterserv-card, .masterserv-card-body, .modal-body, .card-header {
+    background: white !important;
+    color: black !important;
+    border: none !important;
+  }
+
+  /* 5. TEXTOS NEGROS */
+  .text-white, .text-white-50, .text-dim, .text-muted, .text-secondary {
+    color: black !important;
+  }
+
+  /* 6. CORRECCIÓN DEL AMARILLO (Totales) -> NEGRO */
+  .text-warning {
+    color: black !important; 
+    font-weight: bold;
+  }
+
+  /* 7. OCULTAR ELEMENTOS INTERACTIVOS */
+  .modal-footer, .btn-close {
+    display: none !important;
+  }
+
+  /* 8. AJUSTES DE TABLA PARA IMPRESIÓN */
+  .table {
+    color: black !important;
+  }
+  .table th, .table td {
+    border-color: #000 !important; /* Bordes negros finos */
+  }
+  
+  /* Eliminar fondos oscuros de la tabla responsive */
+  .table-responsive {
+    background: transparent !important;
+    border: none !important;
+  }
+  
+  /* Título del comprobante en negro */
+  .masterserv-title {
+    color: black !important;
+    text-shadow: none !important;
+  }
 }

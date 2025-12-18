@@ -1,19 +1,17 @@
 package com.masterserv.productos.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference; // <--- IMPORTANTE
 import com.masterserv.productos.enums.EstadoCotizacion;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString; // <--- IMPORTANTE
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Representa la solicitud de cotización (Pre-Pedido) que se envía
- * a UN proveedor, la cual puede contener MÚLTIPLES items.
- */
 @Entity
 @Table(name = "cotizaciones")
 @Getter
@@ -26,28 +24,27 @@ public class Cotizacion extends AuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "proveedor_id", nullable = false)
-    private Proveedor proveedor; // El proveedor al que le pedimos esto
+    private Proveedor proveedor;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private EstadoCotizacion estado; // PENDIENTE_PROVEEDOR, RECIBIDA, CONFIRMADA, etc.
+    private EstadoCotizacion estado;
 
     @Column(unique = true, nullable = false, length = 36)
-    private String token; // El link secreto (UUID) para este proveedor
+    private String token;
 
     @Column(name = "fecha_entrega_ofertada")
-    private LocalDate fechaEntregaOfertada; // La fecha que el proveedor promete
+    private LocalDate fechaEntregaOfertada;
 
     @Column(name = "precio_total_ofertado", precision = 10, scale = 2)
-    private BigDecimal precioTotalOfertado; // La suma de los items que el proveedor cotizó
+    private BigDecimal precioTotalOfertado;
 
     @Column(name = "es_recomendada")
-    private boolean esRecomendada = false; // true si nuestro sistema la marca como la mejor opción
+    private boolean esRecomendada = false;
 
-    /**
-     * ¡CLAVE! Una cotización tiene MUCHOS items.
-     * CascadeType.ALL: Si borramos la cotización, se borran sus items.
-     */
+    // --- CORRECCIÓN AQUÍ ---
     @OneToMany(mappedBy = "cotizacion", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference // <--- 1. Rompe el ciclo en JSON (Lado Padre)
+    @ToString.Exclude     // <--- 2. Evita recursión si alguna vez usas toString()
     private Set<ItemCotizacion> items = new HashSet<>();
 }

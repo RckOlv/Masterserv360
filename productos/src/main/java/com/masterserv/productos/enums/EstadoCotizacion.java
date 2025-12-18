@@ -1,40 +1,38 @@
 package com.masterserv.productos.enums;
 
 /**
- * Define los estados posibles de una Cotizacion (Pre-Pedido) completa
- * enviada a un proveedor.
+ * Define los estados posibles de una Cotizacion (Pre-Pedido).
  */
 public enum EstadoCotizacion {
 
     /**
-     * El sistema ha generado la cotización y la ha enviado al proveedor
-     * (vía email/link). Estamos esperando que el proveedor ingrese sus precios.
+     * Esperando que el proveedor ingrese sus precios.
      */
     PENDIENTE_PROVEEDOR,
 
     /**
-     * El proveedor ha completado el formulario del link, ha ingresado
-     * sus precios/fechas y ha presionado "Enviar". La oferta ya está
-     * en nuestro sistema, lista para ser evaluada por el Administrador.
+     * El proveedor envió su oferta. Lista para evaluar.
      */
     RECIBIDA,
 
     /**
-     * El Administrador ha revisado las ofertas recibidas y ha
-     * seleccionado esta cotización como la ganadora.
-     * Esto dispara la creación de un 'Pedido' formal.
+     * El Admin la eligió como ganadora. Se generó un Pedido.
      */
     CONFIRMADA_ADMIN,
 
     /**
-     * El Administrador ha cancelado esta cotización completa (no solo un item).
-     * (Ej. ya no necesita los productos o eligió otra cotización).
+     * El Admin la canceló manualmente.
      */
     CANCELADA_ADMIN,
 
     /**
-     * El token del link ha expirado (ej. 3 días) y el proveedor
-     * nunca respondió. El sistema la marca como vencida.
+     * Token expirado.
      */
-    VENCIDA
+    VENCIDA,
+
+    /**
+     * NUEVO: El sistema la cerró automáticamente porque todos sus items
+     * fueron cancelados (se compraron en otras cotizaciones).
+     */
+    CANCELADA_SISTEMA
 }

@@ -1,73 +1,83 @@
-<div class="login-container">
-  <!-- Fondo con la imagen del logo -->
-  <div class="background-image"></div>
-  <div class="background-overlay"></div>
+<div class="login-split-container">
   
-  <div class="login-card-wrapper">
-    <div class="login-card glass-card">
-      <div class="card-body p-4 p-md-5">
-        
-        <div class="text-center mb-4">
-          <!-- Logo más pequeño sobre el fondo -->
-          <div class="logo-container mb-3">
-            <img src="/images/Masterserv.png" alt="Masterserv Logo" class="login-logo">
-          </div>
-          <h2 class="fw-bold title-text mb-2">Masterserv<span class="text-warning">360</span></h2>
-          <p class="tagline">PARA UNA MÁQUINA PODEROSA...</p>
-        </div>
-
-        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-          
-          <!-- EMAIL -->
-          <div class="form-group-custom mb-3">
-            <label for="email" class="form-label-custom">Email</label>
-            <input type="email" class="form-control-custom" id="email" 
-                   placeholder="nombre@ejemplo.com" formControlName="email"
-                   [ngClass]="{ 'input-invalid': email?.invalid && email?.touched }">
-            <div *ngIf="email?.invalid && email?.touched" class="error-message">
-              <i class="bi bi-exclamation-circle me-1"></i>
-              <span *ngIf="email?.errors?.['required']">El email es obligatorio.</span>
-              <span *ngIf="email?.errors?.['email']">Debe ser un email válido.</span>
-            </div>
-          </div>
-
-          <!-- CONTRASEÑA -->
-          <div class="form-group-custom mb-3">
-            <label for="password" class="form-label-custom">Contraseña</label>
-            <input type="password" class="form-control-custom" id="password" 
-                   placeholder="Ingresa tu contraseña" formControlName="password"
-                   [ngClass]="{ 'input-invalid': password?.invalid && password?.touched }">
-            <div *ngIf="password?.invalid && password?.touched" class="error-message">
-              <i class="bi bi-exclamation-circle me-1"></i>
-              <span *ngIf="password?.errors?.['required']">La contraseña es obligatoria.</span>
-            </div>
-          </div>
-
-          <div *ngIf="errorMessage" class="alert-custom mt-3">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            {{ errorMessage }}
-          </div>
-
-          <div class="d-grid mt-4">
-            <button type="submit" class="btn-custom btn-lg glow-button" 
-                    [disabled]="loginForm.invalid || isSubmitting">
-              <span *ngIf="!isSubmitting">
-                <i class="bi bi-lightning-charge me-2"></i>Ingresar
-              </span>
-              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            </button>
-          </div>
-        </form>
-
-        <!-- SECCIÓN REGISTRO -->
-        <div class="text-center mt-4">
-          <small class="register-text">¿Eres un cliente nuevo?</small>
-          <a routerLink="/register" class="register-link">
-            <i class="bi bi-tools me-1"></i>Regístrate aquí
-          </a>
-        </div>
-        
-      </div>
+  <div class="login-left-panel">
+    <div class="brand-content">
+      <img src="/images/Masterserv.png" alt="Masterserv Logo" class="big-logo">
+      <h1 class="brand-title">Masterserv<span class="text-warning">360</span></h1>
+      <p class="brand-tagline">PARA UNA MÁQUINA PODEROSA...</p>
     </div>
   </div>
+
+  <div class="login-right-panel">
+    <div class="login-form-wrapper">
+      
+      <div class="form-header">
+        <h2 class="form-title">Bienvenido</h2>
+        <p class="form-subtitle">Ingresa tus credenciales para continuar</p>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert-custom">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        
+        <div class="form-group-custom">
+          <label for="email" class="form-label-custom">Correo Electrónico</label>
+          <div class="input-wrapper">
+            <input type="email" class="form-control-custom" id="email" 
+                   placeholder="ejemplo@correo.com" formControlName="email"
+                   [ngClass]="{ 'input-invalid': email?.invalid && email?.touched }">
+            <i class="bi bi-envelope input-icon"></i>
+          </div>
+          
+          <div *ngIf="email?.invalid && email?.touched" class="error-message">
+            <i class="bi bi-info-circle"></i>
+            <span *ngIf="email?.errors?.['required']">El email es requerido.</span>
+            <span *ngIf="email?.errors?.['email']">Formato de email inválido.</span>
+          </div>
+        </div>
+
+        <div class="form-group-custom">
+          <div class="d-flex justify-content-between">
+            <label for="password" class="form-label-custom">Contraseña</label>
+            <a routerLink="/forgot-password" class="register-link" style="font-size: 0.75rem; font-weight: normal;">
+              ¿Olvidaste tu contraseña?
+            </a>
+          </div>
+          
+          <div class="input-wrapper">
+            <input type="password" class="form-control-custom" id="password" 
+                   placeholder="••••••••" formControlName="password"
+                   [ngClass]="{ 'input-invalid': password?.invalid && password?.touched }">
+            <i class="bi bi-lock input-icon"></i>
+          </div>
+
+          <div *ngIf="password?.invalid && password?.touched" class="error-message">
+            <i class="bi bi-info-circle"></i>
+            <span *ngIf="password?.errors?.['required']">La contraseña es requerida.</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-custom" [disabled]="loginForm.invalid || isSubmitting">
+          <span *ngIf="!isSubmitting">
+            INICIAR SESIÓN <i class="bi bi-arrow-right ms-2"></i>
+          </span>
+          <span *ngIf="isSubmitting">
+            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+            Validando...
+          </span>
+        </button>
+
+      </form>
+
+      <div class="register-section">
+        <span class="register-text">¿Eres nuevo aquí?</span>
+        <a routerLink="/register" class="register-link">Crear una cuenta</a>
+      </div>
+
+    </div>
+  </div>
+
 </div>

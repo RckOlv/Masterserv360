@@ -54,16 +54,23 @@
                   </span>
                 </td>
                 <td *appHasPermission="'PEDIDOS_MANAGE'" class="text-center pe-3">
+                  
+                  <button class="btn masterserv-btn-outline-success btn-sm me-1" 
+                          (click)="verDetalles(p.id)" 
+                          title="Ver Comprobante">
+                    <i class="bi bi-eye"></i>
+                  </button>
+
                   <ng-container *ngIf="p.estado === 'PENDIENTE'">
                     <button class="btn btn-action-success btn-sm me-1" 
                             (click)="marcarCompletado(p.id)" 
                             title="Marcar como Completado (Ingresar Stock)">
-                      <i class="bi bi-check-lg"></i> Completar
+                      <i class="bi bi-check-lg"></i>
                     </button>
                     <button class="btn masterserv-btn-outline-danger btn-sm" 
                             (click)="marcarCancelado(p.id)" 
                             title="Cancelar Pedido">
-                      <i class="bi bi-x-lg"></i> Cancelar
+                      <i class="bi bi-x-lg"></i>
                     </button>
                   </ng-container>
                 </td>
@@ -98,6 +105,116 @@
         </div>
 
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop fade show" *ngIf="pedidoSeleccionado"></div>
+
+<div class="modal fade show" 
+     tabindex="-1" 
+     role="dialog" 
+     style="display: block;" 
+     *ngIf="pedidoSeleccionado">
+  
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content masterserv-card" style="border: 1px solid #E41E26;">
+      
+      <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
+        <h5 class="masterserv-title mb-0" style="font-size: 1.2rem;">
+          <i class="bi bi-receipt me-2"></i>Comprobante Pedido #{{ pedidoSeleccionado.id }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="cerrarModal()"></button>
+      </div>
+
+      <div class="modal-body masterserv-card-body">
+        
+        <div class="row mb-4 border-bottom border-secondary pb-3">
+          <div class="col-md-6 border-end border-secondary">
+            <h6 class="text-danger text-uppercase fw-bold mb-3 small">Datos del Proveedor</h6>
+            <p class="mb-1 fw-bold text-white fs-5">{{ pedidoSeleccionado.proveedorRazonSocial }}</p>
+            <p class="mb-1 text-dim small">
+                <i class="bi bi-person-vcard me-2"></i>CUIT: <span class="text-white">{{ pedidoSeleccionado.proveedorCuit }}</span>
+            </p>
+            <p class="mb-1 text-dim small">
+                <i class="bi bi-envelope me-2"></i>{{ pedidoSeleccionado.proveedorEmail || 'Sin email' }}
+            </p>
+            <p class="mb-0 text-dim small" *ngIf="pedidoSeleccionado.proveedorTelefono">
+                <i class="bi bi-telephone me-2"></i>{{ pedidoSeleccionado.proveedorTelefono }}
+            </p>
+          </div>
+
+          <div class="col-md-6 ps-4">
+            <h6 class="text-danger text-uppercase fw-bold mb-3 small">Información del Pedido</h6>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-dim small">Estado:</span>
+                <span class="badge masterserv-badge"
+                    [ngClass]="{
+                      'masterserv-badge-warning': pedidoSeleccionado.estado === 'PENDIENTE', 
+                      'masterserv-badge-success': pedidoSeleccionado.estado === 'COMPLETADO', 
+                      'masterserv-badge-danger': pedidoSeleccionado.estado === 'CANCELADO'
+                    }">
+                {{ pedidoSeleccionado.estado }}
+              </span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-dim small">Fecha Emisión:</span>
+                <span class="text-white small">{{ pedidoSeleccionado.fechaPedido | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span class="text-dim small">Solicitado por:</span>
+                <span class="text-white small fw-bold">{{ pedidoSeleccionado.usuarioSolicitante }}</span>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="text-danger text-uppercase fw-bold mb-3 small">Detalle de Productos</h6>
+        <div class="table-responsive mb-3" style="background: rgba(0,0,0,0.2); border-radius: 6px;">
+          <table class="table table-dark table-sm table-borderless align-middle mb-0">
+            <thead class="text-secondary" style="border-bottom: 1px solid #333;">
+              <tr>
+                <th class="ps-3">Cód.</th>
+                <th>Producto</th>
+                <th class="text-center">Cant.</th>
+                <th class="text-end">Precio Unit.</th>
+                <th class="text-end pe-3">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of pedidoSeleccionado.detalles">
+                <td class="ps-3 text-dim small font-monospace">{{ item.productoCodigo }}</td>
+                <td class="text-white">{{ item.productoNombre }}</td>
+                <td class="text-center fw-bold text-white">{{ item.cantidad }}</td>
+                <td class="text-end text-dim font-monospace">{{ item.precioUnitario | currency:'ARS':'symbol':'1.2-2' }}</td>
+                <td class="text-end pe-3 fw-bold text-warning font-monospace">{{ item.subtotal | currency:'ARS':'symbol':'1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-12 text-end">
+            <span class="text-dim me-3 text-uppercase small">Total Estimado</span>
+            <h3 class="text-warning d-inline-block m-0 font-monospace">
+              {{ pedidoSeleccionado.totalPedido | currency:'ARS':'symbol':'1.2-2' }}
+            </h3>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer border-top border-secondary" style="background: #151515;">
+        
+        <button type="button" class="btn btn-outline-light btn-sm me-auto" 
+                (click)="descargarPdf(pedidoSeleccionado.id)">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF
+        </button>
+        
+        <button type="button" class="btn masterserv-btn-success px-4" (click)="cerrarModal()">
+            Cerrar
+        </button>
+      </div>
+
     </div>
   </div>
 </div>
