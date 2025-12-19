@@ -41,8 +41,8 @@ public class SecurityConfig {
                 .requestMatchers("/auth/**", "/bot/whatsapp", "/error").permitAll()
                 
                 // 2. Rutas de Consulta Pública (Catálogo, etc.)
-                .requestMatchers(HttpMethod.GET, "/catalogo/productos/**").permitAll() 
-                .requestMatchers(HttpMethod.POST, "/catalogo/productos/filtrar").permitAll() 
+                .requestMatchers(HttpMethod.GET, "/productos/**").permitAll() 
+                .requestMatchers(HttpMethod.POST, "/productos/filtrar").permitAll() 
                 .requestMatchers(HttpMethod.GET, "/categorias/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/tipos-documento/**").permitAll()
 
