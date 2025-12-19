@@ -223,6 +223,12 @@
   color: #121212;
 }
 
+.masterserv-badge-info {
+    background-color: rgba(13, 202, 240, 0.2);
+    color: #0dcaf0;
+    border: 1px solid #0dcaf0;
+}
+
 /* Alertas */
 .masterserv-alert-danger {
   background: rgba(220, 53, 69, 0.1);

@@ -47,10 +47,11 @@
                   <span class="badge masterserv-badge" 
                         [ngClass]="{
                           'masterserv-badge-warning': p.estado === 'PENDIENTE', 
+                          'masterserv-badge-info': p.estado === 'EN_CAMINO', 
                           'masterserv-badge-success': p.estado === 'COMPLETADO', 
                           'masterserv-badge-danger': p.estado === 'CANCELADO'
                         }">
-                    {{ p.estado }}
+                    {{ p.estado === 'EN_CAMINO' ? 'EN CAMINO' : p.estado }}
                   </span>
                 </td>
                 <td *appHasPermission="'PEDIDOS_MANAGE'" class="text-center pe-3">
@@ -61,13 +62,16 @@
                     <i class="bi bi-eye"></i>
                   </button>
 
-                  <ng-container *ngIf="p.estado === 'PENDIENTE'">
+                  <ng-container *ngIf="p.estado === 'PENDIENTE' || p.estado === 'EN_CAMINO'">
+                    
                     <button class="btn btn-action-success btn-sm me-1" 
                             (click)="marcarCompletado(p.id)" 
                             title="Marcar como Completado (Ingresar Stock)">
                       <i class="bi bi-check-lg"></i>
                     </button>
-                    <button class="btn masterserv-btn-outline-danger btn-sm" 
+                    
+                    <button *ngIf="p.estado === 'PENDIENTE'" 
+                            class="btn masterserv-btn-outline-danger btn-sm" 
                             (click)="marcarCancelado(p.id)" 
                             title="Cancelar Pedido">
                       <i class="bi bi-x-lg"></i>
@@ -151,10 +155,11 @@
                 <span class="badge masterserv-badge"
                     [ngClass]="{
                       'masterserv-badge-warning': pedidoSeleccionado.estado === 'PENDIENTE', 
+                      'masterserv-badge-info': pedidoSeleccionado.estado === 'EN_CAMINO', 
                       'masterserv-badge-success': pedidoSeleccionado.estado === 'COMPLETADO', 
                       'masterserv-badge-danger': pedidoSeleccionado.estado === 'CANCELADO'
                     }">
-                {{ pedidoSeleccionado.estado }}
+                {{ pedidoSeleccionado.estado === 'EN_CAMINO' ? 'EN CAMINO' : pedidoSeleccionado.estado }}
               </span>
             </div>
             <div class="d-flex justify-content-between mb-2">

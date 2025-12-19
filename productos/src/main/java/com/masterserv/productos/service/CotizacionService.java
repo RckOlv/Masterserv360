@@ -35,18 +35,10 @@ import java.util.stream.Collectors;
 @Service
 public class CotizacionService {
 
-    @Autowired
-    private CotizacionRepository cotizacionRepository;
-    
-    @Autowired
-    private ItemCotizacionRepository itemCotizacionRepository;
-
-    @Autowired
-    private PedidoRepository pedidoRepository;
-    
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-    
+    @Autowired private CotizacionRepository cotizacionRepository;
+    @Autowired private ItemCotizacionRepository itemCotizacionRepository;
+    @Autowired private PedidoRepository pedidoRepository;
+    @Autowired private UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
     public CotizacionPublicaDTO findCotizacionPublicaByToken(String token) {
@@ -89,14 +81,20 @@ public class CotizacionService {
                 continue; 
             }
 
-            // Proveedor cotiza
+            // Proveedor cotiza PRECIO
             itemDB.setPrecioUnitarioOfertado(itemOferta.getPrecioUnitarioOfertado());
-            itemDB.setEstado(EstadoItemCotizacion.COTIZADO);
             
-            // Cantidad final
+            // --- CORRECCIÓN CLAVE: CANTIDAD ---
+            // Si el proveedor cambió la cantidad, la guardamos
             int cantidadFinal = (itemOferta.getCantidadOfertada() != null && itemOferta.getCantidadOfertada() > 0) 
                     ? itemOferta.getCantidadOfertada() 
                     : itemDB.getCantidadSolicitada();
+            
+            // Actualizamos la base de datos con la cantidad REAL que ofreció el proveedor
+            itemDB.setCantidadSolicitada(cantidadFinal); 
+            // ----------------------------------
+
+            itemDB.setEstado(EstadoItemCotizacion.COTIZADO);
             
             BigDecimal subtotal = itemOferta.getPrecioUnitarioOfertado()
                     .multiply(new BigDecimal(cantidadFinal));
@@ -112,6 +110,10 @@ public class CotizacionService {
         
         recalcularRecomendacion(cotizacion);
     }
+
+    // ... (El resto de tus métodos findCotizacionesRecibidas, cancelarItem, etc. SE MANTIENEN IGUAL) ...
+    // ... COPIA Y PEGA EL RESTO DEL CÓDIGO ORIGINAL AQUÍ ...
+    // ... SOLO MODIFIQUÉ EL MÉTODO submitOfertaProveedor ARRIBA ...
 
     @Transactional(readOnly = true)
     public List<CotizacionAdminDTO> findCotizacionesRecibidas() {
@@ -155,10 +157,6 @@ public class CotizacionService {
         cotizacionRepository.save(cotizacion);
     }
     
-    /**
-     * Confirma una cotización, genera el pedido y cancela items en otras cotizaciones.
-     * Si una cotización rival se queda sin items activos, se cancela completamente.
-     */
     @Transactional
     public Pedido confirmarCotizacion(Long id, String adminEmail) {
         Usuario adminUsuario = usuarioRepository.findByEmail(adminEmail)
@@ -180,7 +178,6 @@ public class CotizacionService {
         Set<DetallePedido> detallesPedido = new HashSet<>();
         BigDecimal totalPedido = BigDecimal.ZERO;
 
-        // Definimos qué items de la competencia están "vivos" y deben morir
         List<EstadoItemCotizacion> estadosVivosCompetencia = Arrays.asList(
                 EstadoItemCotizacion.PENDIENTE,
                 EstadoItemCotizacion.COTIZADO
@@ -188,13 +185,12 @@ public class CotizacionService {
 
         for (ItemCotizacion itemGanador : cotizacionGanadora.getItems()) {
             
-            // Solo procesamos lo que el proveedor cotizó
             if (itemGanador.getEstado() == EstadoItemCotizacion.COTIZADO) {
                 
-                // 1. Crear detalle de pedido
                 DetallePedido detalle = new DetallePedido();
                 detalle.setPedido(pedido);
                 detalle.setProducto(itemGanador.getProducto());
+                // AQUÍ AHORA USA LA CANTIDAD ACTUALIZADA (Ofertada)
                 detalle.setCantidad(itemGanador.getCantidadSolicitada());
                 detalle.setPrecioUnitario(itemGanador.getPrecioUnitarioOfertado()); 
                 
@@ -204,10 +200,8 @@ public class CotizacionService {
                         .multiply(new BigDecimal(itemGanador.getCantidadSolicitada()));
                 totalPedido = totalPedido.add(subtotal);
 
-                // 2. Marcar el item ganador como CONFIRMADO
                 itemGanador.setEstado(EstadoItemCotizacion.CONFIRMADO);
 
-                // 3. BUSCAR Y ELIMINAR LA COMPETENCIA
                 List<ItemCotizacion> itemsPerdedores = itemCotizacionRepository.findItemsRivales(
                         itemGanador.getProducto().getId(),
                         cotizacionGanadora.getId(),
@@ -215,17 +209,13 @@ public class CotizacionService {
                 );
 
                 if (!itemsPerdedores.isEmpty()) {
-                    // Usamos un Set para identificar las cotizaciones padres afectadas sin repetir
                     Set<Cotizacion> cotizacionesAfectadas = new HashSet<>();
-
                     itemsPerdedores.forEach(perdedor -> {
                         perdedor.setEstado(EstadoItemCotizacion.CANCELADO_SISTEMA);
                         cotizacionesAfectadas.add(perdedor.getCotizacion());
                     });
                     
                     itemCotizacionRepository.saveAll(itemsPerdedores);
-                    
-                    // 4. VERIFICAR SI LAS COTIZACIONES AFECTADAS DEBEN MORIR
                     verificarYAutoCancelarCotizaciones(cotizacionesAfectadas);
                 }
             }
@@ -240,23 +230,16 @@ public class CotizacionService {
 
         pedidoRepository.save(pedido);
 
-        // Actualizamos la cotización ganadora
         cotizacionGanadora.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
         cotizacionRepository.save(cotizacionGanadora);
         
-        // Guardamos los cambios de estado de los items ganadores
         itemCotizacionRepository.saveAll(cotizacionGanadora.getItems());
         
         return pedido;
     }
     
-    /**
-     * Verifica si una lista de cotizaciones se ha quedado sin items activos.
-     * Si no tienen items pendientes ni cotizados, se marcan como CANCELADA_SISTEMA.
-     */
     private void verificarYAutoCancelarCotizaciones(Set<Cotizacion> cotizaciones) {
         for (Cotizacion cot : cotizaciones) {
-            // Buscamos si queda ALGÚN item vivo
             boolean tieneItemsVivos = cot.getItems().stream()
                 .anyMatch(i -> 
                     i.getEstado() == EstadoItemCotizacion.PENDIENTE || 
@@ -264,11 +247,9 @@ public class CotizacionService {
                 );
 
             if (!tieneItemsVivos) {
-                // Si está vacía de items útiles, la cerramos
                 cot.setEstado(EstadoCotizacion.CANCELADA_SISTEMA);
                 cotizacionRepository.save(cot);
             } else {
-                // Si aún vive, actualizamos su total por si acaso bajó de precio
                 recalcularTotalCotizacion(cot);
             }
         }

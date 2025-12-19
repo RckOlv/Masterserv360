@@ -1,0 +1,130 @@
+/*
+ * ESTILOS MASTERSERV (Dark & Red)
+ * Adaptados para la pantalla de Orden de Compra
+*/
+:host {
+  display: block;
+  width: 100%;
+  min-height: 100vh; /* Ocupa toda la altura */
+  
+  /* Variables de tu tema */
+  --bs-body-bg: #121212; 
+  --bs-body-color: #E0E0E0;
+  --bs-card-bg: #1E1E1E;
+  --bs-card-border-color: #9E9E9E;
+  --bs-primary: #E41E26; /* TU ROJO MASTERSERV */
+  --bs-metal: #9E9E9E;
+
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+
+/* Tarjeta Principal */
+.card {
+  background-color: var(--bs-card-bg);
+  border: 1px solid var(--bs-card-border-color);
+  color: var(--bs-body-color);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5); /* Sombra para profundidad */
+}
+
+/* Encabezado de Tarjeta */
+.card-header {
+  background-color: #2a2a2a; /* Ligeramente más claro que el fondo */
+  border-bottom: 1px solid var(--bs-card-border-color);
+  padding: 1.5rem;
+}
+
+/* Títulos y Textos */
+h2, h3, h4, h5 {
+  color: #FFFFFF;
+  margin: 0;
+}
+
+.text-primary-ms {
+    color: var(--bs-primary) !important;
+}
+
+.label-dato {
+    color: var(--bs-metal);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.valor-dato {
+    color: #FFFFFF;
+    font-size: 1.1rem;
+}
+
+/* Tablas */
+.table {
+  color: var(--bs-body-color);
+  border-color: var(--bs-metal);
+  margin-top: 1rem;
+}
+
+.table thead th {
+  background-color: #2a2a2a;
+  color: var(--bs-primary); /* Encabezados en ROJO */
+  border-bottom: 2px solid var(--bs-metal);
+  border-top: none;
+  padding: 12px;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #333;
+}
+
+.table tbody td {
+    background-color: transparent;
+    color: #FFF;
+    padding: 12px;
+    vertical-align: middle;
+}
+
+/* Badges (Etiquetas de estado) */
+.badge-estado {
+    background-color: var(--bs-primary);
+    color: #FFF;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+/* Sección de Aviso/Info */
+.alert-info-ms {
+    background-color: #2a2a2a;
+    border-left: 4px solid var(--bs-primary);
+    color: #E0E0E0;
+    padding: 20px;
+    margin-top: 30px;
+    border-radius: 4px;
+}
+
+/* Spinner de carga (usando tu rojo) */
+.spinner-border {
+    color: var(--bs-primary);
+}
+
+/* Estilo para los inputs del formulario */
+.input-dark {
+    background-color: #2a2a2a;
+    border: 1px solid var(--bs-metal);
+    color: #FFF;
+}
+
+.input-dark:focus {
+    background-color: #333;
+    border-color: var(--bs-primary);
+    color: #FFF;
+    box-shadow: 0 0 0 0.25rem rgba(228, 30, 38, 0.25);
+}
+
+/* Iconos de bootstrap */
+.bi-check-circle {
+    color: #28a745; /* Verde éxito */
+}

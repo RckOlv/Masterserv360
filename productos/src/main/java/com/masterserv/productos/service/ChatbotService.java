@@ -2,13 +2,13 @@ package com.masterserv.productos.service;
 
 import com.masterserv.productos.entity.*;
 import com.masterserv.productos.enums.EstadoCupon;
+import com.masterserv.productos.enums.EstadoListaEspera; // <--- IMPORTANTE
 import com.masterserv.productos.repository.*;
-import com.twilio.Twilio;
 import com.twilio.twiml.MessagingResponse;
 import com.twilio.twiml.messaging.Message;
 
-import jakarta.annotation.PostConstruct; 
-import org.springframework.beans.factory.annotation.Value;
+// import jakarta.annotation.PostConstruct; 
+// import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
@@ -22,10 +22,12 @@ import java.util.UUID;
 @Service
 public class ChatbotService {
 
-    @Value("${twilio.account-sid}")
-    private String ACCOUNT_SID;
-    @Value("${twilio.auth-token}")
-    private String AUTH_TOKEN;
+    // --- CREDENCIALES COMENTADAS (Lo maneja WhatsappService) ---
+    // @Value("${twilio.account-sid}")
+    // private String ACCOUNT_SID;
+    // @Value("${twilio.auth-token}")
+    // private String AUTH_TOKEN;
+    // -----------------------------------------------------------
 
     private final UsuarioRepository usuarioRepository;
     private final ProductoRepository productoRepository;
@@ -35,6 +37,9 @@ public class ChatbotService {
     private final RecompensaRepository recompensaRepository;
     private final CuponRepository cuponRepository;
     private final CuentaPuntosRepository cuentaPuntosRepository;
+    
+    // --- NUEVO REPOSITORIO ---
+    private final ListaEsperaRepository listaEsperaRepository;
 
     public ChatbotService(UsuarioRepository usuarioRepository,
                           ProductoRepository productoRepository,
@@ -43,7 +48,8 @@ public class ChatbotService {
                           SolicitudProductoRepository solicitudProductoRepository,
                           RecompensaRepository recompensaRepository,
                           CuponRepository cuponRepository,
-                          CuentaPuntosRepository cuentaPuntosRepository) {
+                          CuentaPuntosRepository cuentaPuntosRepository,
+                          ListaEsperaRepository listaEsperaRepository) { // <--- INYECCIÓN
         this.usuarioRepository = usuarioRepository;
         this.productoRepository = productoRepository;
         this.interaccionRepository = interaccionRepository;
@@ -52,16 +58,19 @@ public class ChatbotService {
         this.recompensaRepository = recompensaRepository;
         this.cuponRepository = cuponRepository;
         this.cuentaPuntosRepository = cuentaPuntosRepository;
+        this.listaEsperaRepository = listaEsperaRepository; // <--- ASIGNACIÓN
     }
 
-    @PostConstruct
-    public void init() {
-        try {
-            Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-        } catch (Exception e) {
-            System.err.println("Error inicializando Twilio: " + e.getMessage());
-        }
-    }
+    // --- INIT COMENTADO (Lo maneja WhatsappService) ---
+    // @PostConstruct
+    // public void init() {
+    //   try {
+    //       Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
+    //   } catch (Exception e) {
+    //       System.err.println("Error inicializando Twilio: " + e.getMessage());
+    //   }
+    // }
+    // --------------------------------------------------
 
     @Transactional
     public String procesarMensajeWebhook(String from, String body) {
@@ -84,15 +93,14 @@ public class ChatbotService {
 
         Usuario usuario = usuarioOpt.get();
 
-        // 1. SALUDO MEJORADO Y MÁS AMIGABLE
+        // 1. SALUDO
         if (esSaludo(texto) || texto.contains("menu") || texto.contains("ayuda")) {
             return String.format(
                 "👋 ¡Hola %s! Bienvenido a *Masterserv360* 🏍️\n\n" +
                 "Soy tu asistente virtual. ¿Qué necesitas hoy?\n\n" +
-                "🔍 *Buscar Repuesto:* Escribe el nombre (ej: _\"precio bateria\"_)\n" + 
-                "🎁 *Mis Puntos:* Escribe _\"mis puntos\"_ para ver tu saldo y canjear\n" +
-                "📝 *Pedir algo:* Escribe _\"solicitar [producto]\"_ si no lo encuentras\n\n" +
-                "¡Escribe tu consulta y te respondo al instante!",
+                "🔍 *Buscar:* Escribe el nombre (ej: _\"precio bateria\"_)\n" + 
+                "🎁 *Puntos:* Escribe _\"mis puntos\"_ para ver saldo\n" +
+                "📝 *Pedir:* Escribe _\"solicitar [producto]\"_ para pedirlo\n",
                 usuario.getNombre()
             );
         }
@@ -105,7 +113,7 @@ public class ChatbotService {
             List<Recompensa> recompensas = recompensaRepository.findAll(); 
             
             StringBuilder msg = new StringBuilder();
-            msg.append(String.format("🏆 *Tienes %d Puntos*\n\nCanjealos por:\n", puntosActuales));
+            msg.append(String.format("🏆 *Tienes %d Puntos*\nCanjealos por:\n", puntosActuales));
 
             for (Recompensa r : recompensas) {
                 String estado = (puntosActuales >= r.getPuntosRequeridos()) ? "✅" : "🔒";
@@ -119,19 +127,53 @@ public class ChatbotService {
         // 3. CANJEAR
         if (texto.startsWith("canjear")) {
             String nombrePremio = limpiarPrefijo(texto);
-            if (nombrePremio.isEmpty()) return "⚠️ Por favor escribe el nombre del premio. Ej: _\"canjear 10% aceite\"_";
+            if (nombrePremio.isEmpty()) return "⚠️ Por favor escribe el nombre del premio.";
             return procesarCanje(usuario, nombrePremio);
         }
 
-        // 4. SOLICITAR
-        if (texto.startsWith("solicitar")) {
-            String descripcion = limpiarPrefijo(texto); 
-            if (descripcion.length() < 3) return "⚠️ Dime qué producto necesitas. Ej: _\"solicitar espejo retrovisor\"_";
+        // =====================================================================
+        // 4. SOLICITAR (LÓGICA MEJORADA)
+        // =====================================================================
+        if (texto.startsWith("solicitar") || texto.startsWith("pedir") || texto.startsWith("quiero")) {
+            String termino = limpiarPrefijo(texto); 
+            if (termino.length() < 3) return "⚠️ Dime qué producto necesitas. Ej: _\"solicitar espejo\"_";
             
-            SolicitudProducto s = new SolicitudProducto(descripcion, usuario);
-            solicitudProductoRepository.save(s);
-            return "✅ ¡Listo! Hemos anotado tu pedido de: '" + descripcion + "'. Te avisaremos cuando ingrese.";
+            // A. ¿EL PRODUCTO YA EXISTE? Buscamos algo que se parezca en el catálogo
+            Optional<Producto> productoExistente = productoRepository.findByNombreContainingIgnoreCase(termino)
+                    .stream().findFirst();
+
+            if (productoExistente.isPresent()) {
+                Producto p = productoExistente.get();
+                
+                // B. SI EXISTE, TE METEMOS EN LA LISTA DE ESPERA (AUTOMÁTICA)
+                boolean yaEnEspera = listaEsperaRepository.existsByUsuarioIdAndProductoIdAndEstado(
+                        usuario.getId(), p.getId(), EstadoListaEspera.PENDIENTE);
+
+                if (yaEnEspera) {
+                    return "📋 Ya estás en la lista de espera para *" + p.getNombre() + "*. Te avisaremos por aquí cuando llegue.";
+                }
+
+                ListaEspera espera = new ListaEspera();
+                espera.setUsuario(usuario);
+                espera.setProducto(p);
+                espera.setFechaInscripcion(LocalDate.now());
+                espera.setEstado(EstadoListaEspera.PENDIENTE);
+                listaEsperaRepository.save(espera);
+
+                return String.format(
+                    "✅ El producto *%s* existe en catálogo (Stock: %d).\n" +
+                    "🔔 ¡Listo! Te he agregado a la **Lista de Espera** automática.\n" +
+                    "Recibirás un WhatsApp en cuanto entre mercadería.", 
+                    p.getNombre(), p.getStockActual()
+                );
+            } else {
+                // C. SI NO EXISTE, GUARDAMOS LA NOTA PARA EL ADMIN (MANUAL)
+                SolicitudProducto s = new SolicitudProducto(termino, usuario);
+                solicitudProductoRepository.save(s);
+                return "📝 No encontré ese producto en catálogo, pero generé una solicitud de: '" + termino;
+            }
         }
+        // =====================================================================
 
         // 5. STOCK Y PRECIOS
         if (texto.length() > 3 || texto.startsWith("stock") || texto.startsWith("precio")) {

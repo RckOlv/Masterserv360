@@ -2,7 +2,7 @@
 import { DetallePedidoDTO } from "./detalle-pedido.model";
 
 // Coincide con el Enum EstadoPedido del backend
-export type EstadoPedido = 'PENDIENTE' | 'COMPLETADO' | 'CANCELADO';
+export type EstadoPedido = 'PENDIENTE' | 'COMPLETADO' | 'CANCELADO' | 'EN_CAMINO';
 
 export interface PedidoDTO {
   id?: number;

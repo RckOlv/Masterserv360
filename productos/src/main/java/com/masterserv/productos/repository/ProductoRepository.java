@@ -59,4 +59,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
 
     @Query("SELECT p FROM Producto p WHERE p.nombre ILIKE %:termino% AND p.estado = 'ACTIVO'")
     List<Producto> findByNombreILike(@Param("termino") String termino, Pageable pageable);
+
+    // Esto le dice a Spring: "Busca productos donde el nombre contenga este texto, ignorando mayúsculas/minúsculas"
+    List<Producto> findByNombreContainingIgnoreCase(String nombre);
 }

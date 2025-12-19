@@ -1,7 +1,7 @@
 package com.masterserv.productos.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // <--- AGREGAR IMPORT
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // Importante
 import com.masterserv.productos.enums.EstadoItemCotizacion;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -28,8 +28,7 @@ public class ItemCotizacion extends AuditableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "producto_id", nullable = false)
-    // --- AGREGA ESTA ANOTACIÓN ---
-    // Esto evita que traiga la categoría, fechas, imágenes y descripciones largas en la auditoría/JSON
+    // Evita bucles y carga pesada de datos innecesarios en el JSON
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "fechaCreacion", "fechaModificacion", "categoria", "descripcion", "imagenUrl", "stockActual", "stockMinimo", "loteReposicion", "precioCosto", "precioVenta"})
     private Producto producto;
 

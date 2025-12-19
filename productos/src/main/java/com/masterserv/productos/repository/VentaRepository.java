@@ -44,7 +44,7 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
 
     Page<Venta> findByCliente(Usuario cliente, Pageable pageable);
 
-    // --- GRÁFICO DE LÍNEAS (Corregido @@) ---
+    // --- GRÁFICO DE LÍNEAS ---
     @Query("SELECT new com.masterserv.productos.dto.VentasPorDiaDTO(CAST(v.fechaVenta AS LocalDate), SUM(v.totalVenta)) " +
            "FROM Venta v " +
            "WHERE v.estado = 'COMPLETADA' AND v.fechaVenta BETWEEN :fechaInicio AND :fechaFin " +
@@ -66,8 +66,11 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
     @Query("SELECT SUM(v.totalVenta) FROM Venta v WHERE v.estado = 'COMPLETADA' AND v.fechaVenta BETWEEN :inicio AND :fin")
     Optional<BigDecimal> findTotalVentasEntreFechas(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
 
-    // --- GRÁFICO DE DONA (Corregido cálculo manual) ---
-    // Importante: Usamos "dv.precioUnitario * dv.cantidad" porque "subtotal" no existe en la entidad DetalleVenta mapeada
+    // --- NUEVO: CONTAR CANTIDAD DE VENTAS EN RANGO ---
+    @Query("SELECT COUNT(v) FROM Venta v WHERE v.estado = 'COMPLETADA' AND v.fechaVenta BETWEEN :inicio AND :fin")
+    long countVentasEntreFechas(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
+
+    // --- GRÁFICO DE DONA ---
     @Query("SELECT new com.masterserv.productos.dto.VentasPorCategoriaDTO(p.categoria.nombre, SUM(dv.precioUnitario * dv.cantidad)) " +
            "FROM DetalleVenta dv " +
            "JOIN dv.producto p " +

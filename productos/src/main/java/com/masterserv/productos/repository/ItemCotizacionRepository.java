@@ -1,12 +1,16 @@
 package com.masterserv.productos.repository;
 
 import com.masterserv.productos.entity.ItemCotizacion;
+import com.masterserv.productos.entity.Producto;
+import com.masterserv.productos.entity.Proveedor;
+import com.masterserv.productos.enums.EstadoCotizacion;
 import com.masterserv.productos.enums.EstadoItemCotizacion;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -25,4 +29,14 @@ public interface ItemCotizacionRepository extends JpaRepository<ItemCotizacion, 
             @Param("idCotizacionGanadora") Long idCotizacionGanadora,
             @Param("estadosVivos") List<EstadoItemCotizacion> estadosVivos
     );
+
+    // Busca si existe algún item de este producto, para este proveedor, 
+    // dentro de una cotización que esté en estado "Pendiente", "Recibida" o "Confirmada".
+    @Query("SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END FROM ItemCotizacion i " +
+           "WHERE i.producto = :producto " +
+           "AND i.cotizacion.proveedor = :proveedor " +
+           "AND i.cotizacion.estado IN :estados")
+    boolean existePedidoActivo(@Param("producto") Producto producto, 
+                               @Param("proveedor") Proveedor proveedor, 
+                               @Param("estados") Collection<EstadoCotizacion> estados);
 }

@@ -1,0 +1,114 @@
+<div class="container">
+    
+    <div class="text-center mt-5" *ngIf="loading">
+        <div class="spinner-border" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-3" style="color: var(--bs-metal);">Cargando Orden de Compra...</p>
+    </div>
+
+    <div class="row justify-content-center" *ngIf="error && !loading">
+        <div class="col-md-8">
+            <div class="card p-5 text-center" style="border-color: var(--bs-primary);">
+                <h3 class="text-primary-ms mb-3">Aviso</h3>
+                <p class="valor-dato">{{ error }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center" *ngIf="pedido && !loading">
+        <div class="col-lg-10">
+            
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="label-dato">ORDEN DE COMPRA</div>
+                        <h2>#{{ pedido.id }}</h2>
+                    </div>
+                    <div>
+                        <span class="badge-estado">
+                            {{ pedido.estado }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="label-dato">Proveedor</div>
+                            <div class="valor-dato">{{ pedido.proveedor }}</div>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <div class="label-dato">Fecha de Emisión</div>
+                            <div class="valor-dato">{{ pedido.fecha | date:'dd/MM/yyyy HH:mm' }}</div>
+                        </div>
+                    </div>
+
+                    <hr style="border-color: var(--bs-metal); opacity: 0.3;">
+
+                    <h4 class="mb-3 text-primary-ms">Productos Solicitados</h4>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Producto / Descripción</th>
+                                    <th scope="col" class="text-center" style="width: 100px;">Cant.</th>
+                                    <th scope="col" class="text-end" style="width: 180px;">Precio Unit. ($)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let item of pedido.detalles">
+                                    <td>
+                                        {{ item.producto }}
+                                    </td>
+                                    <td class="text-center fw-bold" style="font-size: 1.1rem;">
+                                        {{ item.cantidad }}
+                                    </td>
+                                    <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm text-end input-dark" 
+                                               [(ngModel)]="item.precio" 
+                                               placeholder="0.00">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card mt-5" style="border: 1px solid var(--bs-primary); background-color: #1a1a1a;">
+                        <div class="card-body">
+                            <h4 class="text-white mb-3"><i class="bi bi-check-circle me-2"></i>Confirmar Entrega</h4>
+                            <p class="label-dato mb-4">Por favor, indique la fecha estimada de llegada y confirme los precios.</p>
+                            
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-6">
+                                    <label class="label-dato mb-2">Fecha Estimada de Entrega</label>
+                                    <input type="date" 
+                                           class="form-control input-dark" 
+                                           [(ngModel)]="fechaEntrega"
+                                           [min]="minDate">
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <button class="btn btn-success btn-lg w-100 fw-bold" 
+                                            (click)="confirmarPedido()" 
+                                            [disabled]="enviando || !fechaEntrega">
+                                        <span *ngIf="enviando" class="spinner-border spinner-border-sm me-2"></span>
+                                        {{ enviando ? 'Procesando...' : 'CONFIRMAR PEDIDO' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                
+                <div class="card-footer text-center" style="border-top: 1px solid var(--bs-metal); background-color: #121212;">
+                    <small style="color: var(--bs-metal);">Masterserv S.A. - Sistema de Gestión de Compras</small>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>

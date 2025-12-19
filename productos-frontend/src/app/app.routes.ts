@@ -9,17 +9,14 @@ import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout';
 
 export const routes: Routes = [
 
-  // 1. MUNDO PÚBLICO / CLIENTE (Layout de Tienda)
+  // 1. MUNDO PÚBLICO / CLIENTE
   {
     path: '',
     component: PublicLayoutComponent,
     children: [
       { path: '', redirectTo: 'catalogo', pathMatch: 'full' },
-      
-      // Rutas ABIERTAS
       { path: 'catalogo', loadComponent: () => import('./pages/catalogo/catalogo') },
       
-      // Rutas PROTEGIDAS DE CLIENTE
       { 
         path: 'portal',
         canActivate: [AuthGuard], 
@@ -32,42 +29,41 @@ export const routes: Routes = [
     ]
   },
 
-  // 2. AUTH (Login / Registro / Cambio Pass) - Layout limpio
+  // 2. AUTH
   {
     path: 'auth',
     component: AuthLayoutComponent, 
     children: [
-      { 
-        path: 'login', 
-        loadComponent: () => import('./pages/login/login'),
-        canActivate: [LoginGuard] 
-      },
-      { 
-        path: 'register', 
-        loadComponent: () => import('./pages/reg-cli/reg-cli'),
-        canActivate: [LoginGuard] 
-      },
-      // --- MENTOR: NUEVA RUTA AQUÍ ---
-      { 
-        path: 'cambiar-password-force', 
-        loadComponent: () => import('./pages/change-password-force/change-password-force'),
-        // No le ponemos AuthGuard estricto todavía para simplificar, 
-        // pero idealmente debería tener uno que verifique si realmente debe cambiarla.
-        // Por ahora confiamos en la redirección del login.
-      },
-      // --------------------------------
-      { 
-        path: 'oferta/:token', 
-        loadComponent: () => import('./pages/oferta-proveedor/oferta-proveedor')
-      }
+      { path: 'login', loadComponent: () => import('./pages/login/login'), canActivate: [LoginGuard] },
+      { path: 'register', loadComponent: () => import('./pages/reg-cli/reg-cli'), canActivate: [LoginGuard] },
+      { path: 'cambiar-password-force', loadComponent: () => import('./pages/change-password-force/change-password-force') }
+    ]
+  },
+
+  // 3. RUTAS EXTERNAS (PROVEEDORES) - Usamos AuthLayout para diseño limpio
+  {
+    path: 'oferta',
+    component: AuthLayoutComponent, 
+    children: [
+      { path: ':token', loadComponent: () => import('./pages/oferta-proveedor/oferta-proveedor') }
     ]
   },
   
-  // Redirecciones cortas
+  // --- NUEVA RUTA AGREGADA AQUÍ ---
+  {
+    path: 'proveedor/pedido',
+    component: AuthLayoutComponent, // Reutilizamos layout limpio
+    children: [
+      { path: ':token', loadComponent: () => import('./pages/pedido-proveedor/pedido-proveedor').then(m => m.PedidoProveedorComponent) }
+    ]
+  },
+  // --------------------------------
+
+  // Redirecciones
   { path: 'login', redirectTo: 'auth/login' },
   { path: 'register', redirectTo: 'auth/register' },
 
-  // 3. MUNDO ADMIN (POS) - Layout de Gestión
+  // 4. MUNDO ADMIN (POS)
   {
     path: 'pos',
     component: AdminLayoutComponent,
@@ -78,18 +74,13 @@ export const routes: Routes = [
       { path: 'punto-venta', loadComponent: () => import('./pos/punto-venta/punto-venta') },
       { path: 'ventas-historial', loadComponent: () => import('./pos/ventas-list/ventas-list') },
       { path: 'ventas/:id', loadComponent: () => import('./pos/venta-detalle/venta-detalle') },
-      
       { path: 'productos', loadComponent: () => import('./pos/productos/productos') },
       { path: 'productos/nuevo', loadComponent: () => import('./pos/producto-form/producto-form') },
       { path: 'productos/editar/:id', loadComponent: () => import('./pos/producto-form/producto-form') },
       { path: 'categorias', loadComponent: () => import('./pos/categorias/categorias') },
-
-      // Rutas solo ADMIN
-      { 
-        path: 'usuarios', 
-        loadComponent: () => import('./pos/usuarios-list/usuarios-list'),
-        data: { roles: ['ROLE_ADMIN'] } 
-      },
+      
+      // Admin only
+      { path: 'usuarios', loadComponent: () => import('./pos/usuarios-list/usuarios-list'), data: { roles: ['ROLE_ADMIN'] } },
       { path: 'usuarios/nuevo', loadComponent: () => import('./layouts/admin-layout/registro/registro') },
       { path: 'usuarios/editar/:id', loadComponent: () => import('./layouts/admin-layout/registro/registro') },
       
@@ -108,7 +99,6 @@ export const routes: Routes = [
       { path: 'roles', loadComponent: () => import('./pos/roles/roles') },
       { path: 'reglas-puntos', loadComponent: () => import('./pos/reglas-puntos/reglas-puntos') },
       { path: 'auditoria', loadComponent: () => import('./pos/auditoria/auditoria') },
-      
       { path: 'mi-perfil', loadComponent: () => import('./pos/perfil-usuario/perfil-usuario') },
       
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }

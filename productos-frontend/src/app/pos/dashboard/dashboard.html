@@ -2,8 +2,8 @@
   
   <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 gap-3">
     <div>
-      <h3 class="masterserv-title mb-0"><i class="bi bi-speedometer2 me-2"></i>Panel de Control</h3> 
-      <small class="text-white-50">Métricas y estadísticas clave</small>
+        <h3 class="masterserv-title mb-0"><i class="bi bi-speedometer2 me-2"></i>Panel de Control</h3> 
+        <small class="text-white-50">Métricas y estadísticas clave</small>
     </div>
     <div class="card p-2 bg-dark border-secondary">
         <form [formGroup]="filtroForm" (ngSubmit)="aplicarFiltros()" class="d-flex align-items-center gap-2">
@@ -22,41 +22,88 @@
 
   <div class="row g-3 mb-4">
     <div class="col-md-3">
-      <div class="card kpi-card kpi-card-success">
-        <div class="card-body">
-          <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
-          <div class="kpi-text"><div class="kpi-label">Ventas (Periodo)</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.totalVentasMes | currency:'ARS':'symbol-narrow':'1.0-0' }}</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card kpi-card kpi-card-success-dark">
-        <div class="card-body">
-          <div class="kpi-icon"><i class="bi bi-calendar-check"></i></div>
-          <div class="kpi-text"><div class="kpi-label">Ventas Hoy</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.totalVentasHoy | currency:'ARS':'symbol-narrow':'1.0-0' }}</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card kpi-card kpi-card-warning">
-        <div class="card-body">
-          <div class="kpi-icon"><i class="bi bi-box-seam"></i></div>
-          <div class="kpi-text"><div class="kpi-label">Stock Bajo</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.productosBajoStock | number }}</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <a [routerLink]="!canManageUsers ? null : '/pos/usuarios'" class="kpi-link" [class.disabled]="!canManageUsers">
-      <div class="card kpi-card kpi-card-info">
+        <div class="card kpi-card kpi-card-success">
           <div class="card-body">
-            <div class="kpi-icon"><i class="bi bi-people"></i></div>
-            <div class="kpi-text"><div class="kpi-label">Clientes</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.clientesActivos | number }}</div></div>
+            <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
+            <div class="kpi-text"><div class="kpi-label">Ventas (Periodo)</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.totalVentasMes | currency:'ARS':'symbol-narrow':'1.0-0' }}</div></div>
           </div>
         </div>
-      </a>
-    </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card kpi-card kpi-card-success-dark">
+          <div class="card-body">
+            <div class="kpi-icon"><i class="bi bi-calendar-check"></i></div>
+            <div class="kpi-text"><div class="kpi-label">Ventas Hoy</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.totalVentasHoy | currency:'ARS':'symbol-narrow':'1.0-0' }}</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card kpi-card kpi-card-warning">
+          <div class="card-body">
+            <div class="kpi-icon"><i class="bi bi-box-seam"></i></div>
+            <div class="kpi-text"><div class="kpi-label">Stock Bajo</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.productosBajoStock | number }}</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <a [routerLink]="!canManageUsers ? null : '/pos/usuarios'" class="kpi-link" [class.disabled]="!canManageUsers">
+        <div class="card kpi-card kpi-card-info">
+            <div class="card-body">
+              <div class="kpi-icon"><i class="bi bi-people"></i></div>
+              <div class="kpi-text"><div class="kpi-label">Clientes</div><div *ngIf="!isLoadingStats" class="kpi-value">{{ stats?.clientesActivos | number }}</div></div>
+            </div>
+          </div>
+        </a>
+      </div>
   </div>
 
+  <div class="row mb-4" *ngIf="stats?.pedidosEnCamino && stats!.pedidosEnCamino!.length > 0">
+    <div class="col-12">
+        <div class="card bg-dark border-secondary shadow-sm">
+            <div class="card-header bg-transparent border-secondary d-flex align-items-center">
+                <i class="bi bi-truck text-warning me-2 fs-5"></i>
+                <h5 class="mb-0 text-white">Pedidos en Camino</h5>
+                <span class="badge bg-warning text-dark ms-3">{{ stats?.pedidosEnCamino?.length }} pendientes</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0 align-middle">
+                        <thead class="text-secondary">
+                            <tr>
+                                <th class="ps-4">Proveedor</th>
+                                <th class="text-center">Fecha Estimada</th>
+                                <th class="text-end pe-4">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let p of stats?.pedidosEnCamino">
+                                <td class="ps-4 fw-bold text-white-50">{{ p.proveedor }}</td>
+                                <td class="text-center">{{ p.fechaEntrega | date:'dd/MM/yyyy' }}</td>
+                                <td class="text-end pe-4">
+                                    <span class="badge rounded-pill px-3 py-2" 
+                                          [ngClass]="{
+                                            'bg-danger': p.diasRestantes < 0,
+                                            'bg-success': p.diasRestantes === 0,
+                                            'bg-primary': p.diasRestantes > 0
+                                          }">
+                                        <i class="bi me-1" [ngClass]="{
+                                            'bi-exclamation-triangle-fill': p.diasRestantes < 0, 
+                                            'bi-check-circle-fill': p.diasRestantes === 0,
+                                            'bi-clock-history': p.diasRestantes > 0
+                                        }"></i>
+                                        {{ p.diasRestantes < 0 ? 'Atrasado ' + (p.diasRestantes * -1) + ' días' : 
+                                           p.diasRestantes === 0 ? '¡Llega Hoy!' : 
+                                           'Llega en ' + p.diasRestantes + ' días' }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
   <div class="row g-3 mb-3">
     <div class="col-lg-8">
       <div class="card masterserv-card h-100">

@@ -8,9 +8,9 @@ import com.lowagie.text.pdf.draw.LineSeparator;
 import com.masterserv.productos.dto.DashboardFilterDTO;
 import com.masterserv.productos.dto.DashboardStatsDTO;
 import com.masterserv.productos.dto.TopProductoDTO;
-import com.masterserv.productos.entity.DetallePedido; // Importado
+import com.masterserv.productos.entity.DetallePedido;
 import com.masterserv.productos.entity.DetalleVenta;
-import com.masterserv.productos.entity.Pedido;       // Importado
+import com.masterserv.productos.entity.Pedido;
 import com.masterserv.productos.entity.Venta;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode; // <--- Importante para calcular el promedio
 import java.awt.Color;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
@@ -38,7 +39,9 @@ public class PdfService {
     @Autowired 
     private DashboardService dashboardService;
 
-    // --- NUEVO MÉTODO: COMPROBANTE DE PEDIDO ---
+    // ========================================================================
+    // 1. COMPROBANTE INTERNO (CON PRECIOS) - PARA EL ADMIN
+    // ========================================================================
     public byte[] generarComprobantePedido(Pedido pedido) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4);
@@ -52,13 +55,12 @@ public class PdfService {
             titulo.setAlignment(Element.ALIGN_CENTER);
             document.add(titulo);
 
-            Paragraph subtitulo = new Paragraph("Orden de Compra / Pedido a Proveedor", FONT_SUBTITULO);
+            Paragraph subtitulo = new Paragraph("Orden de Compra (Interno)", FONT_SUBTITULO);
             subtitulo.setAlignment(Element.ALIGN_CENTER);
             document.add(subtitulo);
 
             Paragraph datosEmpresa = new Paragraph(
                 "Razón Social: Masterserv S.A.\n" + 
-                "CUIT: 30-12345678-9\n" + 
                 "Dirección: Av. San Martín 1234, El Soberbio, Misiones\n" +
                 "Email: contacto@masterserv360.com", 
                 FONT_DATA_EMPRESA
@@ -84,18 +86,11 @@ public class PdfService {
                 infoPedido.add(new Chunk("PROVEEDOR:\n", FONT_BOLD));
                 infoPedido.add(new Chunk("Razón Social: " + pedido.getProveedor().getRazonSocial() + "\n", FONT_NORMAL));
                 infoPedido.add(new Chunk("CUIT: " + pedido.getProveedor().getCuit() + "\n", FONT_NORMAL));
-                if(pedido.getProveedor().getEmail() != null) {
-                    infoPedido.add(new Chunk("Email: " + pedido.getProveedor().getEmail() + "\n", FONT_NORMAL));
-                }
-            }
-            
-            if (pedido.getUsuario() != null) {
-                infoPedido.add(new Chunk("\nSolicitado por: " + pedido.getUsuario().getNombre() + " " + pedido.getUsuario().getApellido() + "\n", FONT_NORMAL));
             }
             
             document.add(infoPedido);
 
-            // TABLA PRODUCTOS
+            // TABLA CON PRECIOS (4 Columnas)
             PdfPTable table = new PdfPTable(4); 
             table.setWidthPercentage(100);
             table.setWidths(new float[] { 4f, 1f, 2f, 2f });
@@ -136,10 +131,7 @@ public class PdfService {
             totales.setSpacingBefore(15);
 
             Font fontTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
-            
-            // Usamos el total guardado en el pedido o el calculado si es null
             BigDecimal totalFinal = (pedido.getTotalPedido() != null) ? pedido.getTotalPedido() : totalCalculado;
-            
             totales.add(new Chunk("TOTAL ESTIMADO: $" + String.format("%.2f", totalFinal), fontTotal));
             
             document.add(totales);
@@ -153,9 +145,100 @@ public class PdfService {
         return baos.toByteArray();
     }
 
-    // --- MÉTODOS EXISTENTES (Venta y Dashboard) ---
+    // ========================================================================
+    // 2. ORDEN DE COMPRA EXTERNA (SIN PRECIOS) - PARA EL PROVEEDOR
+    // ========================================================================
+    public byte[] generarOrdenCompraProveedor(Pedido pedido) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4);
+
+        try {
+            PdfWriter.getInstance(document, baos);
+            document.open();
+
+            // CABECERA
+            Paragraph titulo = new Paragraph("MASTERSERV360", FONT_TITULO);
+            titulo.setAlignment(Element.ALIGN_CENTER);
+            document.add(titulo);
+
+            Paragraph subtitulo = new Paragraph("Orden de Compra / Solicitud de Mercadería", FONT_SUBTITULO);
+            subtitulo.setAlignment(Element.ALIGN_CENTER);
+            document.add(subtitulo);
+
+            Paragraph datosEmpresa = new Paragraph(
+                "Razón Social: Masterserv S.A.\n" + 
+                "Dirección: Av. San Martín 1234, El Soberbio, Misiones\n" +
+                "Email: compras@masterserv360.com", 
+                FONT_DATA_EMPRESA
+            );
+            datosEmpresa.setAlignment(Element.ALIGN_CENTER);
+            datosEmpresa.setSpacingAfter(10);
+            document.add(datosEmpresa);
+
+            document.add(new LineSeparator());
+
+            // DATOS DE LA ORDEN
+            Paragraph infoPedido = new Paragraph();
+            infoPedido.setSpacingBefore(10);
+            infoPedido.setSpacingAfter(10);
+            
+            infoPedido.add(new Chunk("Orden de Compra Nº: " + pedido.getId() + "\n", FONT_BOLD));
+            
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            infoPedido.add(new Chunk("Fecha Emisión: " + pedido.getFechaPedido().format(formatter) + "\n\n", FONT_NORMAL));
+            
+            if (pedido.getProveedor() != null) {
+                infoPedido.add(new Chunk("SEÑORES PROVEEDORES:\n", FONT_BOLD));
+                infoPedido.add(new Chunk("Razón Social: " + pedido.getProveedor().getRazonSocial() + "\n", FONT_NORMAL));
+                infoPedido.add(new Chunk("CUIT: " + pedido.getProveedor().getCuit() + "\n", FONT_NORMAL));
+            }
+            
+            document.add(infoPedido);
+
+            // --- TABLA LIMPIA (SOLO 2 COLUMNAS: PRODUCTO Y CANTIDAD) ---
+            PdfPTable table = new PdfPTable(2); 
+            table.setWidthPercentage(100);
+            table.setWidths(new float[] { 4f, 1f }); // 80% Nombre, 20% Cantidad
+            table.setSpacingBefore(10f);
+
+            // Encabezados
+            table.addCell(crearCeldaHeader("Descripción del Producto"));
+            table.addCell(crearCeldaHeader("Cantidad"));
+
+            // Llenado de filas (SIN PRECIOS)
+            for (DetallePedido detalle : pedido.getDetalles()) {
+                // Producto
+                PdfPCell cellProd = new PdfPCell(new Paragraph(detalle.getProducto().getNombre(), FONT_NORMAL));
+                cellProd.setPadding(5);
+                table.addCell(cellProd);
+                
+                // Cantidad
+                PdfPCell cellCant = new PdfPCell(new Paragraph(String.valueOf(detalle.getCantidad()), FONT_NORMAL));
+                cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
+                cellCant.setPadding(5);
+                table.addCell(cellCant);
+            }
+
+            document.add(table);
+
+            // Pie de página simple (SIN TOTALES)
+            Paragraph pie = new Paragraph("\nNota: Por favor confirmar recepción, disponibilidad y fecha estimada de entrega.", FONT_DATA_EMPRESA);
+            pie.setAlignment(Element.ALIGN_CENTER);
+            document.add(pie);
+
+        } catch (DocumentException e) {
+            throw new RuntimeException("Error al generar la Orden de Compra PDF para proveedor", e);
+        } finally {
+            document.close();
+        }
+
+        return baos.toByteArray();
+    }
+
+    // ========================================================================
+    // 3. COMPROBANTE DE VENTA
+    // ========================================================================
     public byte[] generarComprobanteVenta(Venta venta) {
-        // ... (Tu código actual para ventas, sin cambios) ...
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4);
 
@@ -261,6 +344,9 @@ public class PdfService {
         return baos.toByteArray();
     }
 
+    // ========================================================================
+    // 4. REPORTE DASHBOARD (ACTUALIZADO: MÉTRICAS ÚTILES)
+    // ========================================================================
     public byte[] generarReporteDashboard(DashboardFilterDTO filtro) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4);
@@ -290,6 +376,7 @@ public class PdfService {
             
             document.add(contexto);
 
+            // --- GRÁFICO (IMAGEN) ---
             if (filtro.getGraficoBase64() != null && !filtro.getGraficoBase64().isEmpty()) {
                 try {
                     String base64Image = filtro.getGraficoBase64().split(",")[1];
@@ -314,34 +401,47 @@ public class PdfService {
                 }
             }
 
+            // --- OBTENCIÓN DE DATOS ---
             DashboardStatsDTO stats = dashboardService.getEstadisticasFiltradas(filtro.getFechaInicio(), filtro.getFechaFin());
             List<TopProductoDTO> top = dashboardService.getTopProductosPorRango(filtro.getFechaInicio(), filtro.getFechaFin());
 
+            // --- TABLA DE MÉTRICAS REDISEÑADA ---
             PdfPTable tableMetrics = new PdfPTable(3);
             tableMetrics.setWidthPercentage(100);
             tableMetrics.setSpacingAfter(20);
 
+            // Encabezados
             tableMetrics.addCell(crearCeldaHeader("Ventas Totales"));
-            tableMetrics.addCell(crearCeldaHeader("Productos Bajo Stock"));
-            tableMetrics.addCell(crearCeldaHeader("Clientes Activos"));
+            tableMetrics.addCell(crearCeldaHeader("Cant. Transacciones"));
+            tableMetrics.addCell(crearCeldaHeader("Ticket Promedio"));
             
-            PdfPCell cellVentas = new PdfPCell(new Paragraph("$ " + stats.getTotalVentasMes(), FONT_NORMAL));
+            // 1. Total Ventas ($)
+            PdfPCell cellVentas = new PdfPCell(new Paragraph("$ " + String.format("%.2f", stats.getTotalVentasMes()), FONT_NORMAL));
             cellVentas.setHorizontalAlignment(Element.ALIGN_CENTER);
             cellVentas.setPadding(8);
             tableMetrics.addCell(cellVentas);
 
-            PdfPCell cellStock = new PdfPCell(new Paragraph(String.valueOf(stats.getProductosBajoStock()), FONT_NORMAL));
-            cellStock.setHorizontalAlignment(Element.ALIGN_CENTER);
-            cellStock.setPadding(8);
-            tableMetrics.addCell(cellStock);
+            // 2. Cantidad de Ventas (#) - Ahora muestra transacciones reales
+            PdfPCell cellCant = new PdfPCell(new Paragraph(String.valueOf(stats.getCantidadVentasPeriodo()), FONT_NORMAL));
+            cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
+            cellCant.setPadding(8);
+            tableMetrics.addCell(cellCant);
 
-            PdfPCell cellClientes = new PdfPCell(new Paragraph(String.valueOf(stats.getClientesActivos()), FONT_NORMAL));
-            cellClientes.setHorizontalAlignment(Element.ALIGN_CENTER);
-            cellClientes.setPadding(8);
-            tableMetrics.addCell(cellClientes);
+            // 3. Ticket Promedio ($) - Cálculo seguro
+            BigDecimal ticketPromedio = BigDecimal.ZERO;
+            if (stats.getCantidadVentasPeriodo() > 0) {
+                ticketPromedio = stats.getTotalVentasMes()
+                    .divide(BigDecimal.valueOf(stats.getCantidadVentasPeriodo()), 2, RoundingMode.HALF_UP);
+            }
+
+            PdfPCell cellTicket = new PdfPCell(new Paragraph("$ " + String.format("%.2f", ticketPromedio), FONT_NORMAL));
+            cellTicket.setHorizontalAlignment(Element.ALIGN_CENTER);
+            cellTicket.setPadding(8);
+            tableMetrics.addCell(cellTicket);
             
             document.add(tableMetrics);
 
+            // --- TOP PRODUCTOS (Sin cambios, es útil) ---
             Paragraph subtituloTop = new Paragraph("Top Productos Vendidos", FONT_SUBTITULO);
             subtituloTop.setSpacingAfter(10);
             document.add(subtituloTop);
@@ -358,10 +458,10 @@ public class PdfService {
                 cellNombre.setPadding(5);
                 tableTop.addCell(cellNombre);
 
-                PdfPCell cellCant = new PdfPCell(new Paragraph(String.valueOf(p.getCantidadVendida()), FONT_NORMAL));
-                cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
-                cellCant.setPadding(5);
-                tableTop.addCell(cellCant);
+                PdfPCell cellCantProd = new PdfPCell(new Paragraph(String.valueOf(p.getCantidadVendida()), FONT_NORMAL));
+                cellCantProd.setHorizontalAlignment(Element.ALIGN_CENTER);
+                cellCantProd.setPadding(5);
+                tableTop.addCell(cellCantProd);
             }
             document.add(tableTop);
 

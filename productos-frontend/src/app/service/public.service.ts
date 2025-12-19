@@ -5,33 +5,34 @@ import { API_URL } from '../app.config';
 import { CotizacionPublicaDTO } from '../models/cotizacion-publica.model';
 import { OfertaProveedorDTO } from '../models/oferta-proveedor.model';
 
-/**
- * Este servicio maneja todas las llamadas a los endpoints /api/public
- * que no requieren un token de autenticación JWT.
- */
 @Injectable({
   providedIn: 'root'
 })
 export class PublicService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/public`; // URL base pública
+  private apiUrl = `${API_URL}/api/public`;
 
-  /**
-   * Obtiene los detalles de una cotización usando el token público.
-   * Llama a: GET /api/public/oferta/{token}
-   */
+  // --- COTIZACIONES (Ya existía) ---
   getCotizacionPorToken(token: string): Observable<CotizacionPublicaDTO> {
     return this.http.get<CotizacionPublicaDTO>(`${this.apiUrl}/oferta/${token}`);
   }
 
-  /**
-   * Envía la oferta (precios y fecha) llenada por el proveedor.
-   * Llama a: POST /api/public/oferta/{token}
-   */
   submitOferta(token: string, oferta: OfertaProveedorDTO): Observable<any> {
-    // El backend devuelve un Map<String, String> ({ "status": "ok", ... }),
-    // por eso usamos 'any'.
     return this.http.post<any>(`${this.apiUrl}/oferta/${token}`, oferta);
+  }
+
+  // --- NUEVO: PEDIDOS (Agregado) ---
+  obtenerPedidoPorToken(token: string): Observable<any> {
+    // Devuelve un objeto genérico con los datos del pedido para mostrar en pantalla
+    return this.http.get<any>(`${this.apiUrl}/pedido/${token}`);
+  }
+
+  /**
+   * Envía la confirmación del pedido (fecha entrega y precios ajustados).
+   * Llama a: POST /api/public/pedido/{token}/confirmar
+   */
+  confirmarPedidoProveedor(token: string, datos: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/pedido/${token}/confirmar`, datos);
   }
 }
