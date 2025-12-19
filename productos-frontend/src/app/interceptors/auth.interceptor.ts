@@ -14,8 +14,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = authService.getToken();
   const apiUrlBase = authService.getApiUrlBase();
   const isApiUrl = req.url.startsWith(apiUrlBase);
-  const isAuthRoute = req.url.includes('/api/auth/login') || 
-                      req.url.includes('/api/auth/register');
+  const isAuthRoute = req.url.includes('/auth/login') || 
+                      req.url.includes('/auth/register');
 
   let request = req;
 

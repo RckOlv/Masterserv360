@@ -15,7 +15,7 @@ export class CotizacionService {
 
   /**
    * Obtiene la lista de cotizaciones RECIBIDAS (listas para revisar).
-   * GET /api/cotizaciones/recibidas
+   * GET /cotizaciones/recibidas
    */
   getCotizacionesRecibidas(): Observable<CotizacionAdminDTO[]> {
     return this.http.get<CotizacionAdminDTO[]>(`${this.apiUrl}/recibidas`);
@@ -23,7 +23,7 @@ export class CotizacionService {
 
   /**
    * Obtiene el detalle de una cotización específica por su ID.
-   * GET /api/cotizaciones/{id}
+   * GET /cotizaciones/{id}
    */
   getCotizacionById(id: number): Observable<CotizacionAdminDTO> {
     return this.http.get<CotizacionAdminDTO>(`${this.apiUrl}/${id}`);
@@ -31,7 +31,7 @@ export class CotizacionService {
 
   /**
    * Cancela un item específico de una cotización.
-   * PATCH /api/cotizaciones/item/{itemId}/cancelar
+   * PATCH /cotizaciones/item/{itemId}/cancelar
    */
   cancelarItem(itemId: number): Observable<any> {
     return this.http.patch(`${this.apiUrl}/item/${itemId}/cancelar`, {});
@@ -39,7 +39,7 @@ export class CotizacionService {
 
   /**
    * Cancela una cotización completa.
-   * PATCH /api/cotizaciones/{id}/cancelar
+   * PATCH /cotizaciones/{id}/cancelar
    */
   cancelarCotizacion(id: number): Observable<any> {
     return this.http.patch(`${this.apiUrl}/${id}/cancelar`, {});
@@ -48,7 +48,7 @@ export class CotizacionService {
   /**
    * Confirma la cotización ganadora.
    * El backend la convierte en un Pedido.
-   * POST /api/cotizaciones/{id}/confirmar
+   * POST /cotizaciones/{id}/confirmar
    */
   confirmarCotizacion(id: number): Observable<PedidoDTO> {
     // Asumimos que el backend devuelve el PedidoDTO creado

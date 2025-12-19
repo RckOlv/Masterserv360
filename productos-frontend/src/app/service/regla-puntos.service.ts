@@ -17,7 +17,7 @@ export class ReglaPuntosService {
 
   /**
    * Obtiene el historial de todas las reglas de puntos (activas y caducadas).
-   * Llama a: GET /api/reglas-puntos
+   * Llama a: GET /reglas-puntos
    */
   listarReglas(): Observable<ReglaPuntosDTO[]> {
     return this.http.get<ReglaPuntosDTO[]>(this.apiUrl);
@@ -26,7 +26,7 @@ export class ReglaPuntosService {
   /**
    * Crea una nueva regla de puntos.
    * Esta acción desactivará la regla activa anterior en el backend.
-   * Llama a: POST /api/reglas-puntos
+   * Llama a: POST /reglas-puntos
    * @param regla DTO con la nueva configuración (montoGasto, puntosGanados, etc.)
    */
   crearNuevaReglaActiva(regla: ReglaPuntosDTO): Observable<ReglaPuntosDTO> {
@@ -37,7 +37,7 @@ export class ReglaPuntosService {
 
   /**
    * Obtiene la regla activa actualmente.
-   * Llama a: GET /api/reglas-puntos/activa
+   * Llama a: GET /reglas-puntos/activa
    */
   getReglaActiva(): Observable<ReglaPuntosDTO> {
      return this.http.get<ReglaPuntosDTO>(`${this.apiUrl}/activa`);

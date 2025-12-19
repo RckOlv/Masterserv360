@@ -21,7 +21,7 @@ export class CarritoService {
 
   /**
    * Obtiene el carrito actual del vendedor autenticado.
-   * Llama a: GET /api/carrito
+   * Llama a: GET /carrito
    * @returns Observable con el estado actual del carrito.
    */
   getCarrito(): Observable<CarritoDTO> {
@@ -30,7 +30,7 @@ export class CarritoService {
 
   /**
    * Agrega un producto (con cantidad) al carrito.
-   * Llama a: POST /api/carrito/items
+   * Llama a: POST /carrito/items
    * @param item DTO con productoId y cantidad.
    * @returns Observable con el estado actualizado del carrito.
    */
@@ -40,7 +40,7 @@ export class CarritoService {
 
   /**
    * Elimina un item específico del carrito.
-   * Llama a: DELETE /api/carrito/items/{itemCarritoId}
+   * Llama a: DELETE /carrito/items/{itemCarritoId}
    * @param itemCarritoId ID del ItemCarrito a eliminar.
    * @returns Observable con el estado actualizado del carrito.
    */
@@ -50,7 +50,7 @@ export class CarritoService {
 
   /**
    * Actualiza la cantidad de un item específico en el carrito.
-   * Llama a: PUT /api/carrito/items/{itemCarritoId}
+   * Llama a: PUT /carrito/items/{itemCarritoId}
    * @param itemCarritoId ID del ItemCarrito a actualizar.
    * @param nuevaCantidad DTO con la nueva cantidad.
    * @returns Observable con el estado actualizado del carrito.
@@ -61,7 +61,7 @@ export class CarritoService {
 
   /**
    * Vacía completamente el carrito del usuario autenticado.
-   * Llama a: DELETE /api/carrito
+   * Llama a: DELETE /carrito
    * @returns Observable con el estado del carrito (vacío).
    */
   vaciarCarrito(): Observable<CarritoDTO> {

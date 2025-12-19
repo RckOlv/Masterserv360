@@ -50,7 +50,7 @@ export class PermisoService {
    * (Asegúrate de implementar esto en el backend)
    */
   softDelete(id: number): Observable<any> {
-    // Asume endpoint DELETE /api/permisos/{id} que hace soft delete en backend
+    // Asume endpoint DELETE /permisos/{id} que hace soft delete en backend
     return this.http.delete<any>(`${this.apiUrl}/${id}`);
   }
 }

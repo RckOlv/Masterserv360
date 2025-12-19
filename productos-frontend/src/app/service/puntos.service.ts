@@ -20,7 +20,7 @@ export class PuntosService {
 
   /**
    * Canjea puntos por una recompensa específica.
-   * Se envía el ID como parámetro: POST /api/puntos/canje?recompensaId=1
+   * Se envía el ID como parámetro: POST /puntos/canje?recompensaId=1
    */
   canjearPuntos(recompensaId: number): Observable<any> {
     const params = new HttpParams().set('recompensaId', recompensaId.toString());

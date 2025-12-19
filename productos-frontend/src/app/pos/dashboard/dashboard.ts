@@ -89,22 +89,22 @@ export default class DashboardComponent implements OnInit {
   // ... (Métodos cargar... iguales a los anteriores) ...
   cargarEstadisticas(filtros: any) {
     this.isLoadingStats = true;
-    this.http.post<DashboardStatsDTO>(`${this.apiUrlBase}/api/dashboard/estadisticas-filtradas`, filtros) 
+    this.http.post<DashboardStatsDTO>(`${this.apiUrlBase}/dashboard/estadisticas-filtradas`, filtros) 
       .subscribe({ next: (data) => { this.stats = data; this.isLoadingStats = false; }, error: (err) => { console.error(err); this.isLoadingStats = false; } });
   }
   cargarVentasSemanales(filtros: any) {
     this.isLoadingChart = true;
-    this.http.post<VentasPorDiaDTO[]>(`${this.apiUrlBase}/api/dashboard/ventas-semanales`, filtros)
+    this.http.post<VentasPorDiaDTO[]>(`${this.apiUrlBase}/dashboard/ventas-semanales`, filtros)
       .subscribe({ next: (data) => { this.ventasSemanales = data; this.isLoadingChart = false; }, error: (err) => { console.error(err); this.isLoadingChart = false; } });
   }
   cargarVentasPorCategoria(filtros: any) {
     this.isLoadingCategories = true;
-    this.http.post<any[]>(`${this.apiUrlBase}/api/dashboard/ventas-categorias`, filtros)
+    this.http.post<any[]>(`${this.apiUrlBase}/dashboard/ventas-categorias`, filtros)
       .subscribe({ next: (data) => { this.ventasPorCategoria = data; this.isLoadingCategories = false; }, error: (err) => { console.error(err); this.isLoadingCategories = false; } });
   }
   cargarTopProductos(filtros: any) {
     this.isLoadingTopProducts = true;
-    this.http.post<TopProductoDTO[]>(`${this.apiUrlBase}/api/dashboard/top-productos`, filtros)
+    this.http.post<TopProductoDTO[]>(`${this.apiUrlBase}/dashboard/top-productos`, filtros)
       .subscribe({ next: (data) => { this.topProductos = data; this.isLoadingTopProducts = false; }, error: (err) => { console.error(err); this.isLoadingTopProducts = false; } });
   }
   cargarUltimasVentas() {
@@ -129,7 +129,7 @@ export default class DashboardComponent implements OnInit {
         graficoBase64: chartImage
     };
 
-    this.http.post(`${this.apiUrlBase}/api/dashboard/reporte-pdf`, body, { responseType: 'blob' })
+    this.http.post(`${this.apiUrlBase}/dashboard/reporte-pdf`, body, { responseType: 'blob' })
       .subscribe({
         next: (blob: Blob) => {
           const url = window.URL.createObjectURL(blob);

@@ -20,7 +20,7 @@ export class VentaService {
 
   /**
    * Llama al backend para crear (finalizar) una nueva venta.
-   * Llama a: POST /api/ventas
+   * Llama a: POST /ventas
    * @param venta DTO con los datos de la venta (clienteId, detalles).
    * @returns Observable con la VentaDTO creada por el backend.
    */
@@ -31,7 +31,7 @@ export class VentaService {
 
   /**
    * Obtiene una lista paginada de ventas.
-   * Llama a: GET /api/ventas?page=...&size=...&sort=fechaVenta,desc
+   * Llama a: GET /ventas?page=...&size=...&sort=fechaVenta,desc
    * @param page Número de página (base 0).
    * @param size Tamaño de la página.
    * @param sort Campo y dirección de ordenamiento.
@@ -47,7 +47,7 @@ export class VentaService {
 
   /**
    * Obtiene los detalles completos de una venta por su ID.
-   * Llama a: GET /api/ventas/{id}
+   * Llama a: GET /ventas/{id}
    * @param id El ID de la venta a buscar.
    * @returns Observable con la VentaDTO completa.
    */
@@ -81,7 +81,7 @@ export class VentaService {
 
   // Validar cupón sin consumirlo
   validarCupon(codigo: string, clienteId: number): Observable<any> {
-    return this.http.get<any>(`https://masterserv-backend.onrender.com/api/api/cupones/validar`, {
+    return this.http.get<any>(`https://masterserv-backend.onrender.com/api/cupones/validar`, {
       params: {
         codigo: codigo,
         clienteId: clienteId.toString()

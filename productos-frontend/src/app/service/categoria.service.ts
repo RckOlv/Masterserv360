@@ -23,7 +23,7 @@ export class CategoriaService {
       params = params.set('estado', estado); // Envía ?estado=ACTIVO o ?estado=INACTIVO
     }
     
-    // Llama a: GET /api/categorias?estado=...
+    // Llama a: GET /categorias?estado=...
     return this.http.get<CategoriaDTO[]>(this.apiUrl, { params });
   }
 

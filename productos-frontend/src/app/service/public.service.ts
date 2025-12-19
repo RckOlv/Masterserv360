@@ -30,7 +30,7 @@ export class PublicService {
 
   /**
    * Envía la confirmación del pedido (fecha entrega y precios ajustados).
-   * Llama a: POST /api/public/pedido/{token}/confirmar
+   * Llama a: POST /public/pedido/{token}/confirmar
    */
   confirmarPedidoProveedor(token: string, datos: any): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/pedido/${token}/confirmar`, datos);
