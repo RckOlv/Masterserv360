@@ -3,12 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { JwtHelperService } from '@auth0/angular-jwt'; 
-
+import { environment } from '../../environments/environment';
 import { LoginRequestDTO } from '../models/login-request.model';
 import { AuthResponseDTO } from '../models/auth-response.model';
 import { RegisterRequestDTO } from '../models/register-request.model';
+import { API_URL } from '../app.config';
 
-const API_URL = 'http://localhost:8080';
 
 @Injectable({
   providedIn: 'root'
@@ -17,7 +17,7 @@ export class AuthService {
 
   private http = inject(HttpClient);
   private router = inject(Router);
-  private apiUrl = `${API_URL}/api/auth`; 
+  private apiUrl = `${environment.apiUrl}/auth`; 
   private readonly TOKEN_KEY = 'jwt_token';
   private readonly PERMISSIONS_KEY = 'user_permissions';
   
