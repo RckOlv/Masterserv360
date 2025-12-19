@@ -12,7 +12,7 @@ import { mostrarToast } from '../utils/toast'; // Importar si lo usas aquí
 })
 export class RolService {
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/roles`;
+  private apiUrl = `${API_URL}/roles`;
 
   // --- Propiedades para Caché de IDs ---
   private clienteRoleId$: Observable<number | null> | null = null;

@@ -11,7 +11,7 @@ import { ProveedorDTO } from '../models/proveedor.model';
 export class ProveedorService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/proveedores`;
+  private apiUrl = `${API_URL}/proveedores`;
 
   constructor() { }
 

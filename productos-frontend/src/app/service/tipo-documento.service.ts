@@ -9,7 +9,7 @@ import { TipoDocumentoDTO } from '../models/tipo-documento.model';
 })
 export class TipoDocumentoService {
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/tipos-documento`; // Endpoint del backend
+  private apiUrl = `${API_URL}/tipos-documento`; // Endpoint del backend
 
   constructor() { }
 

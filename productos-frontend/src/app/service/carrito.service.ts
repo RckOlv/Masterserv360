@@ -15,7 +15,7 @@ export class CarritoService {
 
   private http = inject(HttpClient);
   // URL base para los endpoints del carrito
-  private apiUrl = `${API_URL}/api/carrito`;
+  private apiUrl = `${API_URL}/carrito`;
 
   constructor() { }
 

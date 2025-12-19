@@ -10,7 +10,7 @@ import { RecompensaDTO } from '../models/recompensa.model';
 export class RecompensaService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/recompensas`; // (Necesitaremos crear este Controller en el Backend)
+  private apiUrl = `${API_URL}/recompensas`; // (Necesitaremos crear este Controller en el Backend)
 
   // (Por ahora solo definimos los métodos, el backend lo hacemos después)
 

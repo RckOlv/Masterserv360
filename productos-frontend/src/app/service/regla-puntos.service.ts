@@ -11,7 +11,7 @@ import { ReglaPuntosDTO } from '../models/regla-puntos.model'; // <-- Necesitas 
 export class ReglaPuntosService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/reglas-puntos`; // <-- Endpoint del backend
+  private apiUrl = `${API_URL}/reglas-puntos`; // <-- Endpoint del backend
 
   constructor() { }
 

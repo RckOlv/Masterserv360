@@ -10,7 +10,7 @@ import { CategoriaDTO } from '../models/categoria.model';
 export class CategoriaService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/categorias`; // Endpoint del backend
+  private apiUrl = `${API_URL}/categorias`; // Endpoint del backend
 
   constructor() { }
 

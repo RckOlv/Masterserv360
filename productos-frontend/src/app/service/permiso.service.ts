@@ -9,7 +9,7 @@ import { PermisoDTO } from '../models/permiso.model'; // DTO Corregido
 })
 export class PermisoService {
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/permisos`; // Asumo esta ruta de backend
+  private apiUrl = `${API_URL}/permisos`; // Asumo esta ruta de backend
 
   /**
    * Obtiene la lista de permisos (idealmente, filtrados por estado si aplica)

@@ -13,7 +13,7 @@ import { PedidoDetallado } from '../models/pedido-detallado.model';
 export class PedidoService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/pedidos`; 
+  private apiUrl = `${API_URL}/pedidos`; 
 
   constructor() { }
 

@@ -14,7 +14,7 @@ import { VentaFiltroDTO } from '../models/venta-filtro.model';
 export class VentaService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/ventas`; // URL base para ventas
+  private apiUrl = `${API_URL}/ventas`; // URL base para ventas
 
   constructor() { }
 

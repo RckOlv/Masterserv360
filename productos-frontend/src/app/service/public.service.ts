@@ -11,7 +11,7 @@ import { OfertaProveedorDTO } from '../models/oferta-proveedor.model';
 export class PublicService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/public`;
+  private apiUrl = `${API_URL}/public`;
 
   // --- COTIZACIONES (Ya existía) ---
   getCotizacionPorToken(token: string): Observable<CotizacionPublicaDTO> {

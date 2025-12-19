@@ -12,7 +12,7 @@ import { Page } from '../models/page.model'; // Importar
 export class UsuarioService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/usuarios`;
+  private apiUrl = `${API_URL}/usuarios`;
 
   constructor() { }
 

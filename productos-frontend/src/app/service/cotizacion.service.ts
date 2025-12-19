@@ -11,7 +11,7 @@ import { PedidoDTO } from '../models/pedido.model'; // Importa tu PedidoDTO
 export class CotizacionService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/api/cotizaciones`; // URL base del Admin
+  private apiUrl = `${API_URL}/cotizaciones`; // URL base del Admin
 
   /**
    * Obtiene la lista de cotizaciones RECIBIDAS (listas para revisar).
