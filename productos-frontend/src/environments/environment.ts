@@ -1,5 +1,4 @@
 export const environment = {
-  production: false,
-  // Aquí pones la URL base de tu Spring Boot
-  apiUrl: 'http://localhost:8080/api' 
+  production: true, // Cámbialo a true si estás desplegando la versión final
+  apiUrl: 'https://masterserv-backend.onrender.com/api' 
 };
