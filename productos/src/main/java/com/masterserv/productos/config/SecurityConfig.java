@@ -77,7 +77,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // AÑADIMOS EL PORTAL DEL CLIENTE (ej. localhost:4300) AL DEL VENDEDOR (localhost:4200)
-        configuration.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:4300","https://masterserv360-g9vah465n-ricky-olivieris-projects.vercel.app")); 
+        configuration.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:4300","https://masterserv360.vercel.app")); 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
