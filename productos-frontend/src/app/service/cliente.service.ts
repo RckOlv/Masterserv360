@@ -6,8 +6,9 @@ import { ClientePerfilUpdateDTO } from '../models/cliente-perfil-update.model';
 import { VentaResumenDTO } from '../models/venta-resumen.model'; 
 import { Page } from '../models/page.model'; 
 import { ClienteDTO } from '../models/cliente.dto'; // <--- IMPORTANTE: Importar el DTO nuevo
+import { API_URL } from '../app.config';
 
-const API_URL = 'https://masterserv-backend.onrender.com/api/cliente'; 
+
 
 @Injectable({
   providedIn: 'root'
@@ -15,6 +16,7 @@ const API_URL = 'https://masterserv-backend.onrender.com/api/cliente';
 export class ClienteService {
 
   private http = inject(HttpClient);
+   private apiUrl = `${API_URL}/cliente`;
 
   getMiPerfil(): Observable<ClientePerfilDTO> {
     return this.http.get<ClientePerfilDTO>(`${API_URL}/mi-perfil`);

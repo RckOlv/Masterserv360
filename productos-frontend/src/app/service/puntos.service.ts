@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { SaldoPuntos } from '../models/saldo-puntos.model';
+import { API_URL } from '../app.config';
 
 @Injectable({
   providedIn: 'root'
@@ -9,7 +10,7 @@ import { SaldoPuntos } from '../models/saldo-puntos.model';
 export class PuntosService {
 
   // Asegúrate que esta URL coincida con tu backend
-  private apiUrl = 'https://masterserv-backend.onrender.com/api/puntos';
+   private apiUrl = `${API_URL}/puntos`;
 
   constructor(private http: HttpClient) { }
 

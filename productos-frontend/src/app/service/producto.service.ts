@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import { ProductoDTO } from '../models/producto.model';
 import { Page } from '../models/page.model';
 import { ProductoFiltroDTO } from '../models/producto-filtro.model';
+import { API_URL } from '../app.config';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +13,7 @@ import { ProductoFiltroDTO } from '../models/producto-filtro.model';
 export class ProductoService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/productos`;
+  private apiUrl = `${API_URL}/productos`;
 
   constructor() { }
 

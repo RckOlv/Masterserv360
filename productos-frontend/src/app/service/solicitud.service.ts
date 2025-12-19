@@ -3,13 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { SolicitudProducto } from '../models/solicitud.model';
+import { API_URL } from '../app.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SolicitudService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/solicitudes`;
+  private apiUrl = `${API_URL}/solicitudes`;
 
   getAll(): Observable<SolicitudProducto[]> {
     return this.http.get<SolicitudProducto[]>(this.apiUrl);

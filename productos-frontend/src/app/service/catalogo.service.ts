@@ -4,8 +4,9 @@ import { Observable, BehaviorSubject } from 'rxjs';
 import { Page } from '../models/page.model';
 import { ProductoPublicoDTO } from '../models/producto-publico.model';
 import { ProductoPublicoFiltroDTO } from '../models/producto-publico-filtro.model';
+import { API_URL } from '../app.config';
 
-const API_URL = 'https://masterserv-backend.onrender.com/api/catalogo' 
+
 
 @Injectable({
   providedIn: 'root'
@@ -13,6 +14,7 @@ const API_URL = 'https://masterserv-backend.onrender.com/api/catalogo'
 export class CatalogoService {
 
   private http = inject(HttpClient);
+  private apiUrl = `${API_URL}/catalogo`;
 
   // --- Lógica de Búsqueda Global ---
   private searchTerm = new BehaviorSubject<string>('');

@@ -17,7 +17,7 @@ export class AuthService {
 
   private http = inject(HttpClient);
   private router = inject(Router);
-  private apiUrl = `${environment.apiUrl}/auth`; 
+  private apiUrl = `${API_URL}/auth`;
   private readonly TOKEN_KEY = 'jwt_token';
   private readonly PERMISSIONS_KEY = 'user_permissions';
   
