@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*; // Mentor: Importar *
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/permisos") 
+@RequestMapping("/permisos") 
 @PreAuthorize("hasAuthority('ROLES_MANAGE')") // Proteger toda la clase
 public class PermisoController {
 

@@ -12,7 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auditoria")
+@RequestMapping("/auditoria")
 @PreAuthorize("hasRole('ADMIN')")
 public class AuditoriaController {
 

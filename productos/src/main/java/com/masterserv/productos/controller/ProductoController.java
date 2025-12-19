@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/productos")
+@RequestMapping("/productos")
 public class ProductoController {
 
     @Autowired

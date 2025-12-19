@@ -15,7 +15,7 @@ import java.security.Principal; // Para obtener el usuario logueado
 
 
 @RestController
-@RequestMapping("/api/carrito")
+@RequestMapping("/carrito")
 // Solo usuarios autenticados (vendedores/admins) pueden acceder a su carrito
 @PreAuthorize("isAuthenticated()")
 public class CarritoController {

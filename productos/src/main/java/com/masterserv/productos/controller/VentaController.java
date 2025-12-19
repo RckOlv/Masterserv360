@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 import java.security.Principal;
 
 @RestController
-@RequestMapping("/api/ventas")
+@RequestMapping("/ventas")
 public class VentaController {
 
     @Autowired

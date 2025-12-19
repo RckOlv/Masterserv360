@@ -10,7 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/recompensas")
+@RequestMapping("/recompensas")
 @PreAuthorize("hasAuthority('ROLES_MANAGE')") // Solo Admins pueden gestionar recompensas
 public class RecompensaController {
 

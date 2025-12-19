@@ -38,7 +38,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/").permitAll()
                 // 1. Rutas de Autenticación y Chatbot (Públicas)
-                .requestMatchers("/api/auth/**", "/api/bot/whatsapp", "/error").permitAll()
+                .requestMatchers("/auth/**", "/api/bot/whatsapp", "/error").permitAll()
                 
                 // 2. Rutas de Consulta Pública (Catálogo, etc.)
                 .requestMatchers(HttpMethod.GET, "/api/catalogo/productos/**").permitAll() 
@@ -48,7 +48,7 @@ public class SecurityConfig {
 
                 // --- ¡NUEVA LÍNEA AÑADIDA! ---
                 // Permite GET, POST, etc. a cualquier ruta bajo /api/public/
-                .requestMatchers("/api/public/**").permitAll() 
+                .requestMatchers("/public/**").permitAll() 
                 // ---------------------------------
 
                 // 3. ¡El resto de rutas!

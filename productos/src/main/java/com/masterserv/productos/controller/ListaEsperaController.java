@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/lista-espera")
+@RequestMapping("/lista-espera")
 @CrossOrigin(origins = "") // Permitimos conexión desde Angular
 public class ListaEsperaController {
 

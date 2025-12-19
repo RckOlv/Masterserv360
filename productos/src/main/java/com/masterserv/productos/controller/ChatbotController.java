@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 // --- Mentor: INICIO DE LA CORRECCIÓN DE RUTA ---
 @RestController
-@RequestMapping("/api/bot") // Cambiado de "/api/chatbot"
+@RequestMapping("/bot") // Cambiado de "/api/chatbot"
 public class ChatbotController {
 // --- Mentor: FIN DE LA CORRECCIÓN DE RUTA ---
 

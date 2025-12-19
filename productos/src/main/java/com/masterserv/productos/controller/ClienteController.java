@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 
 @RestController
-@RequestMapping("/api/cliente")
+@RequestMapping("/cliente")
 public class ClienteController {
 
     @Autowired

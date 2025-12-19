@@ -18,7 +18,7 @@ import java.security.Principal; // Importar Principal
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/usuarios")
+@RequestMapping("/usuarios")
 public class UsuarioController {
 
     @Autowired

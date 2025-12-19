@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/cotizaciones")
+@RequestMapping("/cotizaciones")
 @PreAuthorize("hasRole('ADMIN')") // ¡TODA la clase protegida para ADMIN!
 public class CotizacionController {
 

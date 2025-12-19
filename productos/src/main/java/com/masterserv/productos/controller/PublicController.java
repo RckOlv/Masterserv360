@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  * Controlador para endpoints PÚBLICOS que no requieren autenticación JWT.
  */
 @RestController
-@RequestMapping("/api/public")
+@RequestMapping("/public")
 public class PublicController {
 
     @Autowired

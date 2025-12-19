@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 
 @RestController
-@RequestMapping("/api/puntos")
+@RequestMapping("/puntos")
 public class PuntosController {
 
     @Autowired

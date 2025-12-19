@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Optional; // Importar Optional si no está
 
 @RestController
-@RequestMapping("/api/roles")
+@RequestMapping("/roles")
 public class RolController {
 
     @Autowired

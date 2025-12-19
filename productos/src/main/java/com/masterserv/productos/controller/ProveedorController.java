@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/proveedores")
+@RequestMapping("/proveedores")
 @PreAuthorize("hasRole('ADMIN')") // Todo el módulo es solo para Admin
 public class ProveedorController {
 

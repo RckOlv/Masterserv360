@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/solicitudes")
+@RequestMapping("/solicitudes")
 @PreAuthorize("hasRole('ADMIN')")
 public class SolicitudProductoController {
 

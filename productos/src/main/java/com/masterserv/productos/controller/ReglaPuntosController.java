@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/reglas-puntos")
+@RequestMapping("/reglas-puntos")
 public class ReglaPuntosController {
 
     @Autowired
