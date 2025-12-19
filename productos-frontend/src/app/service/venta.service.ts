@@ -81,7 +81,7 @@ export class VentaService {
 
   // Validar cupón sin consumirlo
   validarCupon(codigo: string, clienteId: number): Observable<any> {
-    return this.http.get<any>(`http://localhost:8080/api/cupones/validar`, {
+    return this.http.get<any>(`https://masterserv-backend.onrender.com/api/cupones/validar`, {
       params: {
         codigo: codigo,
         clienteId: clienteId.toString()

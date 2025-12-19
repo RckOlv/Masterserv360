@@ -21,7 +21,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/lista-espera")
-@CrossOrigin(origins = "http://localhost:4200") // Permitimos conexión desde Angular
+@CrossOrigin(origins = "") // Permitimos conexión desde Angular
 public class ListaEsperaController {
 
     private static final Logger logger = LoggerFactory.getLogger(ListaEsperaController.class);

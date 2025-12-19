@@ -11,7 +11,7 @@ import { provideCharts } from 'ng2-charts';
 registerLocaleData(localeEsAr);
 
 // URL base global (opcional, si la usas en otros lados)
-export const API_URL = 'http://localhost:8080';
+export const API_URL = 'https://masterserv-backend.onrender.com';
 
 export const appConfig: ApplicationConfig = {
   providers: [

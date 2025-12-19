@@ -9,7 +9,7 @@ import { SaldoPuntos } from '../models/saldo-puntos.model';
 export class PuntosService {
 
   // Asegúrate que esta URL coincida con tu backend
-  private apiUrl = 'http://localhost:8080/api/puntos';
+  private apiUrl = 'https://masterserv-backend.onrender.com/api/puntos';
 
   constructor(private http: HttpClient) { }
 

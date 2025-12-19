@@ -7,7 +7,7 @@ import { VentaResumenDTO } from '../models/venta-resumen.model';
 import { Page } from '../models/page.model'; 
 import { ClienteDTO } from '../models/cliente.dto'; // <--- IMPORTANTE: Importar el DTO nuevo
 
-const API_URL = 'http://localhost:8080/api/cliente'; 
+const API_URL = 'https://masterserv-backend.onrender.com/api/cliente'; 
 
 @Injectable({
   providedIn: 'root'
