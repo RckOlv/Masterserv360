@@ -5,7 +5,7 @@ import { Page } from '../models/page.model';
 import { ProductoPublicoDTO } from '../models/producto-publico.model';
 import { ProductoPublicoFiltroDTO } from '../models/producto-publico-filtro.model';
 
-const API_URL = 'https://masterserv-backend.onrender.com/api/catalogo'; 
+const API_URL = 'https://masterserv-backend.onrender.com/api/catalogo' 
 
 @Injectable({
   providedIn: 'root'
