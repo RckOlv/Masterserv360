@@ -111,7 +111,7 @@ public class ChatbotService {
             return new BotResponse(
                 String.format(
                     "👋 ¡Hola *%s*! Soy el asistente virtual de Masterserv. 🏍️\n\n" +
-                    "Escribe la palabra clave:\n\n" +
+                    "Escribe el número o la palabra clave:\n\n" +
                     "1️⃣ *Buscar [Producto]*\n" +
                     "   _(Ej: \"buscar aceite\", \"bateria\")_\n\n" +
                     "2️⃣ *Mis Puntos*\n" +
@@ -144,7 +144,7 @@ public class ChatbotService {
         // 4. CANJEAR
         if (texto.startsWith("canjear")) {
             String nombrePremio = limpiarPrefijo(texto);
-            if (nombrePremio.isEmpty()) return new BotResponse("⚠️ Escribe el nombre del premio. Ej: *canjar 10% OFF Aceites*");
+            if (nombrePremio.isEmpty()) return new BotResponse("⚠️ Escribe el nombre del premio. Ej: *canjear gorra*");
             return new BotResponse(procesarCanje(usuario, nombrePremio));
         }
 
@@ -215,25 +215,25 @@ public class ChatbotService {
             disponibilidad = "🟢 Disponible (" + p.getStockActual() + ")";
         }
 
-        // CORRECCIÓN: Convertir a doubleValue() para evitar IllegalFormatConversionException
+        // CORRECCIÓN: Convertir a doubleValue() y formatear por separado para máxima seguridad
         String precioStr = "Consultar";
         if (p.getPrecioVenta() != null) {
             precioStr = String.format("$%,.2f", p.getPrecioVenta().doubleValue());
         }
 
-        String texto = String.format(
-            "📦 *%s*\n\n" +
-            "💲 Precio: *%s*\n" +
-            "📊 Estado: %s\n" +
-            "🏷️ Código: %s\n\n" +
-            p.getNombre(), precioStr, disponibilidad, p.getCodigo()
-        );
+        // CORRECCIÓN FINAL: Usar StringBuilder para evitar errores de String.format con caracteres raros
+        StringBuilder sb = new StringBuilder();
+        sb.append("📦 *").append(p.getNombre()).append("*\n\n");
+        sb.append("💲 Precio: *").append(precioStr).append("*\n");
+        sb.append("📊 Estado: ").append(disponibilidad).append("\n");
+        sb.append("🏷️ Código: ").append(p.getCodigo()).append("\n\n");
+        sb.append("Para pedirlo, entra a la web o contacta a un vendedor.");
 
         // Si el producto tiene foto (y es una URL válida http...), la preparamos
         String imagen = (p.getImagenUrl() != null && p.getImagenUrl().startsWith("http")) 
                         ? p.getImagenUrl() : null;
 
-        return new BotResponse(texto, imagen);
+        return new BotResponse(sb.toString(), imagen);
     }
 
     private BotResponse procesarSolicitud(Usuario usuario, String termino) {
