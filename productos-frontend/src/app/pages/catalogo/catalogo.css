@@ -152,7 +152,7 @@
 /* --- RESPONSIVE FILTERS (Off-canvas logic) --- */
 @media (max-width: 992px) {
   
-  /* Por defecto ocultamos la columna de filtros en mobile */
+  /* Sidebar de filtros oculto a la izquierda */
   .filters-col {
     position: fixed;
     top: 0;
@@ -165,19 +165,18 @@
     transition: transform 0.3s ease-in-out;
   }
 
-  /* Cuando activamos la clase .mobile-visible */
+  /* Cuando está abierto */
   .filters-col.mobile-visible {
     transform: translateX(0);
   }
 
-  /* El sidebar dentro toma el 100% de la altura y quita bordes redondeados */
   .filters-sidebar {
     height: 100%;
     border-radius: 0 !important;
-    overflow-y: auto; /* Scroll si es muy largo */
+    overflow-y: auto;
   }
 
-  /* Overlay oscuro */
+  /* Overlay independiente */
   .filter-overlay {
     position: fixed;
     top: 0;
@@ -185,6 +184,17 @@
     width: 100vw;
     height: 100vh;
     background: rgba(0,0,0,0.7);
-    z-index: 1040; /* Debajo del sidebar de filtros */
+    z-index: 1040; /* Debajo del sidebar */
+    
+    /* POR DEFECTO: OCULTO */
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+
+  /* Cuando está abierto: VISIBLE */
+  .filter-overlay.show {
+    opacity: 1;
+    visibility: visible;
   }
 }

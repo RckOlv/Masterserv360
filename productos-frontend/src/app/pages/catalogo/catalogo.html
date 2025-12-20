@@ -1,5 +1,10 @@
 <div class="container-fluid my-4 position-relative">
   
+  <div class="filter-overlay d-lg-none" 
+       [class.show]="showMobileFilters" 
+       (click)="toggleMobileFilters()">
+  </div>
+
   <button class="btn btn-danger position-fixed bottom-0 end-0 m-4 rounded-circle shadow-lg d-lg-none z-3" 
           style="width: 60px; height: 60px;"
           (click)="toggleMobileFilters()">
@@ -10,8 +15,6 @@
 
     <div class="col-lg-3 mb-4 filters-col" [class.mobile-visible]="showMobileFilters">
       
-      <div class="filter-overlay d-lg-none" (click)="toggleMobileFilters()"></div>
-
       <div class="filters-sidebar p-4 rounded shadow-sm h-100" style="background-color: #1e1e1e; border: 1px solid #333;">
         
         <div class="d-flex justify-content-between align-items-center mb-4 d-lg-none">
@@ -35,7 +38,9 @@
           </div>
         </div>
 
-        <form [formGroup]="filtroForm" (ngSubmit)="onFiltrar(0); showMobileFilters = false"> <div class="mb-4">
+        <form [formGroup]="filtroForm" (ngSubmit)="onFiltrar(0); showMobileFilters = false">
+          
+          <div class="mb-4">
             <label class="form-label text-white-50 small fw-bold text-uppercase mb-2"><i class="bi bi-tags-fill me-1"></i> Categorías</label>
             <div class="list-group category-list custom-scrollbar pe-1" style="max-height: 300px; overflow-y: auto;">
               <button type="button"
@@ -87,7 +92,6 @@
               <i class="bi bi-eraser me-2"></i>Limpiar Todo
             </button>
           </div>
-
         </form>
       </div>
     </div>
@@ -117,7 +121,7 @@
            class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-xl-3 g-4">
         
         <div class="col" *ngFor="let producto of page.content">
-          <div class="product-card shadow-sm border border-secondary h-100" style="background-color: #1e1e1e; border-radius: 8px; overflow: hidden;">
+           <div class="product-card shadow-sm border border-secondary h-100" style="background-color: #1e1e1e; border-radius: 8px; overflow: hidden;">
             <div class="card-img-wrapper" style="position: relative; overflow: hidden; background-color: #2c2c2c; height: 200px; padding: 15px; display: flex; align-items: center; justify-content: center;">
                <img *ngIf="producto.imagenUrl" [src]="producto.imagenUrl" class="card-img" alt="{{ producto.nombre }}" style="width: 100%; height: 100%; object-fit: contain;" (error)="producto.imagenUrl = null">
                <img *ngIf="!producto.imagenUrl" src="/images/no-image.png" class="card-img placeholder" alt="Sin imagen" style="width: 100%; height: 100%; object-fit: contain; opacity: 0.3;">
