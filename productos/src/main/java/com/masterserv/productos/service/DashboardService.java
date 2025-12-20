@@ -30,21 +30,25 @@ public class DashboardService {
     private ProductoRepository productoRepository;
     @Autowired
     private UsuarioRepository usuarioRepository;
-    
     @Autowired
     private PedidoRepository pedidoRepository; 
 
-    // --- MÉTODO ORIGINAL ---
+    // --- MÉTODO PRINCIPAL (Stats Generales) ---
     public DashboardStatsDTO getEstadisticas() {
+        // Por defecto: Mes actual completo
         LocalDateTime inicioMes = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime finMes = LocalDate.now().plusMonths(1).withDayOfMonth(1).atStartOfDay().minusNanos(1);
         return getStats(inicioMes, finMes);
     }
 
-    // --- MÉTODO CON FILTROS ---
+    // --- MÉTODO CON FILTROS DE FECHA ---
     public DashboardStatsDTO getEstadisticasFiltradas(LocalDate inicio, LocalDate fin) {
+        // Si viene null, usamos inicio de mes. Si viene fecha, usamos 00:00:00
         LocalDateTime fechaInicio = (inicio != null) ? inicio.atStartOfDay() : LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        
+        // Si viene null, usamos fin de hoy. Si viene fecha, usamos 23:59:59.999999999 (LocalTime.MAX)
         LocalDateTime fechaFin = (fin != null) ? fin.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
+        
         return getStats(fechaInicio, fechaFin);
     }
 
@@ -54,22 +58,22 @@ public class DashboardService {
         BigDecimal totalVentasRango = ventaRepository.findTotalVentasEntreFechas(inicio, fin)
                 .orElse(BigDecimal.ZERO);
         
-        // 2. Cantidad de Ventas (#) - NUEVO DATO
+        // 2. Cantidad de Ventas (#)
         long cantidadVentas = ventaRepository.countVentasEntreFechas(inicio, fin);
         
-        // 3. Ventas de HOY (KPI rápido)
+        // 3. Ventas de HOY (KPI rápido) - Siempre calcula el día actual real
         LocalDateTime inicioHoy = LocalDate.now().atStartOfDay();
         LocalDateTime finHoy = LocalDate.now().atTime(LocalTime.MAX);
         BigDecimal totalVentasHoy = ventaRepository.findTotalVentasEntreFechas(inicioHoy, finHoy)
                 .orElse(BigDecimal.ZERO);
 
-        // 4. Contadores básicos
+        // 4. Contadores básicos (Stock y Clientes no dependen de fechas históricas generalmente)
         long productosBajoStock = productoRepository.countProductosBajoStock();
         long clientesActivos = usuarioRepository.countClientesActivos();
 
         DashboardStatsDTO dto = new DashboardStatsDTO();
         dto.setTotalVentasMes(totalVentasRango); 
-        dto.setCantidadVentasPeriodo(cantidadVentas); // <--- Asignamos el nuevo dato
+        dto.setCantidadVentasPeriodo(cantidadVentas);
         dto.setProductosBajoStock(productosBajoStock);
         dto.setClientesActivos(clientesActivos);
         dto.setTotalVentasHoy(totalVentasHoy);
@@ -108,23 +112,30 @@ public class DashboardService {
         return dto;
     }
 
-    // --- GRÁFICO: VENTAS POR RANGO ---
+    // --- GRÁFICO: VENTAS POR RANGO (Evolución) ---
     public List<VentasPorDiaDTO> getVentasPorRango(LocalDate inicio, LocalDate fin) {
         LocalDateTime fechaInicio = (inicio != null) ? inicio.atStartOfDay() : LocalDate.now().minusDays(7).atStartOfDay();
+        // Corrección: Usar LocalTime.MAX para incluir todo el día final
         LocalDateTime fechaFin = (fin != null) ? fin.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
+        
         return ventaRepository.findVentasSumarizadasPorDia(fechaInicio, fechaFin);
     }
     
     // --- TOP PRODUCTOS ---
     public List<TopProductoDTO> getTopProductosPorRango(LocalDate inicio, LocalDate fin) {
         LocalDateTime fechaInicio = (inicio != null) ? inicio.atStartOfDay() : LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        return ventaRepository.findTop5ProductosVendidos(fechaInicio);
+        LocalDateTime fechaFin = (fin != null) ? fin.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
+
+        // CORRECCIÓN IMPORTANTE: Antes solo pasabas fechaInicio e ignorabas fechaFin.
+        // Ahora pasamos ambas para que el top respete el filtro del dashboard.
+        return ventaRepository.findTop5ProductosVendidos(fechaInicio, fechaFin); 
     }
 
     // --- GRÁFICO: VENTAS POR CATEGORÍA ---
     public List<VentasPorCategoriaDTO> getVentasPorCategoria(LocalDate inicio, LocalDate fin) {
         LocalDateTime fechaInicio = (inicio != null) ? inicio.atStartOfDay() : LocalDate.now().withDayOfMonth(1).atStartOfDay();
         LocalDateTime fechaFin = (fin != null) ? fin.atTime(LocalTime.MAX) : LocalDate.now().atTime(LocalTime.MAX);
+        
         return ventaRepository.findVentasPorCategoria(fechaInicio, fechaFin);
     }
     
