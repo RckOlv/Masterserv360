@@ -44,7 +44,7 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
 
     Page<Venta> findByCliente(Usuario cliente, Pageable pageable);
 
-    // --- GRÁFICO DE LÍNEAS ---
+    // --- GRÁFICO DE LÍNEAS (EVOLUCIÓN) ---
     @Query("SELECT new com.masterserv.productos.dto.VentasPorDiaDTO(CAST(v.fechaVenta AS LocalDate), SUM(v.totalVenta)) " +
            "FROM Venta v " +
            "WHERE v.estado = 'COMPLETADA' AND v.fechaVenta BETWEEN :fechaInicio AND :fechaFin " +
@@ -54,23 +54,28 @@ public interface VentaRepository extends JpaRepository<Venta, Long>, JpaSpecific
             @Param("fechaInicio") LocalDateTime fechaInicio, 
             @Param("fechaFin") LocalDateTime fechaFin);
 
-    // --- TOP PRODUCTOS ---
+    // --- TOP PRODUCTOS (CORREGIDO) ---
+    // 1. Agregado el parámetro fechaFin.
+    // 2. Cambiada la condición a BETWEEN para respetar el filtro del dashboard.
+    // 3. Eliminado 'LIMIT 5' para evitar errores de sintaxis JPQL (Hibernate maneja esto mejor si usas Pageable, pero así compilará ya mismo).
     @Query("SELECT new com.masterserv.productos.dto.TopProductoDTO(dv.producto.id, dv.producto.nombre, SUM(dv.cantidad)) " +
            "FROM DetalleVenta dv " +
-           "WHERE dv.venta.estado = 'COMPLETADA' AND dv.venta.fechaVenta >= :fechaInicio " +
+           "WHERE dv.venta.estado = 'COMPLETADA' AND dv.venta.fechaVenta BETWEEN :fechaInicio AND :fechaFin " +
            "GROUP BY dv.producto.id, dv.producto.nombre " +
-           "ORDER BY SUM(dv.cantidad) DESC " +
-           "LIMIT 5")
-    List<TopProductoDTO> findTop5ProductosVendidos(@Param("fechaInicio") LocalDateTime fechaInicio);
+           "ORDER BY SUM(dv.cantidad) DESC")
+    List<TopProductoDTO> findTop5ProductosVendidos(
+            @Param("fechaInicio") LocalDateTime fechaInicio,
+            @Param("fechaFin") LocalDateTime fechaFin);
 
+    // --- TOTAL VENTAS ENTRE FECHAS ---
     @Query("SELECT SUM(v.totalVenta) FROM Venta v WHERE v.estado = 'COMPLETADA' AND v.fechaVenta BETWEEN :inicio AND :fin")
     Optional<BigDecimal> findTotalVentasEntreFechas(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
 
-    // --- NUEVO: CONTAR CANTIDAD DE VENTAS EN RANGO ---
+    // --- CANTIDAD DE VENTAS EN RANGO ---
     @Query("SELECT COUNT(v) FROM Venta v WHERE v.estado = 'COMPLETADA' AND v.fechaVenta BETWEEN :inicio AND :fin")
     long countVentasEntreFechas(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
 
-    // --- GRÁFICO DE DONA ---
+    // --- GRÁFICO DE DONA (CATEGORÍAS) ---
     @Query("SELECT new com.masterserv.productos.dto.VentasPorCategoriaDTO(p.categoria.nombre, SUM(dv.precioUnitario * dv.cantidad)) " +
            "FROM DetalleVenta dv " +
            "JOIN dv.producto p " +
