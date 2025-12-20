@@ -2,13 +2,11 @@ package com.masterserv.productos.service;
 
 import com.masterserv.productos.entity.*;
 import com.masterserv.productos.enums.EstadoCupon;
-import com.masterserv.productos.enums.EstadoListaEspera; // <--- IMPORTANTE
+import com.masterserv.productos.enums.EstadoListaEspera;
 import com.masterserv.productos.repository.*;
 import com.twilio.twiml.MessagingResponse;
 import com.twilio.twiml.messaging.Message;
 
-// import jakarta.annotation.PostConstruct; 
-// import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
@@ -22,13 +20,6 @@ import java.util.UUID;
 @Service
 public class ChatbotService {
 
-    // --- CREDENCIALES COMENTADAS (Lo maneja WhatsappService) ---
-    // @Value("${twilio.account-sid}")
-    // private String ACCOUNT_SID;
-    // @Value("${twilio.auth-token}")
-    // private String AUTH_TOKEN;
-    // -----------------------------------------------------------
-
     private final UsuarioRepository usuarioRepository;
     private final ProductoRepository productoRepository;
     private final InteraccionChatbotRepository interaccionRepository;
@@ -37,8 +28,6 @@ public class ChatbotService {
     private final RecompensaRepository recompensaRepository;
     private final CuponRepository cuponRepository;
     private final CuentaPuntosRepository cuentaPuntosRepository;
-    
-    // --- NUEVO REPOSITORIO ---
     private final ListaEsperaRepository listaEsperaRepository;
 
     public ChatbotService(UsuarioRepository usuarioRepository,
@@ -49,7 +38,7 @@ public class ChatbotService {
                           RecompensaRepository recompensaRepository,
                           CuponRepository cuponRepository,
                           CuentaPuntosRepository cuentaPuntosRepository,
-                          ListaEsperaRepository listaEsperaRepository) { // <--- INYECCIÓN
+                          ListaEsperaRepository listaEsperaRepository) {
         this.usuarioRepository = usuarioRepository;
         this.productoRepository = productoRepository;
         this.interaccionRepository = interaccionRepository;
@@ -58,29 +47,55 @@ public class ChatbotService {
         this.recompensaRepository = recompensaRepository;
         this.cuponRepository = cuponRepository;
         this.cuentaPuntosRepository = cuentaPuntosRepository;
-        this.listaEsperaRepository = listaEsperaRepository; // <--- ASIGNACIÓN
+        this.listaEsperaRepository = listaEsperaRepository;
     }
-
-    // --- INIT COMENTADO (Lo maneja WhatsappService) ---
-    // @PostConstruct
-    // public void init() {
-    //   try {
-    //       Twilio.init(ACCOUNT_SID, AUTH_TOKEN);
-    //   } catch (Exception e) {
-    //       System.err.println("Error inicializando Twilio: " + e.getMessage());
-    //   }
-    // }
-    // --------------------------------------------------
 
     @Transactional
     public String procesarMensajeWebhook(String from, String body) {
-        String telefono = from.replace("whatsapp:", "");
+        // LOG DE DEBUG PARA RENDER
+        System.out.println("--- NUEVO MENSAJE WHATSAPP ---");
+        System.out.println("De: " + from);
+        System.out.println("Texto: " + body);
+
+        // 1. Limpieza del número
+        String telefono = from.replace("whatsapp:", "").trim();
+        
+        // 2. Buscar usuario
         Optional<Usuario> usuarioOpt = usuarioRepository.findByTelefono(telefono);
         
-        registrarInteraccion(body, null, usuarioOpt.orElse(null));
-        String mensajeRespuesta = procesarComando(body.trim(), usuarioOpt); 
-        registrarInteraccion(null, mensajeRespuesta, usuarioOpt.orElse(null));
+        if (usuarioOpt.isPresent()) {
+            System.out.println("✅ Usuario encontrado: " + usuarioOpt.get().getEmail());
+        } else {
+            System.out.println("❌ Usuario NO encontrado con tel: " + telefono);
+        }
         
+        // 3. Registrar Interacción (Entrada) - BLINDADO CON TRY-CATCH
+        try {
+            registrarInteraccion(body, null, usuarioOpt.orElse(null));
+        } catch (Exception e) {
+            System.err.println("⚠️ Error guardando log de entrada (no crítico): " + e.getMessage());
+        }
+
+        // 4. Procesar Lógica
+        String mensajeRespuesta;
+        try {
+            mensajeRespuesta = procesarComando(body.trim(), usuarioOpt);
+        } catch (Exception e) {
+            System.err.println("🔥 Error procesando comando: " + e.getMessage());
+            e.printStackTrace();
+            mensajeRespuesta = "Lo siento, ocurrió un error interno al procesar tu solicitud.";
+        }
+        
+        System.out.println("🤖 Respuesta Bot: " + mensajeRespuesta);
+
+        // 5. Registrar Interacción (Salida) - BLINDADO CON TRY-CATCH
+        try {
+            registrarInteraccion(null, mensajeRespuesta, usuarioOpt.orElse(null));
+        } catch (Exception e) {
+            System.err.println("⚠️ Error guardando log de salida (no crítico): " + e.getMessage());
+        }
+        
+        // 6. Devolver XML a Twilio
         return construirRespuestaTwiML(mensajeRespuesta);
     }
 
@@ -88,7 +103,7 @@ public class ChatbotService {
         String texto = comando.toLowerCase().trim();
 
         if (usuarioOpt.isEmpty()) {
-            return "👋 ¡Hola! No te encontramos en nuestra base de datos.\nRegístrate en *masterserv.com* o contacta a un vendedor.";
+            return "👋 ¡Hola! No te encontramos en nuestra base de datos con este número.\nRegístrate en *masterserv.com* o contacta a un vendedor.";
         }
 
         Usuario usuario = usuarioOpt.get();
@@ -131,21 +146,17 @@ public class ChatbotService {
             return procesarCanje(usuario, nombrePremio);
         }
 
-        // =====================================================================
-        // 4. SOLICITAR (LÓGICA MEJORADA)
-        // =====================================================================
+        // 4. SOLICITAR
         if (texto.startsWith("solicitar") || texto.startsWith("pedir") || texto.startsWith("quiero")) {
             String termino = limpiarPrefijo(texto); 
             if (termino.length() < 3) return "⚠️ Dime qué producto necesitas. Ej: _\"solicitar espejo\"_";
             
-            // A. ¿EL PRODUCTO YA EXISTE? Buscamos algo que se parezca en el catálogo
             Optional<Producto> productoExistente = productoRepository.findByNombreContainingIgnoreCase(termino)
                     .stream().findFirst();
 
             if (productoExistente.isPresent()) {
                 Producto p = productoExistente.get();
                 
-                // B. SI EXISTE, TE METEMOS EN LA LISTA DE ESPERA (AUTOMÁTICA)
                 boolean yaEnEspera = listaEsperaRepository.existsByUsuarioIdAndProductoIdAndEstado(
                         usuario.getId(), p.getId(), EstadoListaEspera.PENDIENTE);
 
@@ -167,13 +178,11 @@ public class ChatbotService {
                     p.getNombre(), p.getStockActual()
                 );
             } else {
-                // C. SI NO EXISTE, GUARDAMOS LA NOTA PARA EL ADMIN (MANUAL)
                 SolicitudProducto s = new SolicitudProducto(termino, usuario);
                 solicitudProductoRepository.save(s);
-                return "📝 No encontré ese producto en catálogo, pero generé una solicitud de: '" + termino;
+                return "📝 No encontré ese producto en catálogo, pero generé una solicitud de: '" + termino + "'";
             }
         }
-        // =====================================================================
 
         // 5. STOCK Y PRECIOS
         if (texto.length() > 3 || texto.startsWith("stock") || texto.startsWith("precio")) {
@@ -185,13 +194,11 @@ public class ChatbotService {
     }
 
     private String buscarProducto(String termino) {
-        // A. Buscar por Código Exacto
         Optional<Producto> productoPorCodigo = productoRepository.findByCodigo(termino.toUpperCase());
         if (productoPorCodigo.isPresent()) {
             return formatearRespuestaProducto(productoPorCodigo.get());
         }
 
-        // B. Buscar por Nombre (Top 5)
         Pageable top5 = PageRequest.of(0, 5); 
         List<Producto> productos = productoRepository.findByNombreILike(termino, top5);
 
@@ -202,10 +209,8 @@ public class ChatbotService {
                 "Escribe: _\"solicitar %s\"_", 
                 termino, termino
             );
-        
         } else if (productos.size() == 1) {
             return formatearRespuestaProducto(productos.get(0));
-        
         } else {
             StringBuilder respuesta = new StringBuilder("🔎 *Encontré estas opciones:*\n");
             for (Producto p : productos) {
@@ -295,11 +300,12 @@ public class ChatbotService {
     }
     
     private void registrarInteraccion(String in, String out, Usuario u) {
+        // ESTE METODO YA NO ROMPERÁ LA TRANSACCIÓN SI FALLA EL USUARIO
         InteraccionChatbot i = new InteraccionChatbot();
         i.setFecha(LocalDateTime.now());
         i.setMensajeUsuario(in);
         i.setRespuestaBot(out);
-        i.setUsuario(u);
+        i.setUsuario(u); 
         interaccionRepository.save(i);
     }
 
