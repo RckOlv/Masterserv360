@@ -1,7 +1,20 @@
 <div class="admin-container">
-  <app-sidebar></app-sidebar>
+  
+  <button class="mobile-toggle-btn d-lg-none" (click)="sidebar.toggleMobileMenu()">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <app-sidebar #sidebar 
+               [class.mobile-open]="sidebar.isMobileMenuOpen">
+  </app-sidebar>
+
+  <div class="sidebar-overlay d-lg-none" 
+       [class.show]="sidebar.isMobileMenuOpen"
+       (click)="sidebar.closeMobileMenu()">
+  </div>
 
   <main class="content">
     <router-outlet></router-outlet>
   </main>
+  
 </div>

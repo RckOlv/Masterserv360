@@ -72,7 +72,6 @@ body {
 
 /* Botones personalizados */
 .btn-masterserv {
-  // CORRECCIÓN: Usar color.adjust en lugar de darken()
   background: linear-gradient(135deg, $masterserv-primary, color.adjust($masterserv-primary, $lightness: -10%));
   border: none;
   color: $masterserv-white;
@@ -80,7 +79,6 @@ body {
   transition: all 0.3s ease;
   
   &:hover {
-    // CORRECCIÓN: Usar color.adjust en lugar de lighten()
     background: linear-gradient(135deg, color.adjust($masterserv-primary, $lightness: 5%), $masterserv-primary);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba($masterserv-primary, 0.4);
@@ -89,14 +87,12 @@ body {
 }
 
 .btn-masterserv-accent {
-  // CORRECCIÓN: Usar color.adjust en lugar de darken()
   background: linear-gradient(135deg, $masterserv-accent, color.adjust($masterserv-accent, $lightness: -10%));
   border: none;
   color: $masterserv-black;
   font-weight: 600;
   
   &:hover {
-    // CORRECCIÓN: Usar color.adjust en lugar de lighten()
     background: linear-gradient(135deg, color.adjust($masterserv-accent, $lightness: 5%), $masterserv-accent);
     color: $masterserv-black;
   }
@@ -123,7 +119,6 @@ body {
 /* Sidebar con nueva paleta */
 /* Estas reglas se aplican a <app-sidebar> */
 app-sidebar .sidebar {
-  // CORRECCIÓN: Usar color.adjust en lugar de lighten()
   background: linear-gradient(180deg, $masterserv-black 0%, color.adjust($masterserv-black, $lightness: 5%) 100%);
   border-right: 1px solid $masterserv-metal;
   
@@ -204,11 +199,9 @@ app-sidebar .sidebar {
   }
   
   .btn-custom {
-    // CORRECCIÓN: Usar color.adjust en lugar de darken()
     background: linear-gradient(135deg, $masterserv-primary, color.adjust($masterserv-primary, $lightness: -10%));
     
     &:hover:not(:disabled) {
-      // CORRECCIÓN: Usar color.adjust en lugar de lighten()
       background: linear-gradient(135deg, color.adjust($masterserv-primary, $lightness: 5%), $masterserv-primary);
     }
   }
@@ -316,10 +309,6 @@ app-sidebar .sidebar {
 
 
 /* --- Mentor: INICIO DE ESTILOS GLOBALES PARA NG-SELECT (V3) --- */
-/*
-  Estas reglas son globales porque el dropdown de ng-select
-  se renderiza en el <body>, fuera del componente.
-*/
 .ng-dropdown-panel {
   background: $masterserv-gray-dark !important; /* Fondo del panel */
   border: 1px solid $masterserv-metal !important; /* Borde del panel */
@@ -343,7 +332,6 @@ app-sidebar .sidebar {
   color: $masterserv-metal !important; /* Texto gris más oscuro para el código */
   background: transparent !important;
 }
-
 
 /* La fila/opción CUANDO ESTÁ SELECCIONADA (hover/focus) */
 .ng-dropdown-panel .ng-option.ng-option-marked {
@@ -382,41 +370,95 @@ app-sidebar .sidebar {
   animation: masterserv-glow 2s ease-in-out infinite;
 }
 
+/* =========================================================
+   LAYOUT GLOBAL DEL ADMIN & SIDEBAR RESPONSIVO
+   (Esta es la única sección modificada para el menú móvil)
+   ========================================================= */
 
-/* --- LAYOUT GLOBAL DEL ADMIN --- */
-.admin-container app-sidebar {
-  width: 250px;
+/* 1. Botón Hamburguesa Flotante (Solo aparece en mobile por d-lg-none en HTML) */
+.mobile-toggle-btn {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1050; /* Capa superior */
+  background: $masterserv-primary; /* Usamos la variable */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  width: 45px;
+  height: 45px;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  
+  &:active { transform: scale(0.95); }
+}
+
+/* 2. Sidebar Base (Desktop) */
+app-sidebar {
+  display: block;
+  width: 260px; /* Ancho fijo como tenías */
   height: 100vh;
   position: fixed;
   left: 0;
   top: 0;
-  z-index: 100;
-  transition: all 0.3s ease-in-out;
+  z-index: 1040; /* Debajo del botón, encima del contenido */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 3. Contenido Principal Base (Desktop) */
 .admin-container .content {
-  margin-left: 250px;
-  width: calc(100% - 250px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  height: 100vh;
+  margin-left: 260px; /* Deja espacio para el sidebar */
+  width: calc(100% - 260px);
   padding: 20px;
+  min-height: 100vh;
   box-sizing: border-box;
-  transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease;
 }
 
+/* 4. Overlay (Fondo oscuro al abrir menú) */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1030; /* Debajo del sidebar */
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(2px);
+}
+.sidebar-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* --- MEDIA QUERY: PANTALLAS MENORES A 992px (Tablets y Celulares) --- */
 @media (max-width: 992px) {
-  .admin-container .content { 
+  
+  /* Sidebar oculto por defecto hacia la izquierda */
+  app-sidebar {
+    transform: translateX(-100%);
+    box-shadow: none;
+  }
+  
+  /* Cuando se activa la clase .mobile-open (desde TS) el sidebar entra */
+  app-sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+  }
+
+  /* El contenido ocupa el 100% del ancho (ya no hay margen izquierdo) */
+  .admin-container .content {
     margin-left: 0;
     width: 100%;
     padding: 15px;
-  }
-  
-  .admin-container app-sidebar {
-    transform: translateX(-100%);
-  }
-  
-  .admin-container app-sidebar.open {
-    transform: translateX(0);
+    padding-top: 80px; /* Dejamos espacio arriba para que el botón hamburguesa no tape nada */
   }
 }
