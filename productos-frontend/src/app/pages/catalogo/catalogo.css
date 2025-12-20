@@ -9,7 +9,7 @@
 /* SIDEBAR DE FILTROS */
 .filters-sidebar {
   position: sticky;
-  top: 80px; /* Ajuste para que no choque con el navbar */
+  top: 80px;
 }
 
 /* Scrollbar personalizado para categorías */
@@ -27,10 +27,35 @@
   background: #E41E26;
 }
 
+/* --- ESTILOS NUEVOS: BOTONES DE CATEGORÍA --- */
+.category-btn {
+  transition: all 0.2s ease;
+  border: 1px solid #333; /* Borde sutil por defecto */
+}
+
+.category-btn:hover {
+  background-color: #2c2c2c !important; /* Gris un poco más claro al pasar mouse */
+}
+
+/* CATEGORÍA SELECCIONADA (ESTADO ACTIVO) */
+.category-btn.selected-cat {
+  background-color: #E41E26 !important; /* Rojo Masterserv */
+  border-color: #E41E26 !important;
+  color: white !important;
+  font-weight: 600; /* Letra un poco más gruesa */
+  box-shadow: 0 4px 10px rgba(228, 30, 38, 0.3); /* Resplandor rojo suave */
+}
+
+/* El icono del check */
+.category-btn.selected-cat i {
+  font-size: 1.1rem;
+  transform: scale(1.1);
+}
+
 /* --- TARJETA DE PRODUCTO --- */
 .product-card {
   position: relative;
-  height: 300px; /* Altura fija para uniformidad */
+  height: 300px;
   background-color: #1E1E1E;
   border-radius: 12px;
   overflow: hidden;
@@ -41,28 +66,26 @@
 
 .product-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(228, 30, 38, 0.2); /* Sombra roja suave */
+  box-shadow: 0 10px 30px rgba(228, 30, 38, 0.2);
   border-color: #E41E26;
 }
 
-/* IMAGEN DE FONDO (Vista Normal) */
+/* IMAGEN DE FONDO */
 .card-img-wrapper {
-  height: 220px; /* Mantenemos altura fija para la zona de imagen */
+  height: 220px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: #2c2c2c;
-  /* MENTOR: Agregamos padding para que la imagen no toque los bordes */
   padding: 15px; 
-  position: relative; /* Necesario para posicionar el badge de precio */
+  position: relative;
   overflow: hidden;
 }
 
 .card-img {
   width: 100%;
   height: 100%;
-  /* MENTOR: 'contain' es la clave. Muestra la imagen entera sin recortar. */
   object-fit: contain; 
   transition: transform 0.5s ease;
 }
@@ -70,15 +93,14 @@
 .card-img.placeholder {
   object-fit: contain;
   opacity: 0.3;
-  padding: 40px; /* Padding extra para el icono por defecto */
+  padding: 40px;
 }
 
-/* Efecto Zoom en imagen al hover */
 .product-card:hover .card-img {
   transform: scale(1.1); 
 }
 
-/* BADGE DE PRECIO (Siempre visible) */
+/* BADGE DE PRECIO */
 .price-badge {
   position: absolute;
   bottom: 0;
@@ -89,30 +111,30 @@
   font-size: 1.2rem;
   padding: 8px 15px;
   border-top-left-radius: 12px;
-  z-index: 2; /* Arriba de la imagen */
+  z-index: 2;
 }
 
-/* --- OVERLAY HOVER (Vista Detallada) --- */
+/* --- OVERLAY HOVER --- */
 .card-hover-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.85); /* Fondo oscuro semi-transparente */
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 20px;
   text-align: center;
-  opacity: 0; /* Invisible por defecto */
+  opacity: 0;
   transition: opacity 0.3s ease-in-out;
   z-index: 3;
 }
 
 .product-card:hover .card-hover-overlay {
-  opacity: 1; /* Visible al hover */
+  opacity: 1;
 }
 
 .product-title {
@@ -137,7 +159,6 @@
   box-shadow: none;
 }
 
-/* Paginador Material Dark (Por si quedó algún rastro, aunque ya lo quitamos del HTML) */
 ::ng-deep .mat-mdc-paginator {
   background: transparent !important;
   color: white !important;
