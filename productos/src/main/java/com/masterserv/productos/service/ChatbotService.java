@@ -23,7 +23,7 @@ import java.util.UUID;
 public class ChatbotService {
 
     // --- CONFIGURACIÓN ---
-    private static final String LINK_REGISTRO = "https://masterserv360.vercel.app/auth/registro"; // Tu link real
+    private static final String LINK_REGISTRO = "https://masterserv360.vercel.app/auth/registro"; 
     // ---------------------
 
     private final UsuarioRepository usuarioRepository;
@@ -56,10 +56,10 @@ public class ChatbotService {
         this.listaEsperaRepository = listaEsperaRepository;
     }
 
-    // Clase auxiliar para manejar Texto + Imagen
+    // Clase auxiliar interna para manejar Texto + Imagen
     private static class BotResponse {
         String texto;
-        String mediaUrl; // URL de la imagen (opcional)
+        String mediaUrl; // URL de la imagen (puede ser null)
 
         public BotResponse(String texto) { this.texto = texto; }
         public BotResponse(String texto, String mediaUrl) { this.texto = texto; this.mediaUrl = mediaUrl; }
@@ -72,7 +72,7 @@ public class ChatbotService {
         String telefono = from.replace("whatsapp:", "").trim();
         Optional<Usuario> usuarioOpt = usuarioRepository.findByTelefono(telefono);
         
-        // Registrar Entrada
+        // Registrar Entrada (Protegido)
         try { registrarInteraccion(body, null, usuarioOpt.orElse(null)); } catch (Exception e) {}
 
         // Procesar Lógica
@@ -81,10 +81,10 @@ public class ChatbotService {
             respuesta = procesarComando(body.trim(), usuarioOpt);
         } catch (Exception e) {
             e.printStackTrace();
-            respuesta = new BotResponse("😓 Tuve un problema técnico. Por favor intenta en un momento.");
+            respuesta = new BotResponse("😓 Tuve un pequeño problema técnico procesando eso. Por favor intenta de nuevo.");
         }
         
-        // Registrar Salida
+        // Registrar Salida (Protegido)
         try { registrarInteraccion(null, respuesta.texto, usuarioOpt.orElse(null)); } catch (Exception e) {}
         
         // Devolver XML a Twilio
@@ -98,7 +98,7 @@ public class ChatbotService {
         if (usuarioOpt.isEmpty()) {
             return new BotResponse(
                 "👋 *¡Hola! Bienvenido a Masterserv360*\n\n" +
-                "No veo tu número registrado. Para acceder a precios y stock, regístrate gratis aquí:\n\n" +
+                "No veo tu número registrado en mi sistema. Para ver precios y stock, regístrate gratis aquí:\n\n" +
                 "👉 " + LINK_REGISTRO + "\n\n" +
                 "Una vez registrado, escríbeme \"Hola\" nuevamente. 🚀"
             );
@@ -110,12 +110,12 @@ public class ChatbotService {
         if (esSaludo(texto) || texto.contains("menu") || texto.equals("ayuda")) {
             return new BotResponse(
                 String.format(
-                    "👋 ¡Hola *%s*! Soy el asistente de Masterserv. 🏍️\n\n" +
-                    "Escribe el número o la palabra clave:\n\n" +
+                    "👋 ¡Hola *%s*! Soy el asistente virtual de Masterserv. 🏍️\n\n" +
+                    "Escribe la palabra clave:\n\n" +
                     "1️⃣ *Buscar [Producto]*\n" +
-                    "   _(Ej: \"buscar aceite\", \"precio bateria\")_\n\n" +
+                    "   _(Ej: \"buscar aceite\", \"bateria\")_\n\n" +
                     "2️⃣ *Mis Puntos*\n" +
-                    "   _(Ver saldo y premios canjeables)_\n\n" +
+                    "   _(Ver saldo y premios)_\n\n" +
                     "3️⃣ *Solicitar [Nombre]*\n" +
                     "   _(Pedir algo que no encuentras)_\n\n" +
                     "❓ *Ayuda* - Ver este menú",
@@ -144,7 +144,7 @@ public class ChatbotService {
         // 4. CANJEAR
         if (texto.startsWith("canjear")) {
             String nombrePremio = limpiarPrefijo(texto);
-            if (nombrePremio.isEmpty()) return new BotResponse("⚠️ Escribe el nombre del premio. Ej: *canjear gorra*");
+            if (nombrePremio.isEmpty()) return new BotResponse("⚠️ Escribe el nombre del premio. Ej: *canjar 10% OFF Aceites*");
             return new BotResponse(procesarCanje(usuario, nombrePremio));
         }
 
@@ -154,6 +154,7 @@ public class ChatbotService {
         }
 
         // 6. BUSCADOR INTELIGENTE (Detecta intención de búsqueda implícita)
+        // Si escribe algo largo y no es un comando, asumimos que busca un producto
         if (texto.length() > 2) {
             String termino = limpiarPrefijo(texto);
             if (!termino.isEmpty()) {
@@ -175,11 +176,11 @@ public class ChatbotService {
         Pageable top5 = PageRequest.of(0, 5); 
         List<Producto> productos;
         try {
-            // Intenta usar la búsqueda con unaccent
+            // Intenta usar la búsqueda con unaccent (si la BD lo soporta)
             productos = productoRepository.findByNombreFlexible(termino, top5);
         } catch (Exception e) {
-            // Fallback por si la BD no tiene la extensión instalada
-            System.err.println("Fallback búsqueda: " + e.getMessage());
+            // Fallback: Si la BD no tiene la extensión, usamos ILIKE normal
+            System.err.println("⚠️ Fallback búsqueda (posiblemente falta extensión unaccent): " + e.getMessage());
             productos = productoRepository.findByNombreILike(termino, top5);
         }
 
@@ -195,7 +196,9 @@ public class ChatbotService {
             // Múltiples resultados -> Lista de texto
             StringBuilder respuesta = new StringBuilder("🔎 *Encontré varias opciones:*\n");
             for (Producto p : productos) {
-                respuesta.append(String.format("\n▪ %s ($%,.0f)", p.getNombre(), p.getPrecioVenta()));
+                // Formateo seguro de precio para lista
+                String precio = (p.getPrecioVenta() != null) ? String.format("$%,.0f", p.getPrecioVenta().doubleValue()) : "Consultar";
+                respuesta.append(String.format("\n▪ %s (%s)", p.getNombre(), precio));
             }
             respuesta.append("\n\nPara ver la foto y stock, escribe el nombre completo.");
             return new BotResponse(respuesta.toString());
@@ -212,15 +215,21 @@ public class ChatbotService {
             disponibilidad = "🟢 Disponible (" + p.getStockActual() + ")";
         }
 
+        // CORRECCIÓN: Convertir a doubleValue() para evitar IllegalFormatConversionException
+        String precioStr = "Consultar";
+        if (p.getPrecioVenta() != null) {
+            precioStr = String.format("$%,.2f", p.getPrecioVenta().doubleValue());
+        }
+
         String texto = String.format(
             "📦 *%s*\n\n" +
-            "💲 Precio: *$%,.2f*\n" +
+            "💲 Precio: *%s*\n" +
             "📊 Estado: %s\n" +
             "🏷️ Código: %s\n\n" +
-            p.getNombre(), p.getPrecioVenta(), disponibilidad, p.getCodigo()
+            p.getNombre(), precioStr, disponibilidad, p.getCodigo()
         );
 
-        // Si el producto tiene foto (y es una URL válida http...), la mandamos
+        // Si el producto tiene foto (y es una URL válida http...), la preparamos
         String imagen = (p.getImagenUrl() != null && p.getImagenUrl().startsWith("http")) 
                         ? p.getImagenUrl() : null;
 
@@ -230,9 +239,14 @@ public class ChatbotService {
     private BotResponse procesarSolicitud(Usuario usuario, String termino) {
         if (termino.length() < 3) return new BotResponse("⚠️ Escribe qué producto necesitas.");
 
-        // Verificar si existe realmente
+        // Verificar si existe realmente (usando búsqueda flexible)
         Pageable top1 = PageRequest.of(0, 1);
-        List<Producto> matches = productoRepository.findByNombreFlexible(termino, top1);
+        List<Producto> matches;
+        try {
+             matches = productoRepository.findByNombreFlexible(termino, top1);
+        } catch (Exception e) {
+             matches = productoRepository.findByNombreILike(termino, top1);
+        }
 
         if (!matches.isEmpty()) {
             Producto p = matches.get(0);
@@ -257,21 +271,18 @@ public class ChatbotService {
     }
 
     private String procesarCanje(Usuario usuario, String nombrePremio) {
-        // Lógica de canje igual que antes, retorna solo String
         Optional<Recompensa> recompensaOpt = recompensaRepository.findByDescripcionContainingIgnoreCase(nombrePremio)
                 .stream().findFirst();
         
         if (recompensaOpt.isEmpty()) return "❌ Premio no encontrado.";
         Recompensa recompensa = recompensaOpt.get();
         
-        // ... (resto de lógica de validación de puntos y stock) ...
         var cuentaOpt = cuentaPuntosRepository.findByCliente(usuario);
         if (cuentaOpt.isEmpty() || cuentaOpt.get().getSaldoPuntos() < recompensa.getPuntosRequeridos()) {
              return "🚫 Puntos insuficientes.";
         }
         
         try {
-            // Canje efectivo
             CuentaPuntos cuenta = cuentaOpt.get();
             cuenta.setSaldoPuntos(cuenta.getSaldoPuntos() - recompensa.getPuntosRequeridos());
             cuentaPuntosRepository.save(cuenta);
@@ -301,7 +312,7 @@ public class ChatbotService {
     }
 
     private boolean esSaludo(String t) {
-        return t.equals("hola") || t.equals("hi") || t.equals("buen dia") || t.equals("buenas");
+        return t.equals("hola") || t.equals("hi") || t.equals("buen dia") || t.equals("buenas") || t.equals("menu");
     }
 
     private String limpiarPrefijo(String texto) {
@@ -309,7 +320,7 @@ public class ChatbotService {
         for (String prefijo : prefijos) {
             if (texto.startsWith(prefijo)) return texto.substring(prefijo.length()).trim();
         }
-        return texto; // Si no tiene prefijo, devolvemos el texto limpio (para búsqueda implícita)
+        return texto; 
     }
     
     private void registrarInteraccion(String in, String out, Usuario u) {
