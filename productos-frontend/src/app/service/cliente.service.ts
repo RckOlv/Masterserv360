@@ -5,10 +5,8 @@ import { ClientePerfilDTO } from '../models/cliente-perfil.model';
 import { ClientePerfilUpdateDTO } from '../models/cliente-perfil-update.model';
 import { VentaResumenDTO } from '../models/venta-resumen.model'; 
 import { Page } from '../models/page.model'; 
-import { ClienteDTO } from '../models/cliente.dto'; // <--- IMPORTANTE: Importar el DTO nuevo
+import { ClienteDTO } from '../models/cliente.dto'; 
 import { API_URL } from '../app.config';
-
-
 
 @Injectable({
   providedIn: 'root'
@@ -16,14 +14,17 @@ import { API_URL } from '../app.config';
 export class ClienteService {
 
   private http = inject(HttpClient);
-   private apiUrl = `${API_URL}/cliente`;
+  // Definimos la base correcta para este servicio
+  private baseUrl = `${API_URL}/cliente`;
 
   getMiPerfil(): Observable<ClientePerfilDTO> {
-    return this.http.get<ClientePerfilDTO>(`${API_URL}/mi-perfil`);
+    // CORREGIDO: Usamos baseUrl
+    return this.http.get<ClientePerfilDTO>(`${this.baseUrl}/mi-perfil`);
   }
 
   updateMiPerfil(updateDTO: ClientePerfilUpdateDTO): Observable<ClientePerfilDTO> {
-    return this.http.put<ClientePerfilDTO>(`${API_URL}/mi-perfil`, updateDTO);
+    // CORREGIDO: Usamos baseUrl
+    return this.http.put<ClientePerfilDTO>(`${this.baseUrl}/mi-perfil`, updateDTO);
   }
 
   getMisCompras(page: number = 0, size: number = 10): Observable<Page<VentaResumenDTO>> {
@@ -31,17 +32,17 @@ export class ClienteService {
       .set('page', page.toString())
       .set('size', size.toString());
       
-    return this.http.get<Page<VentaResumenDTO>>(`${API_URL}/mis-compras`, { params });
+    // CORREGIDO: Ahora apunta a /api/cliente/mis-compras
+    return this.http.get<Page<VentaResumenDTO>>(`${this.baseUrl}/mis-compras`, { params });
   }
 
   cambiarPassword(data: { passwordActual: string; passwordNueva: string }): Observable<void> {
-    return this.http.patch<void>(`${API_URL}/cambiar-password`, data);
+    // CORREGIDO: Usamos baseUrl
+    return this.http.patch<void>(`${this.baseUrl}/cambiar-password`, data);
   }
 
-  // --- MENTOR: ESTE ES EL MÉTODO QUE TE FALTABA ---
   registrarDesdePos(cliente: ClienteDTO): Observable<any> {
-    // Apunta al endpoint nuevo del backend
-    return this.http.post(`${API_URL}/registro-pos`, cliente);
+    // CORREGIDO: Usamos baseUrl
+    return this.http.post(`${this.baseUrl}/registro-pos`, cliente);
   }
-  // ------------------------------------------------
 }
