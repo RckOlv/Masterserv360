@@ -34,7 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 
-import java.math.BigDecimal; // <--- Importante
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Optional;
@@ -96,6 +96,7 @@ public class ProductoService {
 
     @Transactional(readOnly = true)
     public Page<ProductoDTO> filter(ProductoFiltroDTO filtro, Pageable pageable) {
+        // Usamos el método unificado
         Specification<Producto> spec = productoSpecification.getProductosByFilters(filtro);
         Page<Producto> productosPage = productoRepository.findAll(spec, pageable);
         return productosPage.map(productoMapper::toProductoDTO);
@@ -120,14 +121,12 @@ public class ProductoService {
         producto.setCategoria(categoria);
         producto.setEstado("ACTIVO");
         
-        // CORRECCIÓN PARA PRODUCTOS NUEVOS:
-        // Si no mandan precio, lo ponemos en 0.00 para que no falle.
-        // Se actualizará solo cuando llegue el primer pedido.
         if (producto.getPrecioCosto() == null) {
             producto.setPrecioCosto(BigDecimal.ZERO);
         }
         
-        producto.setStockActual(0); 
+        // CORRECCIÓN: Como es int primitivo, no chequeamos null, simplemente lo seteamos a 0
+        producto.setStockActual(0);
         
         Producto productoGuardado = productoRepository.save(producto);
         
@@ -222,15 +221,32 @@ public class ProductoService {
 
     @Transactional(readOnly = true)
     public Page<ProductoPublicoDTO> findAllPublico(Pageable pageable) {
-        ProductoPublicoFiltroDTO filtroVacio = new ProductoPublicoFiltroDTO();
-        Specification<Producto> spec = productoSpecification.getPublicProductosByFilters(filtroVacio);
+        // Usamos el DTO de filtro principal, pero vacío (trae todos)
+        ProductoFiltroDTO filtroVacio = new ProductoFiltroDTO();
+        filtroVacio.setEstado("ACTIVO"); // Solo activos para el público
+        
+        Specification<Producto> spec = productoSpecification.getProductosByFilters(filtroVacio);
         Page<Producto> productosPage = productoRepository.findAll(spec, pageable);
         return productosPage.map(productoMapper::toProductoPublicoDTO);
     }
 
+    // --- CORRECCIÓN CLAVE: Adaptamos el DTO Público al DTO Interno ---
     @Transactional(readOnly = true)
-    public Page<ProductoPublicoDTO> findPublicoByCriteria(ProductoPublicoFiltroDTO filtro, Pageable pageable) {
-        Specification<Producto> spec = productoSpecification.getPublicProductosByFilters(filtro);
+    public Page<ProductoPublicoDTO> findPublicoByCriteria(ProductoPublicoFiltroDTO filtroPublico, Pageable pageable) {
+        
+        // 1. Convertimos el DTO Público (que viene del front) al DTO Interno (que usa la Specification)
+        ProductoFiltroDTO filtroInterno = new ProductoFiltroDTO();
+        filtroInterno.setNombre(filtroPublico.getNombre());
+        filtroInterno.setCategoriaIds(filtroPublico.getCategoriaIds()); // Lista de IDs
+        filtroInterno.setPrecioMin(filtroPublico.getPrecioMin());
+        filtroInterno.setPrecioMax(filtroPublico.getPrecioMax());
+        filtroInterno.setSoloConStock(filtroPublico.getSoloConStock());
+        filtroInterno.setEstado("ACTIVO"); // Siempre forzamos activos para el público
+
+        // 2. Llamamos a la especificación unificada
+        Specification<Producto> spec = productoSpecification.getProductosByFilters(filtroInterno);
+        
+        // 3. Buscamos y mapeamos
         Page<Producto> productosPage = productoRepository.findAll(spec, pageable);
         return productosPage.map(productoMapper::toProductoPublicoDTO);
     }
@@ -270,7 +286,6 @@ public class ProductoService {
     // --- MÉTODO ORIGINAL (Mantener por compatibilidad) ---
     @Transactional(propagation = Propagation.REQUIRED)
     public Producto reponerStock(Long productoId, int cantidadAReponer) {
-        // Redirige al nuevo método pasando null como precio
         return reponerStock(productoId, cantidadAReponer, null);
     }
 
@@ -290,11 +305,8 @@ public class ProductoService {
         producto.setStockActual(stockNuevo);
         
         // --- ACTUALIZACIÓN DE PRECIO ---
-        // Si el pedido trae un precio válido, actualizamos el costo del producto.
         if (nuevoCosto != null && nuevoCosto.compareTo(BigDecimal.ZERO) > 0) {
             producto.setPrecioCosto(nuevoCosto);
-            // Opcional: Podrías querer recalcular el Precio de Venta automáticamente aquí
-            // producto.setPrecioVenta(nuevoCosto.multiply(new BigDecimal("1.5"))); // Ejemplo margen 50%
         }
         // -------------------------------
 

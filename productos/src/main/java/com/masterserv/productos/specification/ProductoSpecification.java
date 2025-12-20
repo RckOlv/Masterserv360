@@ -1,7 +1,6 @@
 package com.masterserv.productos.specification;
 
 import com.masterserv.productos.dto.ProductoFiltroDTO;
-import com.masterserv.productos.dto.ProductoPublicoFiltroDTO;
 import com.masterserv.productos.entity.Producto;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
@@ -15,7 +14,7 @@ import java.util.List;
 public class ProductoSpecification {
 
     /**
-     * Crea una especificación para el ADMIN/VENDEDOR.
+     * Crea una especificación UNIFICADA para ADMIN y CATÁLOGO PÚBLICO.
      */
     public Specification<Producto> getProductosByFilters(ProductoFiltroDTO filtro) {
         return (root, query, cb) -> {
@@ -42,17 +41,25 @@ public class ProductoSpecification {
                 predicates.add(cb.like(cb.lower(root.get("codigo")), "%" + filtro.getCodigo().toLowerCase() + "%"));
             }
 
-            // 4. Categoría ID
+            // 4. Categoría (Soporta ID único o Lista de IDs)
             if (filtro.getCategoriaId() != null) {
                 predicates.add(cb.equal(root.get("categoria").get("id"), filtro.getCategoriaId()));
             }
+            // NUEVO: Soporte para lista de categorías (del catálogo público)
+            if (!CollectionUtils.isEmpty(filtro.getCategoriaIds())) {
+                 predicates.add(root.get("categoria").get("id").in(filtro.getCategoriaIds()));
+            }
             
-            // 5. Precio Máximo
+            // 5. Rango de Precios
+            if (filtro.getPrecioMin() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("precioVenta"), filtro.getPrecioMin()));
+            }
             if (filtro.getPrecioMax() != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("precioVenta"), filtro.getPrecioMax()));
             }
 
-            // 6. --- FILTRO DE STOCK UNIFICADO ---
+            // 6. Stock Unificado
+            // Lógica del Admin (estadoStock)
             if (filtro.getEstadoStock() != null) {
                 switch (filtro.getEstadoStock()) {
                     case "CON_STOCK":
@@ -62,58 +69,22 @@ public class ProductoSpecification {
                         predicates.add(cb.equal(root.get("stockActual"), 0));
                         break;
                     case "STOCK_BAJO":
-                        // stockActual <= stockMinimo
                         predicates.add(cb.lessThanOrEqualTo(root.get("stockActual"), root.get("stockMinimo")));
                         break;
-                    default: // "TODOS"
-                        break;
+                    default: break;
                 }
             }
-            // Compatibilidad vieja (si el front mandara el booleano)
-            else if (filtro.getConStock() != null) {
-                if (filtro.getConStock()) {
-                    predicates.add(cb.greaterThan(root.get("stockActual"), 0));
-                } else {
-                    predicates.add(cb.equal(root.get("stockActual"), 0));
-                }
+            // Lógica del Catálogo Público (soloConStock) o Admin viejo (conStock)
+            else if (Boolean.TRUE.equals(filtro.getSoloConStock()) || Boolean.TRUE.equals(filtro.getConStock())) {
+                predicates.add(cb.greaterThan(root.get("stockActual"), 0));
+            } else if (Boolean.FALSE.equals(filtro.getConStock())) { // Solo si explícitamente pide sin stock
+                 predicates.add(cb.equal(root.get("stockActual"), 0));
             }
             
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
     
-
-    /**
-     * Crea una especificación para el CATÁLOGO PÚBLICO.
-     */
-    public Specification<Producto> getPublicProductosByFilters(ProductoPublicoFiltroDTO filtro) {
-        return (root, query, cb) -> {
-            
-            List<Predicate> predicates = new ArrayList<>();
-
-            // Siempre ACTIVO
-            predicates.add(cb.equal(root.get("estado"), "ACTIVO"));
-
-            if (filtro.getNombre() != null && !filtro.getNombre().isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("nombre")), "%" + filtro.getNombre().toLowerCase() + "%"));
-            }
-
-            if (!CollectionUtils.isEmpty(filtro.getCategoriaIds())) {
-                predicates.add(root.get("categoria").get("id").in(filtro.getCategoriaIds()));
-            }
-
-            if (filtro.getPrecioMin() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("precioVenta"), filtro.getPrecioMin()));
-            }
-            if (filtro.getPrecioMax() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("precioVenta"), filtro.getPrecioMax()));
-            }
-
-            if (filtro.getSoloConStock() != null && filtro.getSoloConStock()) {
-                predicates.add(cb.greaterThan(root.get("stockActual"), 0));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-    }
+    // El método getPublicProductosByFilters ya no es necesario si usas el de arriba, 
+    // pero puedes dejarlo o borrarlo. Lo importante es que el Controller use el de arriba.
 }
