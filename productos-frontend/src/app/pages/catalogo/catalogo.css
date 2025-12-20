@@ -148,3 +148,43 @@
 ::ng-deep .mat-mdc-select-value {
   color: white !important;
 }
+
+/* --- RESPONSIVE FILTERS (Off-canvas logic) --- */
+@media (max-width: 992px) {
+  
+  /* Por defecto ocultamos la columna de filtros en mobile */
+  .filters-col {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100vh;
+    z-index: 1050; /* Encima de todo */
+    padding: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  /* Cuando activamos la clase .mobile-visible */
+  .filters-col.mobile-visible {
+    transform: translateX(0);
+  }
+
+  /* El sidebar dentro toma el 100% de la altura y quita bordes redondeados */
+  .filters-sidebar {
+    height: 100%;
+    border-radius: 0 !important;
+    overflow-y: auto; /* Scroll si es muy largo */
+  }
+
+  /* Overlay oscuro */
+  .filter-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.7);
+    z-index: 1040; /* Debajo del sidebar de filtros */
+  }
+}

@@ -34,6 +34,7 @@ export default class CatalogoComponent implements OnInit, OnDestroy {
   public isLoading = true;
   private currentSort = 'nombre,asc';
   private searchSub?: Subscription;
+  public showMobileFilters = false;
 
   public selectedCategoriaId: number | null = null;
   
@@ -113,5 +114,9 @@ export default class CatalogoComponent implements OnInit, OnDestroy {
     if (this.page && !this.page.last) {
       this.onFiltrar(this.page.number + 1);
     }
+  }
+
+  toggleMobileFilters() {
+    this.showMobileFilters = !this.showMobileFilters;
   }
 }
