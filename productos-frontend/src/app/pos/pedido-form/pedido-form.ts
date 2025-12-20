@@ -13,6 +13,7 @@ import { mostrarToast } from '../../utils/toast';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { Observable, Subject, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, switchMap, tap, map } from 'rxjs/operators';
+import { AuthService } from '../../service/auth.service'; // <--- Importado
 
 @Component({
   selector: 'app-pedido-form',
@@ -28,6 +29,7 @@ export default class PedidoFormComponent implements OnInit {
   private pedidoService = inject(PedidoService);
   private proveedorService = inject(ProveedorService);
   private productoService = inject(ProductoService);
+  private authService = inject(AuthService); // <--- Inyectado
   
   public pedidoForm: FormGroup;
   public proveedores: ProveedorDTO[] = [];
@@ -36,11 +38,13 @@ export default class PedidoFormComponent implements OnInit {
   public productoSearch$ = new Subject<string>(); 
   public isLoadingProductos = false;
   
+  // CORRECCIÓN: Inicializar como null, NO poner un número fijo
+  private empleadoId: number | null = null;
+  
   public isLoading = false;
   public errorMessage: string | null = null;
   public pageTitle = 'Crear Nuevo Pedido a Proveedor';
   
-  private empleadoId = 4;
 
   constructor() {
     this.pedidoForm = this.fb.group({
@@ -50,6 +54,17 @@ export default class PedidoFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // CORRECCIÓN: Obtener ID real del usuario desde el token
+    const tokenData = this.authService.getDecodedToken();
+    
+    if (tokenData && tokenData.id) {
+        this.empleadoId = tokenData.id;
+    } else {
+        mostrarToast('Error: No se pudo identificar al usuario. Reloguee por favor.', 'danger');
+        this.router.navigate(['/auth/login']);
+        return; // Detenemos la carga si no hay usuario
+    }
+
     this.cargarProveedores();
     this.initProductoSearch();
   }
@@ -187,6 +202,12 @@ export default class PedidoFormComponent implements OnInit {
       return;
     }
 
+    // Validación extra de seguridad: Si no tenemos ID de usuario, abortamos
+    if (!this.empleadoId) {
+        mostrarToast("Error de sesión: Usuario no identificado.", "danger");
+        return;
+    }
+
     this.isLoading = true;
     this.errorMessage = null;
 
@@ -194,7 +215,7 @@ export default class PedidoFormComponent implements OnInit {
 
     const pedidoDTO: PedidoDTO = {
       proveedorId: rawFormValue.proveedorId,
-      usuarioId: this.empleadoId,
+      usuarioId: this.empleadoId!, // CORRECCIÓN: Usamos el ID dinámico con !
       detalles: rawFormValue.detalles.map((detalle: any) => ({
         productoId: detalle.productoDTO.id,
         cantidad: detalle.cantidad
