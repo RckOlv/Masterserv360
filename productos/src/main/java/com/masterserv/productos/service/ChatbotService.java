@@ -227,7 +227,7 @@ public class ChatbotService {
         sb.append("💲 Precio: *").append(precioStr).append("*\n");
         sb.append("📊 Estado: ").append(disponibilidad).append("\n");
         sb.append("🏷️ Código: ").append(p.getCodigo()).append("\n\n");
-        sb.append("Para pedirlo, entra a la web o contacta a un vendedor.");
+        sb.append("📍 *Te esperamos en nuestro local para realizar tu compra.*");
 
         // Si el producto tiene foto (y es una URL válida http...), la preparamos
         String imagen = (p.getImagenUrl() != null && p.getImagenUrl().startsWith("http")) 
