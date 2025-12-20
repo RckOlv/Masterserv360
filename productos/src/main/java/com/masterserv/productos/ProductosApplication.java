@@ -1,5 +1,8 @@
 package com.masterserv.productos;
 
+import jakarta.annotation.PostConstruct; // <--- Importante para configurar al inicio
+import java.util.TimeZone; // <--- Importante para la zona horaria
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -7,7 +10,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
 
 @SpringBootApplication
 @EnableJpaAuditing
@@ -18,21 +20,12 @@ public class ProductosApplication {
         SpringApplication.run(ProductosApplication.class, args);
     }
 
-    /**
-     * Bean que se ejecuta al inicio para imprimir el hash de una contraseña de prueba.
-     */
-    /**@Bean
-    public CommandLineRunner run(PasswordEncoder passwordEncoder) {
-        return args -> {
-            String testPassword = "password"; // Usa la contraseña que quieras
-            String hashedPassword = passwordEncoder.encode(testPassword);
-            
-            System.out.println("=========================================================");
-            System.out.println("=== 🔐 HASH GENERADO PARA LA CONTRASEÑA: " + testPassword + " ===");
-            System.out.println("=== COPIA ESTE HASH Y ÚSALO EN TU COMANDO SQL ABAJO: ====");
-            System.out.println("HASH: " + hashedPassword);
-            System.out.println("=========================================================");
-        };
+    // --- ESTE MÉTODO ARREGLA LA HORA ---
+    @PostConstruct
+    public void init() {
+        // Configuramos la zona horaria a Argentina (Buenos Aires GMT-3)
+        // Así las ventas se guardarán con tu hora real, no la de Londres/UTC.
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Argentina/Buenos_Aires"));
+        System.out.println("✅ Zona horaria configurada a: " + TimeZone.getDefault().getID());
     }
-        */
 }
