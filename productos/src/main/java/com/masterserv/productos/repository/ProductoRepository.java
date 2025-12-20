@@ -62,4 +62,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
 
     // Esto le dice a Spring: "Busca productos donde el nombre contenga este texto, ignorando mayúsculas/minúsculas"
     List<Producto> findByNombreContainingIgnoreCase(String nombre);
+
+    @Query(value = "SELECT * FROM productos p WHERE unaccent(lower(p.nombre)) LIKE unaccent(lower(concat('%', :termino, '%'))) AND p.estado = 'ACTIVO'", nativeQuery = true)
+    List<Producto> findByNombreFlexible(@Param("termino") String termino, Pageable pageable);
 }

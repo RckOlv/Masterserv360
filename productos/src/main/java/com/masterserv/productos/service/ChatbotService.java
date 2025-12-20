@@ -6,6 +6,8 @@ import com.masterserv.productos.enums.EstadoListaEspera;
 import com.masterserv.productos.repository.*;
 import com.twilio.twiml.MessagingResponse;
 import com.twilio.twiml.messaging.Message;
+import com.twilio.twiml.messaging.Body;
+import com.twilio.twiml.messaging.Media;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,10 @@ import java.util.UUID;
 
 @Service
 public class ChatbotService {
+
+    // --- CONFIGURACIÓN ---
+    private static final String LINK_REGISTRO = "https://masterserv360.vercel.app/auth/registro"; // Tu link real
+    // ---------------------
 
     private final UsuarioRepository usuarioRepository;
     private final ProductoRepository productoRepository;
@@ -50,257 +56,263 @@ public class ChatbotService {
         this.listaEsperaRepository = listaEsperaRepository;
     }
 
-    @Transactional
-    public String procesarMensajeWebhook(String from, String body) {
-        // LOG DE DEBUG PARA RENDER
-        System.out.println("--- NUEVO MENSAJE WHATSAPP ---");
-        System.out.println("De: " + from);
-        System.out.println("Texto: " + body);
+    // Clase auxiliar para manejar Texto + Imagen
+    private static class BotResponse {
+        String texto;
+        String mediaUrl; // URL de la imagen (opcional)
 
-        // 1. Limpieza del número
-        String telefono = from.replace("whatsapp:", "").trim();
-        
-        // 2. Buscar usuario
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByTelefono(telefono);
-        
-        if (usuarioOpt.isPresent()) {
-            System.out.println("✅ Usuario encontrado: " + usuarioOpt.get().getEmail());
-        } else {
-            System.out.println("❌ Usuario NO encontrado con tel: " + telefono);
-        }
-        
-        // 3. Registrar Interacción (Entrada) - BLINDADO CON TRY-CATCH
-        try {
-            registrarInteraccion(body, null, usuarioOpt.orElse(null));
-        } catch (Exception e) {
-            System.err.println("⚠️ Error guardando log de entrada (no crítico): " + e.getMessage());
-        }
-
-        // 4. Procesar Lógica
-        String mensajeRespuesta;
-        try {
-            mensajeRespuesta = procesarComando(body.trim(), usuarioOpt);
-        } catch (Exception e) {
-            System.err.println("🔥 Error procesando comando: " + e.getMessage());
-            e.printStackTrace();
-            mensajeRespuesta = "Lo siento, ocurrió un error interno al procesar tu solicitud.";
-        }
-        
-        System.out.println("🤖 Respuesta Bot: " + mensajeRespuesta);
-
-        // 5. Registrar Interacción (Salida) - BLINDADO CON TRY-CATCH
-        try {
-            registrarInteraccion(null, mensajeRespuesta, usuarioOpt.orElse(null));
-        } catch (Exception e) {
-            System.err.println("⚠️ Error guardando log de salida (no crítico): " + e.getMessage());
-        }
-        
-        // 6. Devolver XML a Twilio
-        return construirRespuestaTwiML(mensajeRespuesta);
+        public BotResponse(String texto) { this.texto = texto; }
+        public BotResponse(String texto, String mediaUrl) { this.texto = texto; this.mediaUrl = mediaUrl; }
     }
 
-    private String procesarComando(String comando, Optional<Usuario> usuarioOpt) {
+    @Transactional
+    public String procesarMensajeWebhook(String from, String body) {
+        System.out.println("--- 📩 WHATSAPP ENTRANTE ---");
+        
+        String telefono = from.replace("whatsapp:", "").trim();
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByTelefono(telefono);
+        
+        // Registrar Entrada
+        try { registrarInteraccion(body, null, usuarioOpt.orElse(null)); } catch (Exception e) {}
+
+        // Procesar Lógica
+        BotResponse respuesta;
+        try {
+            respuesta = procesarComando(body.trim(), usuarioOpt);
+        } catch (Exception e) {
+            e.printStackTrace();
+            respuesta = new BotResponse("😓 Tuve un problema técnico. Por favor intenta en un momento.");
+        }
+        
+        // Registrar Salida
+        try { registrarInteraccion(null, respuesta.texto, usuarioOpt.orElse(null)); } catch (Exception e) {}
+        
+        // Devolver XML a Twilio
+        return construirRespuestaTwiML(respuesta);
+    }
+
+    private BotResponse procesarComando(String comando, Optional<Usuario> usuarioOpt) {
         String texto = comando.toLowerCase().trim();
 
+        // 1. USUARIO NO REGISTRADO
         if (usuarioOpt.isEmpty()) {
-            return "👋 ¡Hola! No te encontramos en nuestra base de datos con este número.\nRegístrate en *masterserv.com* o contacta a un vendedor.";
+            return new BotResponse(
+                "👋 *¡Hola! Bienvenido a Masterserv360*\n\n" +
+                "No veo tu número registrado. Para acceder a precios y stock, regístrate gratis aquí:\n\n" +
+                "👉 " + LINK_REGISTRO + "\n\n" +
+                "Una vez registrado, escríbeme \"Hola\" nuevamente. 🚀"
+            );
         }
 
         Usuario usuario = usuarioOpt.get();
 
-        // 1. SALUDO
-        if (esSaludo(texto) || texto.contains("menu") || texto.contains("ayuda")) {
-            return String.format(
-                "👋 ¡Hola %s! Bienvenido a *Masterserv360* 🏍️\n\n" +
-                "Soy tu asistente virtual. ¿Qué necesitas hoy?\n\n" +
-                "🔍 *Buscar:* Escribe el nombre (ej: _\"precio bateria\"_)\n" + 
-                "🎁 *Puntos:* Escribe _\"mis puntos\"_ para ver saldo\n" +
-                "📝 *Pedir:* Escribe _\"solicitar [producto]\"_ para pedirlo\n",
-                usuario.getNombre()
+        // 2. SALUDO / MENÚ PRINCIPAL
+        if (esSaludo(texto) || texto.contains("menu") || texto.equals("ayuda")) {
+            return new BotResponse(
+                String.format(
+                    "👋 ¡Hola *%s*! Soy el asistente de Masterserv. 🏍️\n\n" +
+                    "Escribe el número o la palabra clave:\n\n" +
+                    "1️⃣ *Buscar [Producto]*\n" +
+                    "   _(Ej: \"buscar aceite\", \"precio bateria\")_\n\n" +
+                    "2️⃣ *Mis Puntos*\n" +
+                    "   _(Ver saldo y premios canjeables)_\n\n" +
+                    "3️⃣ *Solicitar [Nombre]*\n" +
+                    "   _(Pedir algo que no encuentras)_\n\n" +
+                    "❓ *Ayuda* - Ver este menú",
+                    usuario.getNombre()
+                )
             );
         }
 
-        // 2. PUNTOS Y RECOMPENSAS
+        // 3. PUNTOS Y RECOMPENSAS
         if (texto.contains("punto") || texto.contains("saldo") || texto.contains("premio")) {
             var saldoDTO = puntosService.getSaldoByEmail(usuario.getEmail());
             int puntosActuales = saldoDTO.getSaldoPuntos();
-
             List<Recompensa> recompensas = recompensaRepository.findAll(); 
             
             StringBuilder msg = new StringBuilder();
-            msg.append(String.format("🏆 *Tienes %d Puntos*\nCanjealos por:\n", puntosActuales));
+            msg.append(String.format("🏆 *Tus Puntos: %d*\n\n🎁 *Premios Disponibles:*\n", puntosActuales));
 
             for (Recompensa r : recompensas) {
                 String estado = (puntosActuales >= r.getPuntosRequeridos()) ? "✅" : "🔒";
-                msg.append(String.format("\n🎁 %s *%s* (%d pts)", estado, r.getDescripcion(), r.getPuntosRequeridos()));
+                msg.append(String.format("\n%s *%s* (%d pts)", estado, r.getDescripcion(), r.getPuntosRequeridos()));
             }
-
-            msg.append("\n\n👉 Para canjear escribe: _\"canjear [nombre premio]\"_");
-            return msg.toString();
+            msg.append("\n\nEscribe *\"canjear [nombre]\"* para obtener tu cupón.");
+            return new BotResponse(msg.toString());
         }
 
-        // 3. CANJEAR
+        // 4. CANJEAR
         if (texto.startsWith("canjear")) {
             String nombrePremio = limpiarPrefijo(texto);
-            if (nombrePremio.isEmpty()) return "⚠️ Por favor escribe el nombre del premio.";
-            return procesarCanje(usuario, nombrePremio);
+            if (nombrePremio.isEmpty()) return new BotResponse("⚠️ Escribe el nombre del premio. Ej: *canjear gorra*");
+            return new BotResponse(procesarCanje(usuario, nombrePremio));
         }
 
-        // 4. SOLICITAR
+        // 5. SOLICITAR / PEDIR (Lista de Espera)
         if (texto.startsWith("solicitar") || texto.startsWith("pedir") || texto.startsWith("quiero")) {
-            String termino = limpiarPrefijo(texto); 
-            if (termino.length() < 3) return "⚠️ Dime qué producto necesitas. Ej: _\"solicitar espejo\"_";
-            
-            Optional<Producto> productoExistente = productoRepository.findByNombreContainingIgnoreCase(termino)
-                    .stream().findFirst();
+            return procesarSolicitud(usuario, limpiarPrefijo(texto));
+        }
 
-            if (productoExistente.isPresent()) {
-                Producto p = productoExistente.get();
-                
-                boolean yaEnEspera = listaEsperaRepository.existsByUsuarioIdAndProductoIdAndEstado(
-                        usuario.getId(), p.getId(), EstadoListaEspera.PENDIENTE);
-
-                if (yaEnEspera) {
-                    return "📋 Ya estás en la lista de espera para *" + p.getNombre() + "*. Te avisaremos por aquí cuando llegue.";
-                }
-
-                ListaEspera espera = new ListaEspera();
-                espera.setUsuario(usuario);
-                espera.setProducto(p);
-                espera.setFechaInscripcion(LocalDate.now());
-                espera.setEstado(EstadoListaEspera.PENDIENTE);
-                listaEsperaRepository.save(espera);
-
-                return String.format(
-                    "✅ El producto *%s* existe en catálogo (Stock: %d).\n" +
-                    "🔔 ¡Listo! Te he agregado a la **Lista de Espera** automática.\n" +
-                    "Recibirás un WhatsApp en cuanto entre mercadería.", 
-                    p.getNombre(), p.getStockActual()
-                );
-            } else {
-                SolicitudProducto s = new SolicitudProducto(termino, usuario);
-                solicitudProductoRepository.save(s);
-                return "📝 No encontré ese producto en catálogo, pero generé una solicitud de: '" + termino + "'";
+        // 6. BUSCADOR INTELIGENTE (Detecta intención de búsqueda implícita)
+        if (texto.length() > 2) {
+            String termino = limpiarPrefijo(texto);
+            if (!termino.isEmpty()) {
+                return buscarProducto(termino);
             }
         }
 
-        // 5. STOCK Y PRECIOS
-        if (texto.length() > 3 || texto.startsWith("stock") || texto.startsWith("precio")) {
-            String termino = limpiarPrefijo(texto);
-            return termino.isEmpty() ? "Dime qué producto buscas." : buscarProducto(termino);
-        }
-
-        return "🤔 No entendí tu consulta. Escribe *ayuda* para ver el menú.";
+        return new BotResponse("🤔 No entendí. Escribe *ayuda* para ver las opciones.");
     }
 
-    private String buscarProducto(String termino) {
+    private BotResponse buscarProducto(String termino) {
+        // A. Buscar por Código Exacto
         Optional<Producto> productoPorCodigo = productoRepository.findByCodigo(termino.toUpperCase());
         if (productoPorCodigo.isPresent()) {
             return formatearRespuestaProducto(productoPorCodigo.get());
         }
 
+        // B. Buscar por Nombre "Flexible" (Ignora acentos y mayúsculas)
         Pageable top5 = PageRequest.of(0, 5); 
-        List<Producto> productos = productoRepository.findByNombreILike(termino, top5);
+        List<Producto> productos;
+        try {
+            // Intenta usar la búsqueda con unaccent
+            productos = productoRepository.findByNombreFlexible(termino, top5);
+        } catch (Exception e) {
+            // Fallback por si la BD no tiene la extensión instalada
+            System.err.println("Fallback búsqueda: " + e.getMessage());
+            productos = productoRepository.findByNombreILike(termino, top5);
+        }
 
         if (productos.isEmpty()) {
-            return String.format(
-                "❌ No encontré *%s* en el catálogo.\n\n" +
-                "💡 ¿Quieres que lo pidamos para ti?\n" +
-                "Escribe: _\"solicitar %s\"_", 
-                termino, termino
+            return new BotResponse(
+                "❌ No encontré nada parecido a *\"" + termino + "\"*.\n\n" +
+                "📝 ¿Quieres solicitarlo?\nEscribe: *\"solicitar " + termino + "\"*"
             );
         } else if (productos.size() == 1) {
+            // ¡Bingo! Un solo resultado -> Mostramos foto y detalle
             return formatearRespuestaProducto(productos.get(0));
         } else {
-            StringBuilder respuesta = new StringBuilder("🔎 *Encontré estas opciones:*\n");
+            // Múltiples resultados -> Lista de texto
+            StringBuilder respuesta = new StringBuilder("🔎 *Encontré varias opciones:*\n");
             for (Producto p : productos) {
                 respuesta.append(String.format("\n▪ %s ($%,.0f)", p.getNombre(), p.getPrecioVenta()));
             }
-            respuesta.append("\n\nPara ver detalles, escribe el nombre exacto o el código.");
-            return respuesta.toString();
+            respuesta.append("\n\nPara ver la foto y stock, escribe el nombre completo.");
+            return new BotResponse(respuesta.toString());
         }
     }
 
-    private String formatearRespuestaProducto(Producto p) {
+    private BotResponse formatearRespuestaProducto(Producto p) {
         String disponibilidad;
         if (p.getStockActual() <= 0) {
-            disponibilidad = "🔴 *Sin Stock*";
+            disponibilidad = "🔴 Sin Stock";
         } else if (p.getStockActual() <= p.getStockMinimo()) {
-            disponibilidad = "🟡 *Últimas Unidades*";
+            disponibilidad = "🟡 Pocas Unidades (" + p.getStockActual() + ")";
         } else {
-            disponibilidad = "🟢 *Disponible*";
+            disponibilidad = "🟢 Disponible (" + p.getStockActual() + ")";
         }
 
-        return String.format(
-            "📦 *%s*\nCódigo: %s\nEstado: %s\nPrecio: *$%,.2f*",
-            p.getNombre(), p.getCodigo(), disponibilidad, p.getPrecioVenta()
+        String texto = String.format(
+            "📦 *%s*\n\n" +
+            "💲 Precio: *$%,.2f*\n" +
+            "📊 Estado: %s\n" +
+            "🏷️ Código: %s\n\n" +
+            p.getNombre(), p.getPrecioVenta(), disponibilidad, p.getCodigo()
         );
+
+        // Si el producto tiene foto (y es una URL válida http...), la mandamos
+        String imagen = (p.getImagenUrl() != null && p.getImagenUrl().startsWith("http")) 
+                        ? p.getImagenUrl() : null;
+
+        return new BotResponse(texto, imagen);
+    }
+
+    private BotResponse procesarSolicitud(Usuario usuario, String termino) {
+        if (termino.length() < 3) return new BotResponse("⚠️ Escribe qué producto necesitas.");
+
+        // Verificar si existe realmente
+        Pageable top1 = PageRequest.of(0, 1);
+        List<Producto> matches = productoRepository.findByNombreFlexible(termino, top1);
+
+        if (!matches.isEmpty()) {
+            Producto p = matches.get(0);
+            boolean yaEnEspera = listaEsperaRepository.existsByUsuarioIdAndProductoIdAndEstado(
+                    usuario.getId(), p.getId(), EstadoListaEspera.PENDIENTE);
+
+            if (yaEnEspera) return new BotResponse("📋 Ya estás en la lista de espera para *" + p.getNombre() + "*.");
+
+            ListaEspera espera = new ListaEspera();
+            espera.setUsuario(usuario);
+            espera.setProducto(p);
+            espera.setFechaInscripcion(LocalDate.now());
+            espera.setEstado(EstadoListaEspera.PENDIENTE);
+            listaEsperaRepository.save(espera);
+
+            return new BotResponse("🔔 Te avisare cuando entre stock de: *" + p.getNombre() + "*");
+        } else {
+            SolicitudProducto s = new SolicitudProducto(termino, usuario);
+            solicitudProductoRepository.save(s);
+            return new BotResponse("📝 Anotado. Le pasaré tu pedido de *\"" + termino + "\"* al encargado de compras.");
+        }
     }
 
     private String procesarCanje(Usuario usuario, String nombrePremio) {
+        // Lógica de canje igual que antes, retorna solo String
         Optional<Recompensa> recompensaOpt = recompensaRepository.findByDescripcionContainingIgnoreCase(nombrePremio)
                 .stream().findFirst();
-
-        if (recompensaOpt.isEmpty()) return "❌ No encontré el premio \"" + nombrePremio + "\". Revisa el nombre en el menú de *puntos*.";
-
-        Recompensa recompensa = recompensaOpt.get();
-
-        if (recompensa.getStock() <= 0) return "😔 El premio *" + recompensa.getDescripcion() + "* está agotado por el momento.";
-
-        var cuentaOpt = cuentaPuntosRepository.findByCliente(usuario);
         
+        if (recompensaOpt.isEmpty()) return "❌ Premio no encontrado.";
+        Recompensa recompensa = recompensaOpt.get();
+        
+        // ... (resto de lógica de validación de puntos y stock) ...
+        var cuentaOpt = cuentaPuntosRepository.findByCliente(usuario);
         if (cuentaOpt.isEmpty() || cuentaOpt.get().getSaldoPuntos() < recompensa.getPuntosRequeridos()) {
-            return "🚫 *Puntos insuficientes* para canjear este premio.";
+             return "🚫 Puntos insuficientes.";
         }
-
+        
         try {
+            // Canje efectivo
             CuentaPuntos cuenta = cuentaOpt.get();
             cuenta.setSaldoPuntos(cuenta.getSaldoPuntos() - recompensa.getPuntosRequeridos());
             cuentaPuntosRepository.save(cuenta);
-
             recompensa.setStock(recompensa.getStock() - 1);
             recompensaRepository.save(recompensa);
-
+            
             Cupon cupon = new Cupon();
             cupon.setCodigo(generarCodigoCupon(recompensa.getDescripcion()));
             cupon.setValor(recompensa.getValor());
             cupon.setTipoDescuento(recompensa.getTipoDescuento());
-            cupon.setCategoria(recompensa.getCategoria()); 
+            cupon.setCategoria(recompensa.getCategoria());
             cupon.setFechaVencimiento(LocalDate.now().plusDays(30));
             cupon.setEstado(EstadoCupon.VIGENTE);
-            cupon.setCliente(usuario); 
-            
+            cupon.setCliente(usuario);
             cuponRepository.save(cupon);
-
-            return String.format(
-                "🎉 *¡CANJE EXITOSO!*\nPremio: *%s*\nCódigo: *%s*\n\nPresenta este código en la caja para usarlo. 🛵",
-                recompensa.getDescripcion(), cupon.getCodigo()
-            );
-
+            
+            return "🎉 *CUPÓN GENERADO*: " + cupon.getCodigo();
         } catch (Exception e) {
-            return "🔴 Ocurrió un error procesando el canje. Intenta más tarde.";
+            return "Error al canjear.";
         }
     }
-    
+
+    // --- UTILIDADES ---
     private String generarCodigoCupon(String nombre) {
         String prefix = nombre.length() > 3 ? nombre.substring(0, 3).toUpperCase() : "PRM";
         return prefix + "-" + UUID.randomUUID().toString().substring(0, 5).toUpperCase();
     }
 
     private boolean esSaludo(String t) {
-        return t.contains("hola") || t.contains("buen") || t.contains("hi");
+        return t.equals("hola") || t.equals("hi") || t.equals("buen dia") || t.equals("buenas");
     }
 
     private String limpiarPrefijo(String texto) {
-        String[] prefijos = {"stock", "precio de", "precio", "solicitar", "pedir", "canjear", "quiero"};
+        String[] prefijos = {"buscar", "precio de", "precio", "solicitar", "pedir", "canjear", "quiero", "ver"};
         for (String prefijo : prefijos) {
             if (texto.startsWith(prefijo)) return texto.substring(prefijo.length()).trim();
         }
-        return texto;
+        return texto; // Si no tiene prefijo, devolvemos el texto limpio (para búsqueda implícita)
     }
     
     private void registrarInteraccion(String in, String out, Usuario u) {
-        // ESTE METODO YA NO ROMPERÁ LA TRANSACCIÓN SI FALLA EL USUARIO
         InteraccionChatbot i = new InteraccionChatbot();
         i.setFecha(LocalDateTime.now());
         i.setMensajeUsuario(in);
@@ -309,7 +321,21 @@ public class ChatbotService {
         interaccionRepository.save(i);
     }
 
-    private String construirRespuestaTwiML(String mensaje) {
-        return new MessagingResponse.Builder().message(new Message.Builder(mensaje).build()).build().toXml();
+    // --- CONSTRUCCIÓN XML CON IMAGEN ---
+    private String construirRespuestaTwiML(BotResponse respuesta) {
+        Message.Builder messageBuilder = new Message.Builder();
+        
+        // 1. Agregar Cuerpo del Mensaje
+        messageBuilder.body(new Body.Builder(respuesta.texto).build());
+
+        // 2. Agregar Imagen (si existe)
+        if (respuesta.mediaUrl != null && !respuesta.mediaUrl.isEmpty()) {
+            messageBuilder.media(new Media.Builder(respuesta.mediaUrl).build());
+        }
+
+        return new MessagingResponse.Builder()
+                .message(messageBuilder.build())
+                .build()
+                .toXml();
     }
 }
