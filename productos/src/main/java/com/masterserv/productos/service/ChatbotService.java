@@ -23,7 +23,7 @@ import java.util.UUID;
 public class ChatbotService {
 
     // --- CONFIGURACIÓN ---
-    private static final String LINK_REGISTRO = "https://masterserv360.vercel.app/auth/registro"; 
+    private static final String LINK_REGISTRO = "https://masterserv360.vercel.app/auth/register"; 
     // ---------------------
 
     private final UsuarioRepository usuarioRepository;
