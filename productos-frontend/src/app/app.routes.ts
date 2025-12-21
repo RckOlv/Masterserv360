@@ -29,18 +29,30 @@ export const routes: Routes = [
     ]
   },
 
-  // 2. AUTH
+  // 2. AUTH (Login, Registro y Recuperación)
   {
     path: 'auth',
     component: AuthLayoutComponent, 
     children: [
       { path: 'login', loadComponent: () => import('./pages/login/login'), canActivate: [LoginGuard] },
       { path: 'register', loadComponent: () => import('./pages/reg-cli/reg-cli'), canActivate: [LoginGuard] },
+      
+      // --- NUEVAS RUTAS DE RECUPERACIÓN ---
+      { 
+        path: 'forgot-password', 
+        loadComponent: () => import('./pages/auth/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent) 
+      },
+      { 
+        path: 'reset-password', 
+        loadComponent: () => import('./pages/auth/reset-password/reset-password').then(m => m.ResetPasswordComponent) 
+      },
+      // ------------------------------------
+
       { path: 'cambiar-password-force', loadComponent: () => import('./pages/change-password-force/change-password-force') }
     ]
   },
 
-  // 3. RUTAS EXTERNAS (PROVEEDORES) - Usamos AuthLayout para diseño limpio
+  // 3. RUTAS EXTERNAS (PROVEEDORES)
   {
     path: 'oferta',
     component: AuthLayoutComponent, 
@@ -49,19 +61,20 @@ export const routes: Routes = [
     ]
   },
   
-  // --- NUEVA RUTA AGREGADA AQUÍ ---
   {
     path: 'proveedor/pedido',
-    component: AuthLayoutComponent, // Reutilizamos layout limpio
+    component: AuthLayoutComponent, 
     children: [
       { path: ':token', loadComponent: () => import('./pages/pedido-proveedor/pedido-proveedor').then(m => m.PedidoProveedorComponent) }
     ]
   },
-  // --------------------------------
 
-  // Redirecciones
+  // Redirecciones (Atajos)
   { path: 'login', redirectTo: 'auth/login' },
   { path: 'register', redirectTo: 'auth/register' },
+  // Atajos para las nuevas rutas
+  { path: 'forgot-password', redirectTo: 'auth/forgot-password' },
+  { path: 'reset-password', redirectTo: 'auth/reset-password' },
 
   // 4. MUNDO ADMIN (POS)
   {
