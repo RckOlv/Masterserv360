@@ -21,6 +21,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.masterserv.productos.entity.PasswordResetToken;
+import com.masterserv.productos.repository.PasswordResetTokenRepository;
+import java.util.UUID;
 
 import java.util.List;
 import java.util.Set;
@@ -41,17 +44,22 @@ public class AuthService {
     private TipoDocumentoRepository tipoDocumentoRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private PasswordResetTokenRepository tokenRepository;
+    
+    // --- NUEVO: Inyectar EmailService ---
+    @Autowired
+    private EmailService emailService; 
+    // ------------------------------------
 
     public AuthResponseDTO login(LoginRequestDTO request) {
-        
-        // 1. Autenticar (Esto verifica si el usuario y pass coinciden)
+        // ... (Tu código de login sigue igual) ...
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-        // 2. Buscar datos completos del usuario (incluyendo la bandera de cambio de pass)
         Usuario usuario = usuarioRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
@@ -67,15 +75,13 @@ public class AuthService {
                 .filter(auth -> !auth.startsWith("ROLE_"))
                 .collect(Collectors.toList());
 
-        // --- CORRECCIÓN AQUÍ ---
-        // Pasamos el 6to argumento: usuario.isDebeCambiarPassword()
         return new AuthResponseDTO(
             token, 
             usuario.getId(), 
             usuario.getEmail(), 
             roles, 
             permisos,
-            usuario.isDebeCambiarPassword() // <--- ¡AQUÍ ESTABA EL FALTANTE!
+            usuario.isDebeCambiarPassword() 
         );
     }
 
@@ -85,7 +91,7 @@ public class AuthService {
             throw new RuntimeException("Error: El email ya está registrado.");
         }
 
-        Rol rolPorDefecto = rolRepository.findByNombreRol("ROLE_CLIENTE") // Verifica si tu método se llama findByNombre o findByNombreRol
+        Rol rolPorDefecto = rolRepository.findByNombreRol("ROLE_CLIENTE") 
                 .orElseThrow(() -> new RuntimeException("Error: Rol 'ROLE_CLIENTE' no encontrado."));
 
         TipoDocumento tipoDoc = null;
@@ -104,20 +110,69 @@ public class AuthService {
         nuevoUsuario.setRoles(Set.of(rolPorDefecto));
         nuevoUsuario.setEstado(EstadoUsuario.ACTIVO);
         
-        // Registro normal por web no obliga cambio de pass (por defecto es false)
-
         usuarioRepository.save(nuevoUsuario);
+
+        // --- NUEVO: Enviar Correo de Bienvenida ---
+        try {
+            emailService.sendWelcomeEmail(nuevoUsuario.getEmail(), nuevoUsuario.getNombre());
+            System.out.println("📧 Correo de bienvenida enviado a: " + nuevoUsuario.getEmail());
+        } catch (Exception e) {
+            // Importante: No queremos que falle el registro si falla el correo.
+            // Solo lo logueamos como error.
+            System.err.println("❌ Error enviando correo de bienvenida: " + e.getMessage());
+        }
+        // ------------------------------------------
     }
 
-    // --- NUEVO MÉTODO PARA EL CAMBIO OBLIGATORIO ---
     @Transactional
     public void cambiarPasswordInicial(String email, String nuevaPassword) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         usuario.setPasswordHash(passwordEncoder.encode(nuevaPassword));
-        usuario.setDebeCambiarPassword(false); // Apagamos la alerta
+        usuario.setDebeCambiarPassword(false); 
         
         usuarioRepository.save(usuario);
+    }
+
+    // 1. SOLICITAR TOKEN (Paso 1)
+    @Transactional
+    public void solicitarRecuperacionPassword(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("No existe un usuario con ese email."));
+
+        // Borrar tokens viejos si el usuario ya había pedido uno antes
+        tokenRepository.deleteByUsuario(usuario);
+
+        // Crear token nuevo
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken resetToken = new PasswordResetToken(token, usuario);
+        tokenRepository.save(resetToken);
+
+        // Enviar email
+        try {
+            emailService.sendPasswordResetEmail(usuario.getEmail(), usuario.getNombre(), token);
+        } catch (Exception e) {
+            throw new RuntimeException("Error enviando el correo. Intenta más tarde.");
+        }
+    }
+
+    // 2. CAMBIAR PASSWORD CON TOKEN (Paso 2)
+    @Transactional
+    public void restablecerPasswordConToken(String token, String nuevaPassword) {
+        PasswordResetToken resetToken = tokenRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("El enlace es inválido o ha expirado."));
+
+        if (resetToken.estaExpirado()) {
+            tokenRepository.delete(resetToken);
+            throw new RuntimeException("El enlace ha expirado. Solicita uno nuevo.");
+        }
+
+        Usuario usuario = resetToken.getUsuario();
+        usuario.setPasswordHash(passwordEncoder.encode(nuevaPassword));
+        usuarioRepository.save(usuario);
+
+        // Consumir el token (borrarlo para que no se use dos veces)
+        tokenRepository.delete(resetToken);
     }
 }

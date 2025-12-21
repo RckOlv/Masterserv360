@@ -48,6 +48,7 @@ public class SecurityConfig {
                 // -------------------------------------------------------------
 
                 .requestMatchers("/auth/**", "/error").permitAll()
+                .requestMatchers("/auth/forgot-password", "/auth/reset-password").permitAll()
                 
                 // Rutas de Consulta Pública
                 .requestMatchers(HttpMethod.GET, "/productos/**").permitAll() 
