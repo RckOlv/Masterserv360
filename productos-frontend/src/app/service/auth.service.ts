@@ -143,11 +143,11 @@ export class AuthService {
 
   // 1. Pedir el correo de recuperación
   solicitarRecuperacion(email: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/auth/forgot-password`, { email });
+    return this.http.post(`${this.apiUrl}/forgot-password`, { email });
   }
 
   // 2. Enviar la nueva contraseña con el token
   restablecerContrasena(token: string, password: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/auth/reset-password`, { token, password });
+    return this.http.post(`${this.apiUrl}/reset-password`, { token, password });
   }
 }
