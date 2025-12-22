@@ -102,18 +102,26 @@
                 </div>
 
                 <div class="row g-0">
+                    
                     <div class="col-md-6 border-end border-secondary">
                         <div class="p-2 text-center bg-dark border-bottom border-secondary text-danger fw-bold">
                             <i class="bi bi-clock-history me-1"></i> ANTES
                         </div>
                         <div class="p-3" style="max-height: 400px; overflow-y: auto;">
+                            
                             <div *ngIf="datosAnteriores.length === 0" class="text-white-50 text-center fst-italic small mt-3">
                                 No hay datos anteriores (Creación o vacío)
                             </div>
+
                             <ul class="list-unstyled mb-0">
-                                <li *ngFor="let item of datosAnteriores" class="mb-2 border-bottom border-secondary pb-1">
+                                <li *ngFor="let item of datosAnteriores; let i = index" class="mb-2 border-bottom border-secondary pb-1">
                                     <small class="text-white-50 d-block">{{ item.key }}</small>
-                                    <span class="text-danger font-monospace">{{ item.value }}</span>
+                                    
+                                    <div [class.bg-diff-remove]="esModificado(i)" class="text-break">
+                                        <span class="text-danger font-monospace">
+                                            {{ item.value !== null ? item.value : '---' }}
+                                        </span>
+                                    </div>
                                 </li>
                             </ul>
                         </div>
@@ -124,19 +132,26 @@
                             <i class="bi bi-check-circle me-1"></i> DESPUÉS
                         </div>
                         <div class="p-3" style="max-height: 400px; overflow-y: auto;">
+                            
                             <div *ngIf="datosNuevos.length === 0" class="text-white-50 text-center fst-italic small mt-3">
                                 Datos eliminados o vacíos.
                             </div>
+
                             <ul class="list-unstyled mb-0">
-                                <li *ngFor="let item of datosNuevos" class="mb-2 border-bottom border-secondary pb-1">
+                                <li *ngFor="let item of datosNuevos; let i = index" class="mb-2 border-bottom border-secondary pb-1">
                                     <small class="text-white-50 d-block">{{ item.key }}</small>
-                                    <span class="text-success font-monospace fw-bold">{{ item.value }}</span>
+                                    
+                                    <div [class.bg-diff-add]="esModificado(i)" class="text-break">
+                                        <span class="text-success font-monospace fw-bold">
+                                            {{ item.value !== null ? item.value : '---' }}
+                                        </span>
+                                    </div>
                                 </li>
                             </ul>
                         </div>
                     </div>
-                </div>
 
+                </div>
             </div>
             
             <div class="modal-footer border-top border-secondary">
