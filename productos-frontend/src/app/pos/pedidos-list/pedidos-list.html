@@ -3,13 +3,63 @@
   <div class="card masterserv-card">
     
     <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
-      <h4 class="masterserv-title">
-        <i class="bi bi-clipboard-data me-2"></i>Gestión de Pedidos a Proveedores
-      </h4>
+      <div class="d-flex align-items-center gap-3">
+          <h4 class="masterserv-title mb-0">
+            <i class="bi bi-clipboard-data me-2"></i>Gestión de Pedidos
+          </h4>
+          <button class="btn btn-sm btn-outline-warning" (click)="toggleFiltros()">
+            <i class="bi" [ngClass]="mostrarFiltros ? 'bi-funnel-fill' : 'bi-funnel'"></i> 
+            {{ mostrarFiltros ? 'Ocultar Filtros' : 'Filtrar' }}
+          </button>
+      </div>
+
       <button *appHasPermission="'PEDIDOS_MANAGE'" class="btn masterserv-btn-success btn-sm" [routerLink]="['/pos/pedidos/nuevo']">
         <i class="bi bi-plus-lg"></i> Nuevo Pedido
       </button>
-      </div>
+    </div>
+
+    <div class="card-body bg-dark border-bottom border-secondary" *ngIf="mostrarFiltros">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="text-white-50 small mb-1">Proveedor</label>
+                <select class="form-select form-select-sm bg-dark text-white border-secondary" [(ngModel)]="filtro.proveedorId">
+                    <option [ngValue]="null">Todos</option>
+                    <option *ngFor="let prov of proveedores" [ngValue]="prov.id">
+                        {{ prov.razonSocial }}
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="text-white-50 small mb-1">Estado</label>
+                <select class="form-select form-select-sm bg-dark text-white border-secondary" [(ngModel)]="filtro.estado">
+                    <option value="">Todos</option>
+                    <option value="PENDIENTE">Pendiente</option>
+                    <option value="EN_CAMINO">En Camino</option>
+                    <option value="COMPLETADO">Completado</option>
+                    <option value="CANCELADO">Cancelado</option>
+                </select>
+            </div>
+
+            <div class="col-md-5">
+                <label class="text-white-50 small mb-1">Rango de Fechas</label>
+                <div class="input-group input-group-sm">
+                    <input type="date" class="form-control bg-dark text-white border-secondary" [(ngModel)]="filtro.fechaDesde">
+                    <span class="input-group-text bg-secondary text-white border-secondary">hasta</span>
+                    <input type="date" class="form-control bg-dark text-white border-secondary" [(ngModel)]="filtro.fechaHasta">
+                </div>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end gap-2">
+                <button class="btn btn-sm btn-info w-100" (click)="buscar()">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+                <button class="btn btn-sm btn-outline-secondary w-50" (click)="limpiarFiltros()" title="Limpiar">
+                    <i class="bi bi-eraser"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div class="card-body masterserv-card-body d-flex flex-column">
       
@@ -86,7 +136,7 @@
         <div *ngIf="!isLoading && pedidosPage && pedidosPage.content.length === 0" class="empty-container flex-grow-1 d-flex align-items-center justify-content-center">
           <div class="alert masterserv-alert-info text-center">
             <i class="bi bi-info-circle me-2"></i>
-            No se encontraron pedidos.
+            No se encontraron pedidos con esos criterios.
           </div>
         </div>
 
@@ -114,16 +164,9 @@
 </div>
 
 <div class="modal-backdrop fade show" *ngIf="pedidoSeleccionado"></div>
-
-<div class="modal fade show" 
-     tabindex="-1" 
-     role="dialog" 
-     style="display: block;" 
-     *ngIf="pedidoSeleccionado">
-  
+<div class="modal fade show" tabindex="-1" role="dialog" style="display: block;" *ngIf="pedidoSeleccionado">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content masterserv-card" style="border: 1px solid #E41E26;">
-      
       <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
         <h5 class="masterserv-title mb-0" style="font-size: 1.2rem;">
           <i class="bi bi-receipt me-2"></i>Comprobante Pedido #{{ pedidoSeleccionado.id }}
@@ -209,17 +252,14 @@
       </div>
 
       <div class="modal-footer border-top border-secondary" style="background: #151515;">
-        
         <button type="button" class="btn btn-outline-light btn-sm me-auto" 
                 (click)="descargarPdf(pedidoSeleccionado.id)">
             <i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF
         </button>
-        
         <button type="button" class="btn masterserv-btn-success px-4" (click)="cerrarModal()">
             Cerrar
         </button>
       </div>
-
     </div>
   </div>
 </div>

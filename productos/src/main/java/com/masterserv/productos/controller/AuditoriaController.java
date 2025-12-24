@@ -1,8 +1,9 @@
 package com.masterserv.productos.controller;
 
 import com.masterserv.productos.dto.AuditoriaDTO;
+import com.masterserv.productos.dto.AuditoriaFiltroDTO; // <--- Import DTO Filtro
 import com.masterserv.productos.entity.Auditoria;
-import com.masterserv.productos.repository.AuditoriaRepository;
+import com.masterserv.productos.service.AuditoriaService; // <--- Usamos el Service
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,16 +18,34 @@ import org.springframework.web.bind.annotation.*;
 public class AuditoriaController {
 
     @Autowired
-    private AuditoriaRepository auditoriaRepository;
+    private AuditoriaService auditoriaService; // <--- Inyección del Service
 
+    // Endpoint GET normal (Listar todos)
     @GetMapping
     public ResponseEntity<Page<AuditoriaDTO>> getLogs(
             @PageableDefault(page = 0, size = 20) Pageable pageable) {
         
-        Page<Auditoria> page = auditoriaRepository.findAllByOrderByFechaDesc(pageable);
+        Page<Auditoria> page = auditoriaService.getLogs(pageable);
         
-        // MENTOR: CORRECCIÓN AQUÍ - Agregamos los campos nuevos al constructor
-        Page<AuditoriaDTO> dtoPage = page.map(a -> new AuditoriaDTO(
+        // Mapeo a DTO
+        return ResponseEntity.ok(mapToDto(page));
+    }
+
+    // --- NUEVO ENDPOINT DE FILTRADO ---
+    @PostMapping("/filtrar")
+    public ResponseEntity<Page<AuditoriaDTO>> filtrarLogs(
+            @RequestBody AuditoriaFiltroDTO filtro,
+            @PageableDefault(size = 20, sort = "fecha") Pageable pageable) {
+        
+        Page<Auditoria> page = auditoriaService.filtrarAuditoria(filtro, pageable);
+        
+        // Mapeo a DTO (Reutilizamos lógica)
+        return ResponseEntity.ok(mapToDto(page));
+    }
+
+    // Método auxiliar para no repetir código de conversión DTO
+    private Page<AuditoriaDTO> mapToDto(Page<Auditoria> page) {
+        return page.map(a -> new AuditoriaDTO(
                 a.getId(),
                 a.getEntidad(),
                 a.getEntidadId(),
@@ -34,10 +53,8 @@ public class AuditoriaController {
                 a.getUsuario(),
                 a.getFecha(),
                 a.getDetalle(),
-                a.getValorAnterior(), // Nuevo campo
-                a.getValorNuevo()     // Nuevo campo
+                a.getValorAnterior(),
+                a.getValorNuevo()
         ));
-
-        return ResponseEntity.ok(dtoPage);
     }
 }

@@ -1,7 +1,68 @@
 <div class="container-fluid p-4">
-    <h3 class="text-white mb-4">
-        <i class="bi bi-activity me-2 text-info"></i>Registro de Auditoría
-    </h3>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-white mb-0">
+            <i class="bi bi-activity me-2 text-info"></i>Registro de Auditoría
+        </h3>
+        <button class="btn btn-outline-warning" (click)="toggleFiltros()">
+            <i class="bi" [ngClass]="mostrarFiltros ? 'bi-funnel-fill' : 'bi-funnel'"></i> 
+            {{ mostrarFiltros ? 'Ocultar Filtros' : 'Filtrar' }}
+        </button>
+    </div>
+
+    <div class="card masterserv-card shadow mb-4" *ngIf="mostrarFiltros">
+        <div class="card-body bg-dark border border-secondary rounded">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="text-white-50 small mb-1">Usuario</label>
+                    <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" 
+                           [(ngModel)]="filtro.usuario" placeholder="Ej: admin">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="text-white-50 small mb-1">Acción</label>
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary" [(ngModel)]="filtro.accion">
+                        <option value="">Todas</option>
+                        <option value="CREAR">Crear</option>
+                        <option value="ACTUALIZAR">Actualizar</option>
+                        <option value="ELIMINAR">Eliminar</option>
+                        <option value="LOGIN">Login</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="text-white-50 small mb-1">Entidad</label>
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary" [(ngModel)]="filtro.entidad">
+                        <option value="">Todas</option>
+                        <option value="Producto">Producto</option>
+                        <option value="Usuario">Usuario</option>
+                        <option value="Venta">Venta</option>
+                        <option value="Pedido">Pedido</option>
+                        <option value="Proveedor">Proveedor</option>
+                        <option value="Categoria">Categoria</option>
+                    </select>
+                </div>
+
+                <div class="col-md-5">
+                    <label class="text-white-50 small mb-1">Rango de Fechas</label>
+                    <div class="input-group input-group-sm">
+                        <input type="date" class="form-control bg-dark text-white border-secondary" [(ngModel)]="filtro.fechaDesde">
+                        <span class="input-group-text bg-secondary text-white border-secondary">hasta</span>
+                        <input type="date" class="form-control bg-dark text-white border-secondary" [(ngModel)]="filtro.fechaHasta">
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end mt-3 gap-2">
+                <button class="btn btn-sm btn-outline-secondary" (click)="limpiarFiltros()">
+                    <i class="bi bi-eraser"></i> Limpiar
+                </button>
+                <button class="btn btn-sm btn-info" (click)="buscar()">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div class="card masterserv-card shadow">
         <div class="card-body p-0">
@@ -10,7 +71,12 @@
                 <div class="spinner-border text-primary" role="status"></div>
             </div>
 
-            <div class="table-responsive" *ngIf="!isLoading && page" style="max-height: 75vh;">
+            <div *ngIf="!isLoading && page && page.totalElements === 0" class="text-center py-5 text-white-50">
+                <i class="bi bi-search fs-1 d-block mb-2"></i>
+                No se encontraron registros con esos criterios.
+            </div>
+
+            <div class="table-responsive" *ngIf="!isLoading && page && page.totalElements > 0" style="max-height: 75vh;">
                 <table class="table table-dark table-hover mb-0 align-middle text-sm">
                     <thead class="sticky-top" style="background-color: #121212; border-bottom: 2px solid #dc3545;">
                         <tr>
@@ -102,7 +168,6 @@
                 </div>
 
                 <div class="row g-0">
-                    
                     <div class="col-md-6 border-end border-secondary">
                         <div class="p-2 text-center bg-dark border-bottom border-secondary text-danger fw-bold">
                             <i class="bi bi-clock-history me-1"></i> ANTES
@@ -116,7 +181,6 @@
                             <ul class="list-unstyled mb-0">
                                 <li *ngFor="let item of datosAnteriores; let i = index" class="mb-2 border-bottom border-secondary pb-1">
                                     <small class="text-white-50 d-block">{{ item.key }}</small>
-                                    
                                     <div [class.bg-diff-remove]="esModificado(i)" class="text-break">
                                         <span class="text-danger font-monospace">
                                             {{ item.value !== null ? item.value : '---' }}
@@ -140,7 +204,6 @@
                             <ul class="list-unstyled mb-0">
                                 <li *ngFor="let item of datosNuevos; let i = index" class="mb-2 border-bottom border-secondary pb-1">
                                     <small class="text-white-50 d-block">{{ item.key }}</small>
-                                    
                                     <div [class.bg-diff-add]="esModificado(i)" class="text-break">
                                         <span class="text-success font-monospace fw-bold">
                                             {{ item.value !== null ? item.value : '---' }}
@@ -150,7 +213,6 @@
                             </ul>
                         </div>
                     </div>
-
                 </div>
             </div>
             

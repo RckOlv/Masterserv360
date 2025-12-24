@@ -5,6 +5,7 @@ import com.masterserv.productos.dto.DetallePedidoDTO;
 import com.masterserv.productos.dto.MovimientoStockDTO;
 import com.masterserv.productos.dto.PedidoDTO;
 import com.masterserv.productos.dto.PedidoDetalladoDTO;
+import com.masterserv.productos.dto.PedidoFiltroDTO;
 import com.masterserv.productos.entity.DetallePedido;
 import com.masterserv.productos.entity.Pedido;
 import com.masterserv.productos.entity.Producto;
@@ -17,6 +18,7 @@ import com.masterserv.productos.repository.PedidoRepository;
 import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.repository.ProveedorRepository;
 import com.masterserv.productos.repository.UsuarioRepository;
+import com.masterserv.productos.specification.PedidoSpecification;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -52,6 +54,7 @@ public class PedidoService {
     @Autowired private ProductoService productoService; 
     @Autowired private PedidoMapper pedidoMapper;
     @Autowired private MovimientoStockService movimientoStockService;
+    @Autowired private PedidoSpecification pedidoSpecification;
     
     // --- INYECCIONES PARA NOTIFICACIÓN ---
     @Autowired private PdfService pdfService;
@@ -303,5 +306,17 @@ public class PedidoService {
 
         pedidoRepository.save(pedido);
         logger.info("✅ Pedido #{} confirmado por proveedor. Llega el: {}", pedido.getId(), dto.getFechaEntrega());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PedidoDTO> filter(PedidoFiltroDTO filtro, Pageable pageable) {
+        // Convierte DTO a Specification
+        var spec = pedidoSpecification.getByFilters(filtro);
+    
+        // Busca usando los filtros + paginación
+        Page<Pedido> pedidosPage = pedidoRepository.findAll(spec, pageable);
+    
+        // Convierte a DTO
+        return pedidosPage.map(pedidoMapper::toPedidoDTO);
     }
 }

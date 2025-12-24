@@ -1,4 +1,3 @@
-// src/app/service/pedido.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -29,20 +28,28 @@ export class PedidoService {
     return this.http.get<PedidoDetallado>(`${this.apiUrl}/${id}/detalles`);
   }
 
-  // --- NUEVO: Descargar PDF ---
   descargarPdf(id: number): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/${id}/pdf`, { responseType: 'blob' });
   }
-  // ---------------------------
 
   listarPedidos(page: number, size: number): Observable<Page<PedidoDTO>> {
     const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString())
       .set('sort', 'fechaPedido,desc'); 
-      
     return this.http.get<Page<PedidoDTO>>(this.apiUrl, { params }); 
   }
+
+  // --- NUEVO: MÉTODO PARA FILTRAR ---
+  filtrarPedidos(filtro: any, page: number, size: number): Observable<Page<PedidoDTO>> {
+    const params = new HttpParams()
+        .set('page', page.toString())
+        .set('size', size.toString())
+        .set('sort', 'fechaPedido,desc');
+
+    return this.http.post<Page<PedidoDTO>>(`${this.apiUrl}/filtrar`, filtro, { params });
+  }
+  // ----------------------------------
 
   marcarCompletado(id: number): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/${id}/completar`, {});

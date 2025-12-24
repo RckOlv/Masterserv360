@@ -2,6 +2,7 @@ package com.masterserv.productos.controller;
 
 import com.masterserv.productos.dto.PedidoDTO;
 import com.masterserv.productos.dto.PedidoDetalladoDTO;
+import com.masterserv.productos.dto.PedidoFiltroDTO;
 import com.masterserv.productos.entity.Pedido; // <--- Importado
 import com.masterserv.productos.repository.PedidoRepository; // <--- Importado
 import com.masterserv.productos.service.PdfService; // <--- Importado
@@ -113,4 +114,13 @@ public class PedidoController {
         pedidoService.marcarPedidoCancelado(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/filtrar")
+    public ResponseEntity<Page<PedidoDTO>> filtrarPedidos(
+        @RequestBody PedidoFiltroDTO filtro, 
+        Pageable pageable) {
+    
+    Page<PedidoDTO> resultado = pedidoService.filter(filtro, pageable);
+    return ResponseEntity.ok(resultado);
+}
 }

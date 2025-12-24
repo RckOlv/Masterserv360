@@ -1,8 +1,8 @@
-// src/app/pos/pedidos-list/pedidos-list.ts
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common'; 
 import { RouterModule } from '@angular/router'; 
 import { HttpErrorResponse } from '@angular/common/http';
+import { FormsModule } from '@angular/forms'; // <--- IMPORTANTE: AGREGAR ESTO
 
 import { PedidoService } from '../../service/pedido.service';
 import { PedidoDTO } from '../../models/pedido.model';
@@ -10,6 +10,8 @@ import { PedidoDetallado } from '../../models/pedido-detallado.model';
 import { Page } from '../../models/page.model';
 import { mostrarToast } from '../../utils/toast';
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
+import { ProveedorService } from '../../service/proveedor.service'; // Necesario para el dropdown
+import { UsuarioService } from '../../service/usuario.service'; // Opcional, si quieres filtrar por usuario
 
 @Component({
   selector: 'app-pedidos-list',
@@ -17,7 +19,8 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
   imports: [
     CommonModule, 
     RouterModule,
-    HasPermissionDirective
+    HasPermissionDirective,
+    FormsModule // <--- IMPORTAR AQUÍ
   ], 
   templateUrl: './pedidos-list.html',
   styleUrls: ['./pedidos-list.css'] 
@@ -25,6 +28,7 @@ import { HasPermissionDirective } from '../../directives/has-permission.directiv
 export default class PedidosListComponent implements OnInit {
 
   private pedidoService = inject(PedidoService);
+  private proveedorService = inject(ProveedorService); // Inyectamos para cargar combo
 
   public pedidosPage: Page<PedidoDTO> | null = null;
   public currentPage = 0;
@@ -34,17 +38,38 @@ export default class PedidosListComponent implements OnInit {
   
   public pedidoSeleccionado: PedidoDetallado | null = null; 
 
+  // --- FILTROS ---
+  public mostrarFiltros = false;
+  public filtro: any = {
+      proveedorId: null,
+      estado: '', // Enviamos string vacío si es "Todos"
+      fechaDesde: null,
+      fechaHasta: null
+  };
+  public proveedores: any[] = []; // Para llenar el <select>
+  // ---------------
+
   constructor() {}
 
   ngOnInit(): void {
     this.cargarPedidos(); 
+    this.cargarProveedores(); // Cargar lista para el filtro
+  }
+
+  cargarProveedores() {
+      // Asumiendo que tienes un método para listar todos o paginado
+      this.proveedorService.listarProveedores().subscribe({
+          next: (data) => this.proveedores = data,
+          error: () => console.error('Error cargando proveedores para filtro')
+      });
   }
 
   cargarPedidos(): void {
     this.isLoading = true;
     this.errorMessage = null;
 
-    this.pedidoService.listarPedidos(this.currentPage, this.pageSize).subscribe({
+    // Usamos el método de filtrado siempre. Si el filtro está vacío, el backend devuelve todo.
+    this.pedidoService.filtrarPedidos(this.filtro, this.currentPage, this.pageSize).subscribe({
       next: (page) => {
         this.pedidosPage = page;
         this.isLoading = false;
@@ -57,13 +82,29 @@ export default class PedidosListComponent implements OnInit {
     });
   }
 
+  buscar(): void {
+      this.currentPage = 0; // Volver a página 1
+      this.cargarPedidos();
+  }
+
+  limpiarFiltros(): void {
+      this.filtro = {
+          proveedorId: null,
+          estado: '',
+          fechaDesde: null,
+          fechaHasta: null
+      };
+      this.buscar();
+  }
+
+  toggleFiltros(): void {
+      this.mostrarFiltros = !this.mostrarFiltros;
+  }
+
   verDetalles(id: number | undefined): void {
     if (!id) return;
-
     this.pedidoService.obtenerDetalles(id).subscribe({
-      next: (data) => {
-        this.pedidoSeleccionado = data;
-      },
+      next: (data) => this.pedidoSeleccionado = data,
       error: (err) => {
         console.error('Error al cargar detalles:', err);
         mostrarToast('No se pudieron cargar los detalles.', 'danger');
@@ -75,15 +116,12 @@ export default class PedidosListComponent implements OnInit {
     this.pedidoSeleccionado = null;
   }
 
-  // --- NUEVO: Descargar PDF ---
   descargarPdf(id: number | undefined): void {
     if (!id) return;
-    
-    // Opcional: mostrar un mini spinner o aviso de "Generando..."
     this.pedidoService.descargarPdf(id).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
-        window.open(url); // Abre el PDF en nueva pestaña
+        window.open(url);
       },
       error: (err) => {
         console.error('Error al descargar PDF:', err);
@@ -91,11 +129,9 @@ export default class PedidosListComponent implements OnInit {
       }
     });
   }
-  // ---------------------------
 
   marcarCompletado(id: number | undefined): void {
     if (!id) return;
-
     if (confirm('¿Seguro que deseas marcar este pedido como COMPLETADO? Esta acción ingresará el stock de los productos al inventario.')) {
       this.isLoading = true; 
       this.pedidoService.marcarCompletado(id).subscribe({
@@ -115,7 +151,6 @@ export default class PedidosListComponent implements OnInit {
 
   marcarCancelado(id: number | undefined): void {
     if (!id) return;
-
     if (confirm('¿Seguro que deseas CANCELAR este pedido?')) {
       this.isLoading = true; 
       this.pedidoService.marcarCancelado(id).subscribe({

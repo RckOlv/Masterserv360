@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms'; // <--- IMPORTANTE
 import { AuditoriaService } from '../../service/auditoria.service';
 import { Auditoria } from '../../models/auditoria.model';
 import { Page } from '../../models/page.model';
@@ -10,7 +11,7 @@ declare var bootstrap: any;
 @Component({
   selector: 'app-auditoria-list',
   standalone: true,
-  imports: [CommonModule, HasPermissionDirective],
+  imports: [CommonModule, FormsModule, HasPermissionDirective], // <--- AGREGADO FormsModule
   templateUrl: './auditoria.html',
   styleUrls: ['./auditoria.css']
 })
@@ -23,18 +24,32 @@ export default class AuditoriaListComponent implements OnInit {
   currentPage = 0;
   pageSize = 20;
 
+  // --- FILTROS ---
+  mostrarFiltros = false;
+  filtro: any = {
+    usuario: '',
+    accion: '',
+    entidad: '',
+    entidadId: null,
+    fechaDesde: null,
+    fechaHasta: null
+  };
+  // ---------------
+
   selectedLog: Auditoria | null = null;
   datosAnteriores: any[] = [];
   datosNuevos: any[] = [];
   private detalleModal: any;
 
   ngOnInit() {
-    this.loadLogs();
+    this.cargarLogs();
   }
 
-  loadLogs() {
+  cargarLogs() {
     this.isLoading = true;
-    this.auditoriaService.getLogs(this.currentPage, this.pageSize).subscribe({
+    
+    // Usamos filtrarLogs siempre. Si el filtro está vacío, el backend devuelve todo.
+    this.auditoriaService.filtrarLogs(this.filtro, this.currentPage, this.pageSize).subscribe({
       next: (data) => {
         this.page = data;
         this.isLoading = false;
@@ -46,41 +61,56 @@ export default class AuditoriaListComponent implements OnInit {
     });
   }
 
+  buscar() {
+    this.currentPage = 0; // Volver a la primera página al buscar
+    this.cargarLogs();
+  }
+
+  limpiarFiltros() {
+    this.filtro = {
+      usuario: '',
+      accion: '',
+      entidad: '',
+      entidadId: null,
+      fechaDesde: null,
+      fechaHasta: null
+    };
+    this.buscar();
+  }
+
+  toggleFiltros() {
+    this.mostrarFiltros = !this.mostrarFiltros;
+  }
+
+  // --- LÓGICA DEL MODAL (Se mantiene igual) ---
   verDetalles(log: Auditoria) {
     this.selectedLog = log;
     
-    // Primero parseamos los datos
     const rawAnteriores = log.valorAnterior ? JSON.parse(log.valorAnterior) : {};
     const rawNuevos = log.valorNuevo ? JSON.parse(log.valorNuevo) : {};
-
-    // Obtenemos todas las claves únicas para mostrar ambos lados alineados
     const allKeys = new Set([...Object.keys(rawAnteriores), ...Object.keys(rawNuevos)]);
 
     this.datosAnteriores = [];
     this.datosNuevos = [];
 
     allKeys.forEach(key => {
-       // Filtramos campos técnicos
        if (['passwordHash', 'hibernateLazyInitializer', 'handler', 'roles', 'permisos', 'password'].includes(key)) return;
 
-       // Valor crudo para comparación lógica
        const rawValAntes = rawAnteriores[key];
        const rawValNuevo = rawNuevos[key];
-
-       // Valor formateado para visualización
        const valAntesFmt = rawAnteriores.hasOwnProperty(key) ? this.formatValue(rawValAntes) : null;
        const valNuevoFmt = rawNuevos.hasOwnProperty(key) ? this.formatValue(rawValNuevo) : null;
 
        this.datosAnteriores.push({
            key: this.formatKey(key),
            value: valAntesFmt, 
-           rawValue: rawValAntes // Guardamos el valor crudo
+           rawValue: rawValAntes
        });
 
        this.datosNuevos.push({
            key: this.formatKey(key),
            value: valNuevoFmt,
-           rawValue: rawValNuevo // Guardamos el valor crudo
+           rawValue: rawValNuevo
        });
     });
     
@@ -91,33 +121,25 @@ export default class AuditoriaListComponent implements OnInit {
     }
   }
   
-  // Función para determinar si un valor ha cambiado
   esModificado(index: number): boolean {
       if (!this.datosAnteriores[index] || !this.datosNuevos[index]) return true;
-      
       const valAntes = this.datosAnteriores[index].rawValue;
       const valNuevo = this.datosNuevos[index].rawValue;
-
-      // Comparación simple. Para objetos complejos podría requerir JSON.stringify
       return JSON.stringify(valAntes) !== JSON.stringify(valNuevo);
   }
-
 
   cerrarModal() {
     if (this.detalleModal) this.detalleModal.hide();
     this.selectedLog = null;
   }
 
-  // --- MENTOR: FORMATEADOR INTELIGENTE DE OBJETOS ---
   private formatValue(val: any): string {
     if (val === null || val === undefined) return '-';
     if (typeof val === 'boolean') return val ? 'Sí' : 'No';
-
     if (Array.isArray(val)) {
         if (val.length === 0) return 'Ninguno';
         return val.map(item => this.formatValue(item)).join(', ');
     }
-
     if (typeof val === 'object') {
         if (val.nombre && val.apellido) return `${val.nombre} ${val.apellido}`;
         if (val.razonSocial) return val.razonSocial;
@@ -140,14 +162,14 @@ export default class AuditoriaListComponent implements OnInit {
   paginaAnterior() {
     if (this.page && !this.page.first) {
       this.currentPage--;
-      this.loadLogs();
+      this.cargarLogs();
     }
   }
 
   paginaSiguiente() {
     if (this.page && !this.page.last) {
       this.currentPage++;
-      this.loadLogs();
+      this.cargarLogs();
     }
   }
 
