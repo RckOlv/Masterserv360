@@ -127,19 +127,31 @@ export default class AuditoriaListComponent implements OnInit {
     this.selectedLog = null;
   }
 
-  private formatValue(val: any): string {
+ private formatValue(val: any): string {
     if (val === null || val === undefined) return '-';
     if (typeof val === 'boolean') return val ? 'Sí' : 'No';
+
     if (Array.isArray(val)) {
         if (val.length === 0) return 'Ninguno';
         return val.map(item => this.formatValue(item)).join(', ');
     }
+
     if (typeof val === 'object') {
+        // --- AGREGA ESTAS LÍNEAS PARA CUBRIR MÁS CASOS ---
+        if (val.descripcion) return val.descripcion; // <--- Probablemente sea este para TipoDoc
+        if (val.tipo) return val.tipo;
+        if (val.detalle) return val.detalle;
+        // -------------------------------------------------
+
         if (val.nombre && val.apellido) return `${val.nombre} ${val.apellido}`;
         if (val.razonSocial) return val.razonSocial;
         if (val.nombre) return val.nombre;
+        if (val.nombreCorto) return val.nombreCorto;
+        if (val.nombreRol) return val.nombreRol.replace('ROLE_', '');
         if (val.codigo) return val.codigo;
-        if (val.id) return `#${val.id}`;
+        
+        if (val.id) return `#${val.id}`; // Último recurso
+        
         return JSON.stringify(val);
     }
     return String(val);
