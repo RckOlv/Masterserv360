@@ -13,4 +13,5 @@ public class AuditoriaFiltroDTO {
     // Rango de fechas
     private LocalDate fechaDesde;
     private LocalDate fechaHasta;
+	private Long entidadId;
 }

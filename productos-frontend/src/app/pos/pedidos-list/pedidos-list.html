@@ -33,7 +33,7 @@
             <div class="col-md-2">
                 <label class="text-white-50 small mb-1">Estado</label>
                 <select class="form-select form-select-sm bg-dark text-white border-secondary" [(ngModel)]="filtro.estado">
-                    <option value="">Todos</option>
+                    <option [ngValue]="null">Todos</option>
                     <option value="PENDIENTE">Pendiente</option>
                     <option value="EN_CAMINO">En Camino</option>
                     <option value="COMPLETADO">Completado</option>
@@ -167,6 +167,7 @@
 <div class="modal fade show" tabindex="-1" role="dialog" style="display: block;" *ngIf="pedidoSeleccionado">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content masterserv-card" style="border: 1px solid #E41E26;">
+      
       <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
         <h5 class="masterserv-title mb-0" style="font-size: 1.2rem;">
           <i class="bi bi-receipt me-2"></i>Comprobante Pedido #{{ pedidoSeleccionado.id }}

@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common'; 
 import { RouterModule } from '@angular/router'; 
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormsModule } from '@angular/forms'; // <--- IMPORTANTE: AGREGAR ESTO
+import { FormsModule } from '@angular/forms'; 
 
 import { PedidoService } from '../../service/pedido.service';
 import { PedidoDTO } from '../../models/pedido.model';
@@ -10,8 +10,7 @@ import { PedidoDetallado } from '../../models/pedido-detallado.model';
 import { Page } from '../../models/page.model';
 import { mostrarToast } from '../../utils/toast';
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
-import { ProveedorService } from '../../service/proveedor.service'; // Necesario para el dropdown
-import { UsuarioService } from '../../service/usuario.service'; // Opcional, si quieres filtrar por usuario
+import { ProveedorService } from '../../service/proveedor.service'; 
 
 @Component({
   selector: 'app-pedidos-list',
@@ -20,7 +19,7 @@ import { UsuarioService } from '../../service/usuario.service'; // Opcional, si 
     CommonModule, 
     RouterModule,
     HasPermissionDirective,
-    FormsModule // <--- IMPORTAR AQUÍ
+    FormsModule 
   ], 
   templateUrl: './pedidos-list.html',
   styleUrls: ['./pedidos-list.css'] 
@@ -28,7 +27,7 @@ import { UsuarioService } from '../../service/usuario.service'; // Opcional, si 
 export default class PedidosListComponent implements OnInit {
 
   private pedidoService = inject(PedidoService);
-  private proveedorService = inject(ProveedorService); // Inyectamos para cargar combo
+  private proveedorService = inject(ProveedorService); 
 
   public pedidosPage: Page<PedidoDTO> | null = null;
   public currentPage = 0;
@@ -42,24 +41,24 @@ export default class PedidosListComponent implements OnInit {
   public mostrarFiltros = false;
   public filtro: any = {
       proveedorId: null,
-      estado: '', // Enviamos string vacío si es "Todos"
+      estado: null, // <--- CORREGIDO: Debe ser null, NO comillas vacías ''
       fechaDesde: null,
       fechaHasta: null
   };
-  public proveedores: any[] = []; // Para llenar el <select>
+  public proveedores: any[] = []; 
   // ---------------
 
   constructor() {}
 
   ngOnInit(): void {
     this.cargarPedidos(); 
-    this.cargarProveedores(); // Cargar lista para el filtro
+    this.cargarProveedores(); 
   }
 
   cargarProveedores() {
-      // Asumiendo que tienes un método para listar todos o paginado
+      // Usamos el método que me confirmaste que ya tienes
       this.proveedorService.listarProveedores().subscribe({
-          next: (data) => this.proveedores = data,
+          next: (data: any) => this.proveedores = data,
           error: () => console.error('Error cargando proveedores para filtro')
       });
   }
@@ -68,7 +67,6 @@ export default class PedidosListComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
 
-    // Usamos el método de filtrado siempre. Si el filtro está vacío, el backend devuelve todo.
     this.pedidoService.filtrarPedidos(this.filtro, this.currentPage, this.pageSize).subscribe({
       next: (page) => {
         this.pedidosPage = page;
@@ -83,14 +81,14 @@ export default class PedidosListComponent implements OnInit {
   }
 
   buscar(): void {
-      this.currentPage = 0; // Volver a página 1
+      this.currentPage = 0; 
       this.cargarPedidos();
   }
 
   limpiarFiltros(): void {
       this.filtro = {
           proveedorId: null,
-          estado: '',
+          estado: null, // <--- CORREGIDO: Resetear a null
           fechaDesde: null,
           fechaHasta: null
       };
