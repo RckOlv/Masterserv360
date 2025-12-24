@@ -13,40 +13,29 @@
     <div class="card masterserv-card shadow mb-4" *ngIf="mostrarFiltros">
         <div class="card-body bg-dark border border-secondary rounded">
             <div class="row g-3">
+                
                 <div class="col-md-3">
-                    <label class="text-white-50 small mb-1">Usuario</label>
-                    <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" 
-                           [(ngModel)]="filtro.usuario" placeholder="Ej: admin">
-                </div>
-
-                <div class="col-md-2">
                     <label class="text-white-50 small mb-1">Acción</label>
                     <select class="form-select form-select-sm bg-dark text-white border-secondary" [(ngModel)]="filtro.accion">
                         <option value="">Todas</option>
                         <option value="CREAR">Crear</option>
                         <option value="ACTUALIZAR">Actualizar</option>
                         <option value="ELIMINAR">Eliminar</option>
-                        <option value="LOGIN">Login</option>
                     </select>
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="text-white-50 small mb-1">Entidad</label>
                     <select class="form-select form-select-sm bg-dark text-white border-secondary" [(ngModel)]="filtro.entidad">
                         <option value="">Todas</option>
                         <option value="Producto">Producto</option>
-                        <option value="Usuario">Usuario</option>
-                        <option value="Venta">Venta</option>
-                        <option value="Pedido">Pedido</option>
+                        <option value="Categoria">Categoría</option>
                         <option value="Proveedor">Proveedor</option>
-                        <option value="Categoria">Categoria</option>
+                        <option value="Pedido">Pedido</option>
+                        <option value="Usuario">Usuario</option>
+                        <option value="Cupon">Cupón</option>
+                        <option value="Recompensa">Recompensa</option>
                     </select>
-                </div>
-
-                <div class="col-md-1">
-                    <label class="text-white-50 small mb-1">ID Ref.</label>
-                    <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" 
-                           [(ngModel)]="filtro.entidadId" placeholder="#">
                 </div>
 
                 <div class="col-md-4">
@@ -57,15 +46,15 @@
                         <input type="date" class="form-control bg-dark text-white border-secondary" [(ngModel)]="filtro.fechaHasta">
                     </div>
                 </div>
-            </div>
 
-            <div class="d-flex justify-content-end mt-3 gap-2">
-                <button class="btn btn-sm btn-outline-secondary" (click)="limpiarFiltros()">
-                    <i class="bi bi-eraser"></i> Limpiar
-                </button>
-                <button class="btn btn-sm btn-info" (click)="buscar()">
-                    <i class="bi bi-search"></i> Buscar
-                </button>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button class="btn btn-sm btn-info w-100" (click)="buscar()">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary w-50" (click)="limpiarFiltros()" title="Limpiar">
+                        <i class="bi bi-eraser"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -79,7 +68,7 @@
 
             <div *ngIf="!isLoading && page && page.totalElements === 0" class="text-center py-5 text-white-50">
                 <i class="bi bi-search fs-1 d-block mb-2"></i>
-                No se encontraron registros con esos filtros.
+                No se encontraron movimientos.
             </div>
 
             <div class="table-responsive" *ngIf="!isLoading && page && page.totalElements > 0" style="max-height: 75vh;">
@@ -99,27 +88,22 @@
                             <td class="text-nowrap text-white-50 small ps-3">
                                 {{ log.fecha | date:'dd/MM HH:mm' }}
                             </td>
-                            
                             <td class="fw-bold text-white">
                                 <i class="bi bi-person-circle me-1 text-secondary"></i>
                                 {{ log.usuario }}
                             </td>
-                            
                             <td class="text-center">
                                 <span class="badge" [ngClass]="getBadgeClass(log.accion)">
                                     {{ log.accion }}
                                 </span>
                             </td>
-                            
                             <td>
                                 <div class="text-info fw-bold">{{ log.entidad }}</div>
                                 <div class="text-white-50 small font-monospace">#{{ log.entidadId }}</div>
                             </td>
-                            
                             <td class="text-white-50 small text-truncate" style="max-width: 250px;" title="{{ log.detalle }}">
                                 {{ log.detalle.split('(')[0] }}...
                             </td>
-
                             <td class="text-center">
                                 <button class="btn btn-sm btn-outline-info" 
                                         (click)="verDetalles(log)" 
@@ -135,20 +119,16 @@
 
             <div class="card-footer bg-dark border-top border-secondary d-flex justify-content-between align-items-center py-3" 
                  *ngIf="!isLoading && page && page.totalElements > 0">
-                
                 <button class="btn btn-outline-light btn-sm" (click)="paginaAnterior()" [disabled]="page.first">
                     <i class="bi bi-chevron-left"></i> Anterior
                 </button>
-
                 <span class="text-white-50 small">
                     Página <strong class="text-warning">{{ page.number + 1 }}</strong> de <strong class="text-white">{{ page.totalPages }}</strong>
                 </span>
-
                 <button class="btn btn-outline-light btn-sm" (click)="paginaSiguiente()" [disabled]="page.last">
                     Siguiente <i class="bi bi-chevron-right"></i>
                 </button>
             </div>
-            
         </div>
     </div>
 </div>
@@ -156,14 +136,10 @@
 <div class="modal fade" id="modalDetalleAuditoria" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content" style="background-color: #1e1e1e; border: 1px solid #444; color: white;">
-            
             <div class="modal-header border-bottom border-secondary">
-                <h5 class="modal-title text-info">
-                    <i class="bi bi-journal-text me-2"></i>Detalle de Movimiento
-                </h5>
+                <h5 class="modal-title text-info"><i class="bi bi-journal-text me-2"></i>Detalle de Movimiento</h5>
                 <button type="button" class="btn-close btn-close-white" (click)="cerrarModal()"></button>
             </div>
-
             <div class="modal-body p-0" *ngIf="selectedLog">
                 <div class="p-3 border-bottom border-secondary bg-dark">
                     <div class="d-flex justify-content-between mb-2">
@@ -172,56 +148,33 @@
                     </div>
                     <p class="mb-0 text-white small">{{ selectedLog.detalle }}</p>
                 </div>
-
                 <div class="row g-0">
                     <div class="col-md-6 border-end border-secondary">
-                        <div class="p-2 text-center bg-dark border-bottom border-secondary text-danger fw-bold">
-                            <i class="bi bi-clock-history me-1"></i> ANTES
-                        </div>
+                        <div class="p-2 text-center bg-dark border-bottom border-secondary text-danger fw-bold"><i class="bi bi-clock-history me-1"></i> ANTES</div>
                         <div class="p-3" style="max-height: 400px; overflow-y: auto;">
-                            
-                            <div *ngIf="datosAnteriores.length === 0" class="text-white-50 text-center fst-italic small mt-3">
-                                No hay datos anteriores (Creación o vacío)
-                            </div>
-
+                            <div *ngIf="datosAnteriores.length === 0" class="text-white-50 text-center fst-italic small mt-3">No hay datos anteriores</div>
                             <ul class="list-unstyled mb-0">
                                 <li *ngFor="let item of datosAnteriores; let i = index" class="mb-2 border-bottom border-secondary pb-1">
                                     <small class="text-white-50 d-block">{{ item.key }}</small>
-                                    <div [class.bg-diff-remove]="esModificado(i)" class="text-break">
-                                        <span class="text-danger font-monospace">
-                                            {{ item.value !== null ? item.value : '---' }}
-                                        </span>
-                                    </div>
+                                    <div [class.bg-diff-remove]="esModificado(i)" class="text-break"><span class="text-danger font-monospace">{{ item.value !== null ? item.value : '---' }}</span></div>
                                 </li>
                             </ul>
                         </div>
                     </div>
-
                     <div class="col-md-6">
-                        <div class="p-2 text-center bg-dark border-bottom border-secondary text-success fw-bold">
-                            <i class="bi bi-check-circle me-1"></i> DESPUÉS
-                        </div>
+                        <div class="p-2 text-center bg-dark border-bottom border-secondary text-success fw-bold"><i class="bi bi-check-circle me-1"></i> DESPUÉS</div>
                         <div class="p-3" style="max-height: 400px; overflow-y: auto;">
-                            
-                            <div *ngIf="datosNuevos.length === 0" class="text-white-50 text-center fst-italic small mt-3">
-                                Datos eliminados o vacíos.
-                            </div>
-
+                            <div *ngIf="datosNuevos.length === 0" class="text-white-50 text-center fst-italic small mt-3">Datos eliminados</div>
                             <ul class="list-unstyled mb-0">
                                 <li *ngFor="let item of datosNuevos; let i = index" class="mb-2 border-bottom border-secondary pb-1">
                                     <small class="text-white-50 d-block">{{ item.key }}</small>
-                                    <div [class.bg-diff-add]="esModificado(i)" class="text-break">
-                                        <span class="text-success font-monospace fw-bold">
-                                            {{ item.value !== null ? item.value : '---' }}
-                                        </span>
-                                    </div>
+                                    <div [class.bg-diff-add]="esModificado(i)" class="text-break"><span class="text-success font-monospace fw-bold">{{ item.value !== null ? item.value : '---' }}</span></div>
                                 </li>
                             </ul>
                         </div>
                     </div>
                 </div>
             </div>
-            
             <div class="modal-footer border-top border-secondary">
                 <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cerrar</button>
             </div>

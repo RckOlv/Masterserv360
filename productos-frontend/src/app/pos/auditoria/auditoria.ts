@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms'; // <--- IMPORTANTE
+import { FormsModule } from '@angular/forms';
 import { AuditoriaService } from '../../service/auditoria.service';
 import { Auditoria } from '../../models/auditoria.model';
 import { Page } from '../../models/page.model';
@@ -11,7 +11,7 @@ declare var bootstrap: any;
 @Component({
   selector: 'app-auditoria-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, HasPermissionDirective], // <--- AGREGADO FormsModule
+  imports: [CommonModule, FormsModule, HasPermissionDirective],
   templateUrl: './auditoria.html',
   styleUrls: ['./auditoria.css']
 })
@@ -24,17 +24,15 @@ export default class AuditoriaListComponent implements OnInit {
   currentPage = 0;
   pageSize = 20;
 
-  // --- FILTROS ---
+  // --- FILTROS SIMPLIFICADOS ---
   mostrarFiltros = false;
   filtro: any = {
-    usuario: '',
-    accion: '',
+    accion: '', 
     entidad: '',
-    entidadId: null,
     fechaDesde: null,
     fechaHasta: null
   };
-  // ---------------
+  // -----------------------------
 
   selectedLog: Auditoria | null = null;
   datosAnteriores: any[] = [];
@@ -47,8 +45,6 @@ export default class AuditoriaListComponent implements OnInit {
 
   cargarLogs() {
     this.isLoading = true;
-    
-    // Usamos filtrarLogs siempre. Si el filtro está vacío, el backend devuelve todo.
     this.auditoriaService.filtrarLogs(this.filtro, this.currentPage, this.pageSize).subscribe({
       next: (data) => {
         this.page = data;
@@ -62,16 +58,14 @@ export default class AuditoriaListComponent implements OnInit {
   }
 
   buscar() {
-    this.currentPage = 0; // Volver a la primera página al buscar
+    this.currentPage = 0;
     this.cargarLogs();
   }
 
   limpiarFiltros() {
     this.filtro = {
-      usuario: '',
       accion: '',
       entidad: '',
-      entidadId: null,
       fechaDesde: null,
       fechaHasta: null
     };
@@ -82,7 +76,7 @@ export default class AuditoriaListComponent implements OnInit {
     this.mostrarFiltros = !this.mostrarFiltros;
   }
 
-  // --- LÓGICA DEL MODAL (Se mantiene igual) ---
+  // --- MÉTODOS DEL MODAL Y TABLA (Igual que antes) ---
   verDetalles(log: Auditoria) {
     this.selectedLog = log;
     
@@ -144,10 +138,7 @@ export default class AuditoriaListComponent implements OnInit {
         if (val.nombre && val.apellido) return `${val.nombre} ${val.apellido}`;
         if (val.razonSocial) return val.razonSocial;
         if (val.nombre) return val.nombre;
-        if (val.nombreCorto) return val.nombreCorto;
-        if (val.nombreRol) return val.nombreRol.replace('ROLE_', '');
         if (val.codigo) return val.codigo;
-        if (val.descripcion) return val.descripcion;
         if (val.id) return `#${val.id}`;
         return JSON.stringify(val);
     }
