@@ -94,13 +94,22 @@ public class ProductoService {
         return productosPage.map(productoMapper::toProductoDTO);
     }
 
+    // --- AQUÍ EL CAMBIO CLAVE PARA USAR LA BÚSQUEDA FLEXIBLE ---
     @Transactional(readOnly = true)
     public Page<ProductoDTO> filter(ProductoFiltroDTO filtro, Pageable pageable) {
-        // Usamos el método unificado
+        
+        // Si hay un texto de búsqueda (nombre), usamos la búsqueda nativa flexible
+        if (filtro.getNombre() != null && !filtro.getNombre().isBlank()) {
+             Page<Producto> productosPage = productoRepository.buscarFlexible(filtro.getNombre(), pageable);
+             return productosPage.map(productoMapper::toProductoDTO);
+        }
+
+        // Si no hay texto, usamos los filtros normales (categoría, precio, etc.)
         Specification<Producto> spec = productoSpecification.getProductosByFilters(filtro);
         Page<Producto> productosPage = productoRepository.findAll(spec, pageable);
         return productosPage.map(productoMapper::toProductoDTO);
     }
+    // -----------------------------------------------------------
 
     @Transactional(readOnly = true)
     public ProductoDTO findById(Long id) {
@@ -125,7 +134,6 @@ public class ProductoService {
             producto.setPrecioCosto(BigDecimal.ZERO);
         }
         
-        // CORRECCIÓN: Como es int primitivo, no chequeamos null, simplemente lo seteamos a 0
         producto.setStockActual(0);
         
         Producto productoGuardado = productoRepository.save(producto);
@@ -221,32 +229,34 @@ public class ProductoService {
 
     @Transactional(readOnly = true)
     public Page<ProductoPublicoDTO> findAllPublico(Pageable pageable) {
-        // Usamos el DTO de filtro principal, pero vacío (trae todos)
         ProductoFiltroDTO filtroVacio = new ProductoFiltroDTO();
-        filtroVacio.setEstado("ACTIVO"); // Solo activos para el público
+        filtroVacio.setEstado("ACTIVO");
         
         Specification<Producto> spec = productoSpecification.getProductosByFilters(filtroVacio);
         Page<Producto> productosPage = productoRepository.findAll(spec, pageable);
         return productosPage.map(productoMapper::toProductoPublicoDTO);
     }
 
-    // --- CORRECCIÓN CLAVE: Adaptamos el DTO Público al DTO Interno ---
     @Transactional(readOnly = true)
     public Page<ProductoPublicoDTO> findPublicoByCriteria(ProductoPublicoFiltroDTO filtroPublico, Pageable pageable) {
         
-        // 1. Convertimos el DTO Público (que viene del front) al DTO Interno (que usa la Specification)
+        // --- AQUÍ TAMBIÉN USAMOS LA BÚSQUEDA FLEXIBLE PARA EL PÚBLICO ---
+        if (filtroPublico.getNombre() != null && !filtroPublico.getNombre().isBlank()) {
+             Page<Producto> productosPage = productoRepository.buscarFlexible(filtroPublico.getNombre(), pageable);
+             return productosPage.map(productoMapper::toProductoPublicoDTO);
+        }
+
+        // Si no hay búsqueda por texto, usamos los filtros tradicionales
         ProductoFiltroDTO filtroInterno = new ProductoFiltroDTO();
         filtroInterno.setNombre(filtroPublico.getNombre());
-        filtroInterno.setCategoriaIds(filtroPublico.getCategoriaIds()); // Lista de IDs
+        filtroInterno.setCategoriaIds(filtroPublico.getCategoriaIds());
         filtroInterno.setPrecioMin(filtroPublico.getPrecioMin());
         filtroInterno.setPrecioMax(filtroPublico.getPrecioMax());
         filtroInterno.setSoloConStock(filtroPublico.getSoloConStock());
-        filtroInterno.setEstado("ACTIVO"); // Siempre forzamos activos para el público
+        filtroInterno.setEstado("ACTIVO"); 
 
-        // 2. Llamamos a la especificación unificada
         Specification<Producto> spec = productoSpecification.getProductosByFilters(filtroInterno);
         
-        // 3. Buscamos y mapeamos
         Page<Producto> productosPage = productoRepository.findAll(spec, pageable);
         return productosPage.map(productoMapper::toProductoPublicoDTO);
     }
@@ -283,13 +293,11 @@ public class ProductoService {
         return productoGuardado;
     }
     
-    // --- MÉTODO ORIGINAL (Mantener por compatibilidad) ---
     @Transactional(propagation = Propagation.REQUIRED)
     public Producto reponerStock(Long productoId, int cantidadAReponer) {
         return reponerStock(productoId, cantidadAReponer, null);
     }
 
-    // --- NUEVO MÉTODO SOBRECARGADO (Para Pedidos con cambio de precio) ---
     @Transactional(propagation = Propagation.REQUIRED)
     public Producto reponerStock(Long productoId, int cantidadAReponer, BigDecimal nuevoCosto) {
          if (cantidadAReponer <= 0) {
@@ -304,11 +312,9 @@ public class ProductoService {
 
         producto.setStockActual(stockNuevo);
         
-        // --- ACTUALIZACIÓN DE PRECIO ---
         if (nuevoCosto != null && nuevoCosto.compareTo(BigDecimal.ZERO) > 0) {
             producto.setPrecioCosto(nuevoCosto);
         }
-        // -------------------------------
 
         Producto productoGuardado = productoRepository.save(producto);
 

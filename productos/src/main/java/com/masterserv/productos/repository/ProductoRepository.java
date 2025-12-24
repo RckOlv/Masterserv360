@@ -22,25 +22,23 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     Optional<Producto> findByNombre(String nombre);
 
     // --- MENTOR: NUEVO MÉTODO PARA EL GENERADOR ---
-    // Busca el último producto cuyo código empiece con el prefijo (ej: "ELLA")
-    // ordenado descendentemente para obtener el número más alto (ej: "ELLA05").
     Optional<Producto> findTopByCodigoStartingWithOrderByCodigoDesc(String prefix);
     // ----------------------------------------------
 
     @Query("SELECT p FROM Producto p " +
-           "JOIN p.categoria c " +
-           "JOIN c.proveedores provs " + 
-           "WHERE provs.id = :proveedorId AND p.estado = 'ACTIVO' " +
-           "ORDER BY p.nombre ASC")
+            "JOIN p.categoria c " +
+            "JOIN c.proveedores provs " + 
+            "WHERE provs.id = :proveedorId AND p.estado = 'ACTIVO' " +
+            "ORDER BY p.nombre ASC")
     List<Producto> findActivosByProveedorId(@Param("proveedorId") Long proveedorId);
 
     @Query("SELECT p FROM Producto p " +
-           "JOIN p.categoria c " +
-           "JOIN c.proveedores provs " +
-           "WHERE provs.id = :proveedorId AND p.estado = 'ACTIVO' " +
-           "AND (LOWER(p.nombre) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           " OR LOWER(p.codigo) LIKE LOWER(CONCAT('%', :search, '%')) )"
-           )
+            "JOIN p.categoria c " +
+            "JOIN c.proveedores provs " +
+            "WHERE provs.id = :proveedorId AND p.estado = 'ACTIVO' " +
+            "AND (LOWER(p.nombre) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            " OR LOWER(p.codigo) LIKE LOWER(CONCAT('%', :search, '%')) )"
+            )
     Page<Producto> searchByProveedor(
         @Param("proveedorId") Long proveedorId, 
         @Param("search") String search, 
@@ -60,9 +58,31 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     @Query("SELECT p FROM Producto p WHERE p.nombre ILIKE %:termino% AND p.estado = 'ACTIVO'")
     List<Producto> findByNombreILike(@Param("termino") String termino, Pageable pageable);
 
-    // Esto le dice a Spring: "Busca productos donde el nombre contenga este texto, ignorando mayúsculas/minúsculas"
     List<Producto> findByNombreContainingIgnoreCase(String nombre);
 
-    @Query(value = "SELECT * FROM productos p WHERE unaccent(lower(p.nombre)) LIKE unaccent(lower(concat('%', :termino, '%'))) AND p.estado = 'ACTIVO'", nativeQuery = true)
-    List<Producto> findByNombreFlexible(@Param("termino") String termino, Pageable pageable);
+    // --- BÚSQUEDA DEFINITIVA (Flexible: Sin acentos, Sin mayúsculas, Código+Nombre+Desc) ---
+    @Query(value = """
+        SELECT * FROM productos p 
+        WHERE p.estado = 'ACTIVO' 
+        AND (
+            unaccent(p.nombre) ILIKE unaccent(concat('%', :termino, '%')) 
+            OR 
+            unaccent(p.descripcion) ILIKE unaccent(concat('%', :termino, '%'))
+            OR 
+            unaccent(p.codigo) ILIKE unaccent(concat('%', :termino, '%'))
+        )
+        """,
+        countQuery = """
+        SELECT count(*) FROM productos p 
+        WHERE p.estado = 'ACTIVO' 
+        AND (
+            unaccent(p.nombre) ILIKE unaccent(concat('%', :termino, '%')) 
+            OR 
+            unaccent(p.descripcion) ILIKE unaccent(concat('%', :termino, '%'))
+            OR 
+            unaccent(p.codigo) ILIKE unaccent(concat('%', :termino, '%'))
+        )
+        """,
+        nativeQuery = true)
+    Page<Producto> buscarFlexible(@Param("termino") String termino, Pageable pageable);
 }

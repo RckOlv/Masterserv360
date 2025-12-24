@@ -11,6 +11,7 @@ import com.twilio.twiml.messaging.Media;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import java.util.List;
@@ -176,8 +177,9 @@ public class ChatbotService {
         Pageable top5 = PageRequest.of(0, 5); 
         List<Producto> productos;
         try {
-            // Intenta usar la búsqueda con unaccent (si la BD lo soporta)
-            productos = productoRepository.findByNombreFlexible(termino, top5);
+            // CORRECCIÓN AQUÍ: Usamos el nuevo método buscarFlexible y extraemos el contenido
+            Page<Producto> page = productoRepository.buscarFlexible(termino, top5);
+            productos = page.getContent();
         } catch (Exception e) {
             // Fallback: Si la BD no tiene la extensión, usamos ILIKE normal
             System.err.println("⚠️ Fallback búsqueda (posiblemente falta extensión unaccent): " + e.getMessage());
@@ -215,13 +217,11 @@ public class ChatbotService {
             disponibilidad = "🟢 Disponible (" + p.getStockActual() + ")";
         }
 
-        // CORRECCIÓN: Convertir a doubleValue() y formatear por separado para máxima seguridad
         String precioStr = "Consultar";
         if (p.getPrecioVenta() != null) {
             precioStr = String.format("$%,.2f", p.getPrecioVenta().doubleValue());
         }
 
-        // CORRECCIÓN FINAL: Usar StringBuilder para evitar errores de String.format con caracteres raros
         StringBuilder sb = new StringBuilder();
         sb.append("📦 *").append(p.getNombre()).append("*\n\n");
         sb.append("💲 Precio: *").append(precioStr).append("*\n");
@@ -243,7 +243,9 @@ public class ChatbotService {
         Pageable top1 = PageRequest.of(0, 1);
         List<Producto> matches;
         try {
-             matches = productoRepository.findByNombreFlexible(termino, top1);
+             // CORRECCIÓN AQUÍ TAMBIÉN: Usar buscarFlexible
+             Page<Producto> page = productoRepository.buscarFlexible(termino, top1);
+             matches = page.getContent();
         } catch (Exception e) {
              matches = productoRepository.findByNombreILike(termino, top1);
         }
