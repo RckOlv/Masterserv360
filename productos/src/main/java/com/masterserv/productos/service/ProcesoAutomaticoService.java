@@ -5,12 +5,12 @@ import com.masterserv.productos.entity.*;
 import com.masterserv.productos.enums.EstadoCotizacion;
 import com.masterserv.productos.enums.EstadoItemCotizacion;
 import com.masterserv.productos.enums.EstadoListaEspera;
-import com.masterserv.productos.enums.EstadoPedido; // Importante
+import com.masterserv.productos.enums.EstadoPedido;
 import com.masterserv.productos.enums.EstadoUsuario;
 import com.masterserv.productos.repository.CotizacionRepository;
 import com.masterserv.productos.repository.ItemCotizacionRepository;
 import com.masterserv.productos.repository.ListaEsperaRepository;
-import com.masterserv.productos.repository.PedidoRepository; // Importante
+import com.masterserv.productos.repository.PedidoRepository;
 import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.repository.ProveedorRepository;
 import org.slf4j.Logger;
@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine; 
 import org.thymeleaf.context.Context; 
 
-import java.time.LocalDate; // Importante
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -45,61 +45,67 @@ public class ProcesoAutomaticoService {
     @Autowired private TemplateEngine templateEngine; 
     @Autowired private ItemCotizacionRepository itemCotizacionRepository;
     @Autowired private WhatsappService whatsappService;
-    
-    // --- NUEVA INYECCIÓN PARA ALERTAS ---
     @Autowired private PedidoRepository pedidoRepository; 
 
     /**
-     * TAREA 1: Genera pedidos automáticos (Stock Bajo).
-     * EJECUCIÓN: Cada 10 MINUTOS.
+     * TAREA 1: Genera pedidos automáticos (AGRUPADO POR PROVEEDOR).
+     * Lógica "Pro": 1 Proveedor = 1 Email con todos los productos faltantes que él vende.
+     * EJECUCIÓN: Cada 10 MINUTOS (o disparado manualmente tras venta).
      */
     @Scheduled(fixedDelay = 600000) 
     @Transactional
     public void generarPrePedidosAgrupados() {
-        // ... (Tu lógica original intacta) ...
-        logger.info("⏰ Iniciando ciclo de revisión automática de stock...");
+        logger.info("⏰ [AUTO] Revisando stock para generar pedidos agrupados...");
 
+        // 1. Obtener TODOS los productos con stock bajo
         List<Producto> productosFaltantes = productoRepository.findAll().stream()
                 .filter(p -> p.getStockActual() <= p.getStockMinimo())
                 .collect(Collectors.toList());
 
         if (productosFaltantes.isEmpty()) {
-            logger.info("✅ Todo el stock está en orden. Nada que pedir.");
+            logger.info("✅ Todo el stock está en orden.");
             return;
         }
 
-        Map<Categoria, List<Producto>> productosPorCategoria = productosFaltantes.stream()
-                .collect(Collectors.groupingBy(Producto::getCategoria));
+        // 2. Obtener TODOS los proveedores activos
+        List<Proveedor> proveedoresActivos = proveedorRepository.findByEstado(EstadoUsuario.ACTIVO);
+        if (proveedoresActivos.isEmpty()) {
+            logger.warn("⚠️ No hay proveedores activos para reponer stock.");
+            return;
+        }
 
-        for (Map.Entry<Categoria, List<Producto>> entry : productosPorCategoria.entrySet()) {
-            Categoria categoria = entry.getKey();
-            List<Producto> todosLosProductosDeLaCategoria = entry.getValue();
+        // 3. Iterar por PROVEEDOR
+        for (Proveedor proveedor : proveedoresActivos) {
+            
+            List<Producto> productosParaEsteProveedor = new ArrayList<>();
 
-            List<Proveedor> proveedoresActivos = proveedorRepository.findByEstado(EstadoUsuario.ACTIVO);
-            if (proveedoresActivos.isEmpty()) continue;
-
-            for (Proveedor proveedor : proveedoresActivos) {
-                if (!proveedorVendeCategoria(proveedor, categoria)) continue; 
-
-                List<Producto> productosParaPedirHoy = new ArrayList<>();
-                List<EstadoCotizacion> estadosActivos = Arrays.asList(
-                    EstadoCotizacion.PENDIENTE_PROVEEDOR, 
-                    EstadoCotizacion.RECIBIDA,            
-                    EstadoCotizacion.CONFIRMADA_ADMIN     
-                );
-
-                for (Producto p : todosLosProductosDeLaCategoria) {
+            // A. De todos los faltantes, ¿cuáles puede vender este proveedor?
+            for (Producto p : productosFaltantes) {
+                // Chequeamos si el proveedor tiene la categoría del producto
+                if (proveedorVendeCategoria(proveedor, p.getCategoria())) {
+                    
+                    // B. Chequeamos si ya no lo pedimos hace poco (para no duplicar cotizaciones pendientes)
+                    List<EstadoCotizacion> estadosActivos = Arrays.asList(
+                        EstadoCotizacion.PENDIENTE_PROVEEDOR, 
+                        EstadoCotizacion.RECIBIDA,            
+                        EstadoCotizacion.CONFIRMADA_ADMIN     
+                    );
+                    
                     boolean yaPedido = itemCotizacionRepository.existePedidoActivo(p, proveedor, estadosActivos);
+                    
                     if (!yaPedido) {
-                        productosParaPedirHoy.add(p);
+                        productosParaEsteProveedor.add(p);
                     }
                 }
+            }
 
-                if (!productosParaPedirHoy.isEmpty()) {
-                    crearYNotificarCotizacion(proveedor, productosParaPedirHoy);
-                }
+            // C. Si juntamos productos para este proveedor, creamos UNA SOLA cotización
+            if (!productosParaEsteProveedor.isEmpty()) {
+                logger.info("📦 Agrupando {} productos para el proveedor {}", productosParaEsteProveedor.size(), proveedor.getRazonSocial());
+                crearYNotificarCotizacion(proveedor, productosParaEsteProveedor);
             }
         }
+        
         logger.info("🏁 Ciclo de revisión finalizado.");
     }
 
@@ -138,8 +144,7 @@ public class ProcesoAutomaticoService {
 
     // --- Método auxiliar para enviar el mail al admin ---
     private void notificarAdminArribo(List<Pedido> pedidos, String titulo, String mensajeIntro) {
-        // En un sistema real, este mail vendría de una config o de la tabla de usuarios con rol ADMIN
-        String emailAdmin = "admin@masterserv360.com"; // Pon tu mail real aquí para probar
+        String emailAdmin = "admin@masterserv360.com"; // Configurable
 
         StringBuilder cuerpo = new StringBuilder();
         cuerpo.append("<h2 style='color: #E41E26;'>").append(titulo).append("</h2>");
@@ -157,8 +162,6 @@ public class ProcesoAutomaticoService {
         emailService.enviarEmailHtml(emailAdmin, "📦 Alerta Stock: " + titulo, cuerpo.toString());
     }
 
-    // ... (Resto de métodos auxiliares privados y Listener de stock SIN CAMBIOS) ...
-    
     private boolean proveedorVendeCategoria(Proveedor proveedor, Categoria categoria) {
         if (proveedor.getCategorias() == null || proveedor.getCategorias().isEmpty()) return true; 
         return proveedor.getCategorias().stream().anyMatch(c -> c.getId().equals(categoria.getId()));
@@ -177,6 +180,7 @@ public class ProcesoAutomaticoService {
                 ItemCotizacion item = new ItemCotizacion();
                 item.setCotizacion(cotizacion);
                 item.setProducto(producto);
+                // Lógica de cantidad: Lote Reposición o (StockMin * 2)
                 int cant = (producto.getLoteReposicion() > 0) ? producto.getLoteReposicion() : Math.max(1, producto.getStockMinimo() * 2);
                 item.setCantidadSolicitada(cant);
                 item.setEstado(EstadoItemCotizacion.PENDIENTE);
@@ -188,13 +192,18 @@ public class ProcesoAutomaticoService {
             logger.info("-> 📨 [AUTO] Cotización #{} generada para '{}' con {} items.", 
                         guardada.getId(), proveedor.getRazonSocial(), items.size());
 
-            String linkOferta = "http://localhost:4200/oferta/" + guardada.getToken();
+            // URL DE PRODUCCIÓN (Vercel)
+            String linkOferta = "https://masterserv360.vercel.app/oferta/" + guardada.getToken();
+            
             Context context = new Context();
             context.setVariable("proveedorNombre", proveedor.getRazonSocial());
             context.setVariable("linkOferta", linkOferta);
             context.setVariable("items", guardada.getItems()); 
+            
             String html = templateEngine.process("email-oferta", context);
+            
             emailService.enviarEmailHtml(proveedor.getEmail(), "Masterserv: Solicitud Cotización #" + guardada.getId(), html);
+            
         } catch (Exception e) {
             logger.error("-> 🔴 Error cotización: {}", e.getMessage());
         }
@@ -204,8 +213,6 @@ public class ProcesoAutomaticoService {
     @EventListener
     @Transactional(propagation = Propagation.REQUIRES_NEW) 
     public void handleStockActualizado(StockActualizadoEvent event) {
-        // ... (Tu código de notificaciones que ya funcionaba bien) ...
-        // (Resumido para brevedad, pero MANTENLO igual que antes)
         if (event.stockNuevo() <= 0) return;
         Producto producto = productoRepository.findById(event.productoId()).orElse(null);
         if (producto == null) return;

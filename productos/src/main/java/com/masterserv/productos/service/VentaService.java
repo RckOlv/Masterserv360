@@ -63,6 +63,9 @@ public class VentaService {
     @Autowired private CuponService cuponService;
     @Autowired private CarritoService carritoService;
     @Autowired private ApplicationEventPublisher eventPublisher;
+    
+    // --- INYECCIÓN PARA DISPARAR EL PROCESO AUTOMÁTICO ---
+    @Autowired private ProcesoAutomaticoService procesoAutomaticoService;
 
     @Transactional
     public VentaDTO create(VentaDTO ventaDTO, String vendedorEmail) {
@@ -97,6 +100,7 @@ public class VentaService {
         Set<DetalleVenta> detallesVenta = new HashSet<>(); 
 
         for (DetalleVentaDTO d : ventaDTO.getDetalles()) {
+            // Solo descontamos stock. NO enviamos mail aquí.
             Producto p = productoService.descontarStock(d.getProductoId(), d.getCantidad());
 
             DetalleVenta det = new DetalleVenta();
@@ -136,8 +140,22 @@ public class VentaService {
         // 9) Vaciar carrito
         carritoService.vaciarCarrito(vendedorEmail);
 
-        // 10) PUBLICAR EVENTO
+        // 10) PUBLICAR EVENTO (Para enviar PDF al cliente)
         eventPublisher.publishEvent(new VentaRealizadaEvent(this, ventaGuardada.getId()));
+        
+        // 11) --- DISPARADOR INTELIGENTE (B2B) ---
+        // Llamamos al proceso automático en un hilo separado.
+        // Él se encargará de agrupar los faltantes y enviar UN solo correo por proveedor.
+        new Thread(() -> {
+            try {
+                // Esperamos 2 segundos para asegurar que la transacción de la venta se haya commiteado en la BD
+                Thread.sleep(2000); 
+                procesoAutomaticoService.generarPrePedidosAgrupados();
+            } catch (Exception e) {
+                logger.error("Error trigger automático reposición: " + e.getMessage());
+            }
+        }).start();
+        // ----------------------------------------
         
         return ventaMapper.toVentaDTO(ventaGuardada);
     }
@@ -270,7 +288,7 @@ public class VentaService {
     }
 
     // ------------------------------------------------------------
-    // GENERACIÓN DE PDF COMPROBANTE (CORREGIDO Y DEFINITIVO)
+    // GENERACIÓN DE PDF COMPROBANTE
     // ------------------------------------------------------------
     @Transactional(readOnly = true)
     public byte[] generarComprobantePdf(Long ventaId) {
@@ -281,7 +299,7 @@ public class VentaService {
             PdfWriter.getInstance(document, out);
             document.open();
 
-            // 1. CABECERA DE LA EMPRESA
+            // 1. CABECERA
             Font fontTitulo = new Font(Font.HELVETICA, 20, Font.BOLD);
             Paragraph titulo = new Paragraph("MASTERSERV360", fontTitulo);
             titulo.setAlignment(Element.ALIGN_CENTER);
@@ -291,7 +309,6 @@ public class VentaService {
             Paragraph datosEmpresa = new Paragraph(
                 "Razón Social: Masterserv S.A.\n" + 
                 "CUIT: 30-12345678-9\n" + 
-                "Inicio de Actividades: 01/01/2020\n" +
                 "Dirección: Av. San Martín 1234, El Soberbio, Misiones\n" +
                 "Tel: (3755) 12-3456", 
                 fontSubtitulo
@@ -304,13 +321,12 @@ public class VentaService {
             separator.setLineColor(Color.LIGHT_GRAY);
             document.add(separator);
 
-            // 2. DATOS DE LA VENTA
+            // 2. INFO VENTA
             Font fontCuerpo = new Font(Font.HELVETICA, 11, Font.NORMAL);
             Paragraph infoVenta = new Paragraph();
             infoVenta.setSpacingBefore(15);
             infoVenta.setSpacingAfter(15);
             
-            // --- AQUÍ ESTÁ EL CAMBIO A "Nº VENTA" ---
             infoVenta.add(new Chunk("Nº Venta: " + venta.getId() + "\n", new Font(Font.HELVETICA, 14, Font.BOLD)));
             
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -324,13 +340,12 @@ public class VentaService {
             infoVenta.add("Atendido por: " + (venta.getVendedor() != null ? venta.getVendedor().getNombre() : "Sistema") + "\n");
             document.add(infoVenta);
 
-            // 3. TABLA DE PRODUCTOS
+            // 3. TABLA
             PdfPTable table = new PdfPTable(4); 
             table.setWidthPercentage(100);
             table.setWidths(new float[]{45f, 10f, 20f, 25f});
             table.setSpacingBefore(10f);
 
-            // Cabeceras
             Font fontHeader = new Font(Font.HELVETICA, 10, Font.BOLD, Color.WHITE);
             String[] headers = {"Producto", "Cant.", "Precio Unit.", "Subtotal"};
             
@@ -343,7 +358,6 @@ public class VentaService {
                 table.addCell(cell);
             }
 
-            // Filas
             Font fontCell = new Font(Font.HELVETICA, 10);
             BigDecimal subtotalSinDescuento = BigDecimal.ZERO;
 
@@ -373,7 +387,7 @@ public class VentaService {
 
             document.add(table);
 
-            // 4. TOTALES Y DESCUENTOS
+            // 4. TOTALES
             Paragraph totales = new Paragraph();
             totales.setAlignment(Element.ALIGN_RIGHT);
             totales.setSpacingBefore(15);
