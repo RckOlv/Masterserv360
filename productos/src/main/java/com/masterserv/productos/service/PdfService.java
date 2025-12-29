@@ -18,7 +18,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
-import java.math.RoundingMode; // <--- Importante para calcular el promedio
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.awt.Color;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
@@ -38,6 +40,22 @@ public class PdfService {
 
     @Autowired 
     private DashboardService dashboardService;
+
+    // ========================================================================
+    // MÉTODO AUXILIAR PARA FORMATEO DE MONEDA (ARGENTINA)
+    // ========================================================================
+    private String formatearMoneda(BigDecimal valor) {
+        if (valor == null) valor = BigDecimal.ZERO;
+        
+        // Configuración manual de símbolos para asegurar formato $ 1.000,00
+        // independientemente del idioma del servidor (Docker/Windows/Linux)
+        DecimalFormatSymbols simbolos = new DecimalFormatSymbols();
+        simbolos.setGroupingSeparator('.'); // Miles con punto
+        simbolos.setDecimalSeparator(',');  // Decimales con coma
+        
+        DecimalFormat df = new DecimalFormat("#,##0.00", simbolos);
+        return "$ " + df.format(valor);
+    }
 
     // ========================================================================
     // 1. COMPROBANTE INTERNO (CON PRECIOS) - PARA EL ADMIN
@@ -111,14 +129,16 @@ public class PdfService {
                 table.addCell(cellCant);
                 
                 BigDecimal precio = (detalle.getPrecioUnitario() != null) ? detalle.getPrecioUnitario() : BigDecimal.ZERO;
-                PdfPCell cellPrecio = new PdfPCell(new Paragraph(String.format("$%.2f", precio), FONT_NORMAL));
+                // ✅ USO DEL FORMATEADOR
+                PdfPCell cellPrecio = new PdfPCell(new Paragraph(formatearMoneda(precio), FONT_NORMAL));
                 cellPrecio.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 table.addCell(cellPrecio);
                 
                 BigDecimal subtotalItem = precio.multiply(new BigDecimal(detalle.getCantidad()));
                 totalCalculado = totalCalculado.add(subtotalItem);
                 
-                PdfPCell cellSub = new PdfPCell(new Paragraph(String.format("$%.2f", subtotalItem), FONT_NORMAL));
+                // ✅ USO DEL FORMATEADOR
+                PdfPCell cellSub = new PdfPCell(new Paragraph(formatearMoneda(subtotalItem), FONT_NORMAL));
                 cellSub.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 table.addCell(cellSub);
             }
@@ -132,7 +152,9 @@ public class PdfService {
 
             Font fontTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
             BigDecimal totalFinal = (pedido.getTotalPedido() != null) ? pedido.getTotalPedido() : totalCalculado;
-            totales.add(new Chunk("TOTAL: $" + String.format("%.2f", totalFinal), fontTotal));
+            
+            // ✅ USO DEL FORMATEADOR
+            totales.add(new Chunk("TOTAL: " + formatearMoneda(totalFinal), fontTotal));
             
             document.add(totales);
 
@@ -149,6 +171,7 @@ public class PdfService {
     // 2. ORDEN DE COMPRA EXTERNA (SIN PRECIOS) - PARA EL PROVEEDOR
     // ========================================================================
     public byte[] generarOrdenCompraProveedor(Pedido pedido) {
+        // ... (Este método NO MUESTRA PRECIOS, así que queda igual, solo copio la estructura)
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4);
 
@@ -156,7 +179,6 @@ public class PdfService {
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            // CABECERA
             Paragraph titulo = new Paragraph("MASTERSERV360", FONT_TITULO);
             titulo.setAlignment(Element.ALIGN_CENTER);
             document.add(titulo);
@@ -177,7 +199,6 @@ public class PdfService {
 
             document.add(new LineSeparator());
 
-            // DATOS DE LA ORDEN
             Paragraph infoPedido = new Paragraph();
             infoPedido.setSpacingBefore(10);
             infoPedido.setSpacingAfter(10);
@@ -195,24 +216,19 @@ public class PdfService {
             
             document.add(infoPedido);
 
-            // --- TABLA LIMPIA (SOLO 2 COLUMNAS: PRODUCTO Y CANTIDAD) ---
             PdfPTable table = new PdfPTable(2); 
             table.setWidthPercentage(100);
-            table.setWidths(new float[] { 4f, 1f }); // 80% Nombre, 20% Cantidad
+            table.setWidths(new float[] { 4f, 1f });
             table.setSpacingBefore(10f);
 
-            // Encabezados
             table.addCell(crearCeldaHeader("Descripción del Producto"));
             table.addCell(crearCeldaHeader("Cantidad"));
 
-            // Llenado de filas (SIN PRECIOS)
             for (DetallePedido detalle : pedido.getDetalles()) {
-                // Producto
                 PdfPCell cellProd = new PdfPCell(new Paragraph(detalle.getProducto().getNombre(), FONT_NORMAL));
                 cellProd.setPadding(5);
                 table.addCell(cellProd);
                 
-                // Cantidad
                 PdfPCell cellCant = new PdfPCell(new Paragraph(String.valueOf(detalle.getCantidad()), FONT_NORMAL));
                 cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
                 cellCant.setPadding(5);
@@ -221,7 +237,6 @@ public class PdfService {
 
             document.add(table);
 
-            // Pie de página simple (SIN TOTALES)
             Paragraph pie = new Paragraph("\nNota: Por favor confirmar recepción, disponibilidad y fecha estimada de entrega.", FONT_DATA_EMPRESA);
             pie.setAlignment(Element.ALIGN_CENTER);
             document.add(pie);
@@ -304,14 +319,16 @@ public class PdfService {
                 cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
                 table.addCell(cellCant);
                 
-                PdfPCell cellPrecio = new PdfPCell(new Paragraph(String.format("$%.2f", detalle.getPrecioUnitario()), FONT_NORMAL));
+                // ✅ USO DEL FORMATEADOR
+                PdfPCell cellPrecio = new PdfPCell(new Paragraph(formatearMoneda(detalle.getPrecioUnitario()), FONT_NORMAL));
                 cellPrecio.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 table.addCell(cellPrecio);
                 
                 BigDecimal subtotalItem = detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad()));
                 subtotalSinDescuento = subtotalSinDescuento.add(subtotalItem);
                 
-                PdfPCell cellSub = new PdfPCell(new Paragraph(String.format("$%.2f", subtotalItem), FONT_NORMAL));
+                // ✅ USO DEL FORMATEADOR
+                PdfPCell cellSub = new PdfPCell(new Paragraph(formatearMoneda(subtotalItem), FONT_NORMAL));
                 cellSub.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 table.addCell(cellSub);
             }
@@ -325,13 +342,16 @@ public class PdfService {
             BigDecimal descuento = subtotalSinDescuento.subtract(venta.getTotalVenta());
             
             if (descuento.compareTo(BigDecimal.ZERO) > 0) {
-                totales.add(new Chunk("Subtotal: $" + String.format("%.2f", subtotalSinDescuento) + "\n", FONT_NORMAL));
+                // ✅ USO DEL FORMATEADOR
+                totales.add(new Chunk("Subtotal: " + formatearMoneda(subtotalSinDescuento) + "\n", FONT_NORMAL));
                 Font fontRojo = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.RED);
-                totales.add(new Chunk("Descuento: -$" + String.format("%.2f", descuento) + "\n", fontRojo));
+                // ✅ USO DEL FORMATEADOR
+                totales.add(new Chunk("Descuento: -" + formatearMoneda(descuento) + "\n", fontRojo));
             }
 
             Font fontTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK);
-            totales.add(new Chunk("TOTAL: $" + String.format("%.2f", venta.getTotalVenta()), fontTotal));
+            // ✅ USO DEL FORMATEADOR
+            totales.add(new Chunk("TOTAL: " + formatearMoneda(venta.getTotalVenta()), fontTotal));
             
             document.add(totales);
 
@@ -415,26 +435,26 @@ public class PdfService {
             tableMetrics.addCell(crearCeldaHeader("Cant. Transacciones"));
             tableMetrics.addCell(crearCeldaHeader("Ticket Promedio"));
             
-            // 1. Total Ventas ($)
-            PdfPCell cellVentas = new PdfPCell(new Paragraph("$ " + String.format("%.2f", stats.getTotalVentasMes()), FONT_NORMAL));
+            // 1. Total Ventas ($) - ✅ USO DEL FORMATEADOR
+            PdfPCell cellVentas = new PdfPCell(new Paragraph(formatearMoneda(stats.getTotalVentasMes()), FONT_NORMAL));
             cellVentas.setHorizontalAlignment(Element.ALIGN_CENTER);
             cellVentas.setPadding(8);
             tableMetrics.addCell(cellVentas);
 
-            // 2. Cantidad de Ventas (#) - Ahora muestra transacciones reales
+            // 2. Cantidad de Ventas (#)
             PdfPCell cellCant = new PdfPCell(new Paragraph(String.valueOf(stats.getCantidadVentasPeriodo()), FONT_NORMAL));
             cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
             cellCant.setPadding(8);
             tableMetrics.addCell(cellCant);
 
-            // 3. Ticket Promedio ($) - Cálculo seguro
+            // 3. Ticket Promedio ($) - ✅ USO DEL FORMATEADOR
             BigDecimal ticketPromedio = BigDecimal.ZERO;
             if (stats.getCantidadVentasPeriodo() > 0) {
                 ticketPromedio = stats.getTotalVentasMes()
                     .divide(BigDecimal.valueOf(stats.getCantidadVentasPeriodo()), 2, RoundingMode.HALF_UP);
             }
 
-            PdfPCell cellTicket = new PdfPCell(new Paragraph("$ " + String.format("%.2f", ticketPromedio), FONT_NORMAL));
+            PdfPCell cellTicket = new PdfPCell(new Paragraph(formatearMoneda(ticketPromedio), FONT_NORMAL));
             cellTicket.setHorizontalAlignment(Element.ALIGN_CENTER);
             cellTicket.setPadding(8);
             tableMetrics.addCell(cellTicket);

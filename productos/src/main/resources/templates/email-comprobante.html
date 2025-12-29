@@ -8,6 +8,7 @@
         .header { font-size: 24px; color: #E41E26; /* Rojo Masterserv */ }
         .content { margin-top: 20px; }
         .total { font-size: 20px; font-weight: bold; color: #333; margin-top: 15px; }
+        .descuento { font-size: 16px; color: green; font-weight: normal; margin-top: 5px;}
     </style>
 </head>
 <body>
@@ -19,11 +20,13 @@
             <p>Muchas gracias por elegir Masterserv360. Adjuntamos el comprobante (no fiscal) de tu reciente compra.</p>
 
             <div class="total">
-                Total de la compra: <span th:text="${totalVenta}">$0.00</span>
-                <p th:if="${hayDescuento}" style="color: green;">
-                Descuento aplicado: -<span th:text="${montoDescuento}"></span> 
-                <span th:if="${codigoCupon != ''}" th:text="'(' + ${codigoCupon} + ')'"></span>
-            </p>
+                Total de la compra: 
+                <span th:text="${'$ ' + #numbers.formatDecimal(totalVenta, 0, 'POINT', 2, 'COMMA')}">$ 0,00</span>
+                
+                <div th:if="${hayDescuento}" class="descuento">
+                    Descuento aplicado: -<span th:text="${'$ ' + #numbers.formatDecimal(montoDescuento, 0, 'POINT', 2, 'COMMA')}"></span> 
+                    <span th:if="${codigoCupon != ''}" th:text="'(' + ${codigoCupon} + ')'"></span>
+                </div>
             </div>
 
             <p style="margin-top: 25px;">
