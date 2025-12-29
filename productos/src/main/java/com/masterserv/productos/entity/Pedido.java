@@ -9,9 +9,10 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate; // <--- Ojo: LocalDate (solo fecha), no DateTime
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID; // ✅ IMPORTANTE: Faltaba este import
 
 @Entity
 @Table(name = "pedidos")
@@ -26,12 +27,10 @@ public class Pedido extends AuditableEntity {
     private Long id;
 
     @Column(name = "fecha_pedido", nullable = false)
-    private LocalDateTime fechaPedido; // Cuándo lo pediste (18/12)
+    private LocalDateTime fechaPedido; 
 
-    // --- NUEVO CAMPO: CUÁNDO LLEGA ---
     @Column(name = "fecha_entrega_estimada")
-    private LocalDate fechaEntregaEstimada; // Cuándo llega (23/12)
-    // ---------------------------------
+    private LocalDate fechaEntregaEstimada; 
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -43,7 +42,6 @@ public class Pedido extends AuditableEntity {
     @Column(name = "total_pedido", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPedido;
 
-    // ... (Relaciones igual que antes) ...
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "proveedor_id", nullable = false)
     @ToString.Exclude
@@ -57,4 +55,14 @@ public class Pedido extends AuditableEntity {
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ToString.Exclude
     private Set<DetallePedido> detalles;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.token == null || this.token.isEmpty()) {
+            this.token = UUID.randomUUID().toString();
+        }
+        if (this.fechaPedido == null) {
+            this.fechaPedido = LocalDateTime.now();
+        }
+    }
 }

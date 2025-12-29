@@ -20,7 +20,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.util.UUID;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -111,10 +111,6 @@ public class CotizacionService {
         recalcularRecomendacion(cotizacion);
     }
 
-    // ... (El resto de tus métodos findCotizacionesRecibidas, cancelarItem, etc. SE MANTIENEN IGUAL) ...
-    // ... COPIA Y PEGA EL RESTO DEL CÓDIGO ORIGINAL AQUÍ ...
-    // ... SOLO MODIFIQUÉ EL MÉTODO submitOfertaProveedor ARRIBA ...
-
     @Transactional(readOnly = true)
     public List<CotizacionAdminDTO> findCotizacionesRecibidas() {
         return cotizacionRepository.findByEstado(EstadoCotizacion.RECIBIDA).stream()
@@ -173,7 +169,10 @@ public class CotizacionService {
         pedido.setFechaPedido(LocalDateTime.now());
         pedido.setEstado(EstadoPedido.PENDIENTE); 
         pedido.setProveedor(cotizacionGanadora.getProveedor());
-        pedido.setUsuario(adminUsuario); 
+        pedido.setUsuario(adminUsuario);
+        
+        // 🟢 CORRECCIÓN: Generamos el Token obligatorio
+        pedido.setToken(UUID.randomUUID().toString());
         
         Set<DetallePedido> detallesPedido = new HashSet<>();
         BigDecimal totalPedido = BigDecimal.ZERO;
@@ -190,7 +189,7 @@ public class CotizacionService {
                 DetallePedido detalle = new DetallePedido();
                 detalle.setPedido(pedido);
                 detalle.setProducto(itemGanador.getProducto());
-                // AQUÍ AHORA USA LA CANTIDAD ACTUALIZADA (Ofertada)
+                // Usamos la cantidad ofertada/corregida
                 detalle.setCantidad(itemGanador.getCantidadSolicitada());
                 detalle.setPrecioUnitario(itemGanador.getPrecioUnitarioOfertado()); 
                 
@@ -202,6 +201,7 @@ public class CotizacionService {
 
                 itemGanador.setEstado(EstadoItemCotizacion.CONFIRMADO);
 
+                // Cancelación de rivales (Lógica correcta)
                 List<ItemCotizacion> itemsPerdedores = itemCotizacionRepository.findItemsRivales(
                         itemGanador.getProducto().getId(),
                         cotizacionGanadora.getId(),
@@ -228,6 +228,7 @@ public class CotizacionService {
         pedido.setDetalles(detallesPedido);
         pedido.setTotalPedido(totalPedido);
 
+        // Guardamos el pedido (Ahora sí tiene Token)
         pedidoRepository.save(pedido);
 
         cotizacionGanadora.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
