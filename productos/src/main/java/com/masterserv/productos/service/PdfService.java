@@ -132,7 +132,7 @@ public class PdfService {
 
             Font fontTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
             BigDecimal totalFinal = (pedido.getTotalPedido() != null) ? pedido.getTotalPedido() : totalCalculado;
-            totales.add(new Chunk("TOTAL ESTIMADO: $" + String.format("%.2f", totalFinal), fontTotal));
+            totales.add(new Chunk("TOTAL: $" + String.format("%.2f", totalFinal), fontTotal));
             
             document.add(totales);
 
