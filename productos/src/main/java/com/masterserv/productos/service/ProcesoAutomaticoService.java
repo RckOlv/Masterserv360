@@ -24,12 +24,11 @@ import java.util.*;
 
 @Service
 @EnableScheduling
-@RequiredArgsConstructor // ✅ 1. Inyección de dependencias automática y limpia (Lombok)
+@RequiredArgsConstructor
 public class ProcesoAutomaticoService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProcesoAutomaticoService.class);
 
-    // Todos los repositorios y servicios son 'final' para garantizar inmutabilidad
     private final ProductoRepository productoRepository;
     private final CotizacionRepository cotizacionRepository;
     private final ProveedorRepository proveedorRepository;
@@ -43,18 +42,16 @@ public class ProcesoAutomaticoService {
     /**
      * 🟢 TAREA 1: Generar pedidos automáticos (AGRUPADO POR PROVEEDOR).
      * Ejecución: Cada 10 minutos.
-     * MEJORA: Separamos la lógica de DB (rápida) de la red (lenta).
      */
     @Scheduled(fixedDelay = 600000) 
     public void generarPrePedidosAgrupados() {
         logger.info("⏰ [AUTO] Iniciando ciclo de reabastecimiento...");
 
-        // PASO 1: Operación Transaccional (Rápida)
-        // Generamos y guardamos las cotizaciones en BD.
+        // PASO 1: Operación Transaccional (Rápida - Solo DB)
         List<Cotizacion> cotizacionesParaNotificar = crearCotizacionesEnTransaccion();
 
-        // PASO 2: Operación de Red (Lenta) - FUERA de la transacción
-        // Si el servidor de correo tarda, no bloqueamos la base de datos.
+        // PASO 2: Operación de Red (Lenta - Envío de Emails)
+        // Se hace fuera de la transacción para no bloquear la conexión a la BD mientras se envían correos.
         if (!cotizacionesParaNotificar.isEmpty()) {
             logger.info("📨 Iniciando envío de {} solicitudes agrupadas...", cotizacionesParaNotificar.size());
             for (Cotizacion cotizacion : cotizacionesParaNotificar) {
@@ -70,13 +67,14 @@ public class ProcesoAutomaticoService {
      */
     @Transactional
     protected List<Cotizacion> crearCotizacionesEnTransaccion() {
-        // ✅ Optimización: Pedimos a la BD solo lo que falta (evita OutOfMemory)
-        // Asegúrate de tener este método con @Query en tu ProductoRepository
+        // Buscamos productos con stock bajo (Asegúrate de tener este @Query en el Repo)
         List<Producto> productosFaltantes = productoRepository.findProductosConStockBajo(); 
 
         if (productosFaltantes.isEmpty()) return Collections.emptyList();
 
-        List<Proveedor> proveedoresActivos = proveedorRepository.findByEstado(EstadoUsuario.ACTIVO);        if (proveedoresActivos.isEmpty()) {
+        List<Proveedor> proveedoresActivos = proveedorRepository.findByEstado(EstadoUsuario.ACTIVO);
+        
+        // CORRECCIÓN AQUI: Eliminado el código duplicado y la llave abierta
         if (proveedoresActivos.isEmpty()) {
             logger.warn("⚠️ No hay proveedores activos para reponer stock.");
             return Collections.emptyList();
@@ -84,9 +82,7 @@ public class ProcesoAutomaticoService {
 
         List<Cotizacion> nuevasCotizaciones = new ArrayList<>();
 
-        // Lógica de Agrupación (Tu lógica original intacta)
         for (Proveedor proveedor : proveedoresActivos) {
-            
             List<Producto> productosParaEsteProveedor = new ArrayList<>();
 
             for (Producto p : productosFaltantes) {
@@ -117,23 +113,23 @@ public class ProcesoAutomaticoService {
     }
 
     // Helper privado para guardar en BD
+    // Helper privado para guardar en BD
     private Cotizacion guardarCotizacion(Proveedor proveedor, List<Producto> productos) {
         Cotizacion cotizacion = new Cotizacion();
         cotizacion.setProveedor(proveedor);
         cotizacion.setEstado(EstadoCotizacion.PENDIENTE_PROVEEDOR);
         cotizacion.setToken(UUID.randomUUID().toString());
+        cotizacion.setFechaCreacion(java.time.LocalDateTime.now()); 
 
         Set<ItemCotizacion> items = new HashSet<>();
         for (Producto producto : productos) {
             ItemCotizacion item = new ItemCotizacion();
             item.setCotizacion(cotizacion);
             item.setProducto(producto);
-            
-            // Tu lógica de cálculo de cantidad
             int cant = (producto.getLoteReposicion() > 0) 
-                     ? producto.getLoteReposicion() 
-                     : Math.max(1, producto.getStockMinimo() * 2);
-                     
+                      ? producto.getLoteReposicion() 
+                      : Math.max(1, producto.getStockMinimo() * 2);
+                      
             item.setCantidadSolicitada(cant);
             item.setEstado(EstadoItemCotizacion.PENDIENTE);
             items.add(item);
@@ -141,14 +137,13 @@ public class ProcesoAutomaticoService {
         cotizacion.setItems(items);
         return cotizacionRepository.save(cotizacion);
     }
-
     // Helper para enviar email (Sin Transactional)
     private void notificarProveedor(Cotizacion cotizacion) {
         Proveedor proveedor = cotizacion.getProveedor();
         if (proveedor.getEmail() == null || proveedor.getEmail().isBlank()) return;
 
         try {
-            // URL configurada (idealmente desde properties)
+            // Ajusta la URL a tu dominio real o variable de entorno
             String linkOferta = "https://masterserv360.vercel.app/oferta/" + cotizacion.getToken();
 
             Context context = new Context();
@@ -173,7 +168,7 @@ public class ProcesoAutomaticoService {
      * Ejecución: 08:00 AM diario.
      */
     @Scheduled(cron = "0 0 8 * * *")
-    @Transactional(readOnly = true) // Optimización de lectura
+    @Transactional(readOnly = true)
     public void verificarPedidosEnCamino() {
         logger.info("📅 [ALERTA DIARIA] Verificando arribos de mercadería...");
 
@@ -196,7 +191,7 @@ public class ProcesoAutomaticoService {
     }
 
     private void notificarAdminArribo(List<Pedido> pedidos, String titulo, String mensajeIntro) {
-        String emailAdmin = "admin@masterserv360.com"; // Considera mover esto a application.properties
+        String emailAdmin = "admin@masterserv360.com"; 
         
         try {
             StringBuilder cuerpo = new StringBuilder();
@@ -221,14 +216,12 @@ public class ProcesoAutomaticoService {
     /**
      * 🟢 TAREA 3: LISTA DE ESPERA (Reactiva)
      * Se ejecuta cuando entra stock (evento).
-     * MEJORA: @Async + AFTER_COMMIT asegura que el stock ya esté guardado antes de avisar.
      */
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleStockActualizado(StockActualizadoEvent event) {
         if (event.stockNuevo() <= 0) return;
         
-        // Llamamos a un método transaccional propio para manejar la lista
         procesarListaEspera(event.productoId());
     }
 
@@ -251,7 +244,7 @@ public class ProcesoAutomaticoService {
                     "¡Ya llegó! " + producto.getNombre(), 
                     "Hola " + usuario.getNombre() + ", tu producto ya está disponible.");
 
-                // WhatsApp (Opcional)
+                // WhatsApp
                 if (whatsappService != null && usuario.getTelefono() != null) {
                     whatsappService.enviarMensaje(usuario.getTelefono(), 
                         "👋 Hola " + usuario.getNombre() + ", buenas noticias: Llegó " + producto.getNombre());
@@ -267,7 +260,6 @@ public class ProcesoAutomaticoService {
 
     private boolean proveedorVendeCategoria(Proveedor proveedor, Categoria categoria) {
         if (proveedor.getCategorias() == null || proveedor.getCategorias().isEmpty()) return true;
-        // Comparamos por ID para evitar problemas con proxies de Hibernate
         return proveedor.getCategorias().stream()
                 .anyMatch(c -> c.getId().equals(categoria.getId()));
     }
