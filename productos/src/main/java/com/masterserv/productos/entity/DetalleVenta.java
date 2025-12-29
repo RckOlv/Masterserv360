@@ -7,6 +7,7 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 // ------------------------------------
 import java.math.BigDecimal;
 
@@ -36,6 +37,7 @@ public class DetalleVenta {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venta_id", nullable = false) // FK a la cabecera de la Venta
+    @JsonIgnore // Evita serialización infinita
     @ToString.Exclude // ¡Clave para evitar StackOverflowError!
     private Venta venta;
 
