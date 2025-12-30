@@ -68,10 +68,10 @@
             <div class="mb-4">
               <label class="form-label masterserv-label">Teléfono / Celular (Whatsapp) <span class="text-danger">*</span></label>
               <div class="input-group">
-                  <select class="form-select masterserv-input text-center" formControlName="codigoPais" style="max-width: 110px;">
-                      <option *ngFor="let pais of paises" [value]="pais.codigo">
-                          {{ pais.bandera }} {{ pais.codigo }}
-                      </option>
+                  <select class="form-select masterserv-input ps-2" formControlName="codigoPais" style="max-width: 160px;">
+                    <option *ngFor="let pais of paises" [value]="pais.codigo">
+                        {{ pais.nombre }} ({{ pais.codigo }})
+                    </option>
                   </select>
                   <input type="tel" class="form-control masterserv-input" formControlName="telefono"
                          placeholder="Ej: 11 1234 5678"

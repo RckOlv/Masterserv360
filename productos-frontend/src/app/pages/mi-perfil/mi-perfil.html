@@ -69,11 +69,11 @@
               <div class="mb-4">
                   <label class="form-label">Teléfono / Celular</label>
                   <div class="input-group">
-                     <select class="form-select text-center" formControlName="codigoPais" style="max-width: 110px;">
+                     <select class="form-select masterserv-input ps-2" formControlName="codigoPais" style="max-width: 160px;">
                         <option *ngFor="let pais of paises" [value]="pais.codigo">
-                            {{ pais.bandera }} {{ pais.codigo }}
+                            {{ pais.nombre }} ({{ pais.codigo }})
                         </option>
-                     </select>
+                      </select>
                      <input type="tel" class="form-control" formControlName="telefono" placeholder="11 1234 5678"
                             maxlength="15"
                             (input)="validarInputNumerico($event)"
