@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { UsuarioService } from '../../service/usuario.service';
 import { TipoDocumentoService } from '../../service/tipo-documento.service';
 import { TipoDocumentoDTO } from '../../models/tipo-documento.model';
@@ -30,12 +30,11 @@ export default class PerfilUsuarioComponent implements OnInit {
   public isSubmittingPass = false;
   public usuarioActual: UsuarioDTO | null = null;
 
-  // MENTOR: Variables para visibilidad de contraseñas
   public hideActual = true;
   public hideNueva = true;
   public hideRepetir = true;
 
-  // MENTOR: Lista de Países
+  // 🟢 Lista Manual "Hardcoded"
   public paises = [
     { nombre: 'Argentina', codigo: '+54', bandera: '🇦🇷' },
     { nombre: 'Brasil', codigo: '+55', bandera: '🇧🇷' },
@@ -48,7 +47,6 @@ export default class PerfilUsuarioComponent implements OnInit {
   constructor() {
     const textPattern = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
 
-    // Formulario Datos Personales
     this.perfilForm = this.fb.group({
       nombre: ['', [Validators.required, Validators.minLength(2), Validators.pattern(textPattern)]],
       apellido: ['', [Validators.required, Validators.minLength(2), Validators.pattern(textPattern)]],
@@ -56,12 +54,11 @@ export default class PerfilUsuarioComponent implements OnInit {
       tipoDocumentoId: [null, Validators.required],
       documento: ['', [Validators.required, Validators.pattern(/^[0-9]{7,11}$/)]],
       
-      // Teléfono dividido
-      codigoPais: ['+54'],
-      telefono: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(15)]]
+      // 🟢 Campos Separados para Teléfono
+      codigoPais: ['+54', Validators.required],
+      telefono: ['', [Validators.required, Validators.pattern(/^[0-9]{8,15}$/)]]
     });
 
-    // Formulario Cambio de Contraseña
     this.passwordForm = this.fb.group({
       passwordActual: ['', Validators.required],
       passwordNueva: ['', [Validators.required, Validators.minLength(6)]],
@@ -74,7 +71,6 @@ export default class PerfilUsuarioComponent implements OnInit {
     this.loadMiPerfil();
   }
 
-  // MENTOR: Métodos toggle
   toggleActual() { this.hideActual = !this.hideActual; }
   toggleNueva() { this.hideNueva = !this.hideNueva; }
   toggleRepetir() { this.hideRepetir = !this.hideRepetir; }
@@ -84,8 +80,7 @@ export default class PerfilUsuarioComponent implements OnInit {
     const confirm = control.get('passwordRepetir')?.value;
     return pass === confirm ? null : { mismatch: true };
   }
-  
-  // Validadores de bloqueo de teclas
+
   validarInputNumerico(event: any): void {
       const input = event.target;
       input.value = input.value.replace(/[^0-9]/g, '');
@@ -112,19 +107,26 @@ export default class PerfilUsuarioComponent implements OnInit {
       next: (data) => {
         this.usuarioActual = data;
         
-        // MENTOR: Separar teléfono
+        // 🟢 LÓGICA DE PARSEO INTELIGENTE (Detectar +549)
         let telefonoFull = data.telefono || '';
-        let codigo = '+54';
-        let numero = telefonoFull;
+        let codigo = '+54'; // Default
+        let numero = '';
 
-        if (telefonoFull.startsWith('+549')) { 
-            codigo = '+54';
-            numero = telefonoFull.substring(4); 
-        } else {
-            const pais = this.paises.find(p => telefonoFull.startsWith(p.codigo));
-            if (pais) {
-                codigo = pais.codigo;
-                numero = telefonoFull.substring(codigo.length);
+        if (telefonoFull) {
+            // Caso especial Argentina Móvil (+549...)
+            if (telefonoFull.startsWith('+549')) {
+                codigo = '+54';
+                numero = telefonoFull.substring(4); // Sacamos '+549'
+            } else {
+                // Buscamos coincidencia estándar
+                const paisMatch = this.paises.find(p => telefonoFull.startsWith(p.codigo));
+                if (paisMatch) {
+                    codigo = paisMatch.codigo;
+                    numero = telefonoFull.substring(codigo.length);
+                } else {
+                    // Si no coincide con nada conocido, dejamos default y todo el numero
+                    numero = telefonoFull; 
+                }
             }
         }
 
@@ -147,33 +149,31 @@ export default class PerfilUsuarioComponent implements OnInit {
   }
 
   onSubmitPerfil(): void {
-    this.perfilForm.markAllAsTouched();
     if (this.perfilForm.invalid) {
       mostrarToast('Revise los datos personales.', 'warning');
+      this.perfilForm.markAllAsTouched();
       return;
     }
 
     this.isSubmitting = true;
-    
-    // Extraemos codigoPais para no mandarlo sucio, pero lo usamos para armar el teléfono
-    const { codigoPais, ...restForm } = this.perfilForm.getRawValue();
-    
-    // Lógica de unión
+    const f = this.perfilForm.value;
+
+    // 🟢 LÓGICA DE UNIÓN Y "EL 9 MÁGICO"
+    let numeroLimpio = f.telefono ? f.telefono.trim() : '';
     let telefonoFinal = '';
-    let numeroLimpio = restForm.telefono ? restForm.telefono.trim() : '';
-    
-    if (numeroLimpio) {
-        if (codigoPais === '+54' && !numeroLimpio.startsWith('9')) {
-            telefonoFinal = `${codigoPais}9${numeroLimpio}`;
-        } else {
-            telefonoFinal = `${codigoPais}${numeroLimpio}`;
-        }
+
+    if (f.codigoPais === '+54' && !numeroLimpio.startsWith('9')) {
+        // Es Argentina y falta el 9 -> Agregamos 9
+        telefonoFinal = `${f.codigoPais}9${numeroLimpio}`;
+    } else {
+        // Resto de casos (o si ya puso el 9)
+        telefonoFinal = `${f.codigoPais}${numeroLimpio}`;
     }
 
     const usuarioUpdate = { 
         ...this.usuarioActual, 
-        ...restForm,
-        telefono: telefonoFinal // Sobreescribimos con el formateado
+        ...f,
+        telefono: telefonoFinal 
     };
 
     this.usuarioService.actualizarMiPerfil(usuarioUpdate).subscribe({
@@ -181,6 +181,8 @@ export default class PerfilUsuarioComponent implements OnInit {
         mostrarToast('Perfil actualizado correctamente.', 'success');
         this.usuarioActual = data;
         this.isSubmitting = false;
+        // Recargar para verificar que se guardó y parsea bien
+        this.loadMiPerfil();
       },
       error: (err: HttpErrorResponse) => {
         const msg = err.error?.message || 'Error al actualizar perfil.';
@@ -192,7 +194,6 @@ export default class PerfilUsuarioComponent implements OnInit {
 
   onSubmitPassword(): void {
     if (this.passwordForm.invalid) return;
-
     this.isSubmittingPass = true;
     const { passwordActual, passwordNueva } = this.passwordForm.value;
 
@@ -203,12 +204,10 @@ export default class PerfilUsuarioComponent implements OnInit {
         this.isSubmittingPass = false;
       },
       error: (err: HttpErrorResponse) => {
-        const msg = err.error?.message || 'Error al cambiar contraseña. Verifica tu clave actual.';
+        const msg = err.error?.message || 'Error al cambiar contraseña.';
         mostrarToast(msg, 'danger');
         this.isSubmittingPass = false;
       }
     });
   }
-  
-  get f() { return this.perfilForm.controls; }
 }

@@ -36,6 +36,7 @@ export default class MiPerfilComponent implements OnInit {
   public hideNueva = true;
   public hideRepetir = true;
 
+  // 🟢 LISTA PAISES
   public paises = [
     { nombre: 'Argentina', codigo: '+54', bandera: '🇦🇷' },
     { nombre: 'Brasil', codigo: '+55', bandera: '🇧🇷' },
@@ -52,8 +53,9 @@ export default class MiPerfilComponent implements OnInit {
       nombre: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(textPattern)]],
       apellido: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(textPattern)]],
       
-      codigoPais: ['+54'],
-      telefono: ['', [Validators.maxLength(15), Validators.minLength(8)]],
+      // 🟢 PHONE
+      codigoPais: ['+54', Validators.required],
+      telefono: ['', [Validators.required, Validators.maxLength(15), Validators.minLength(8), Validators.pattern(/^[0-9]+$/)]],
       
       tipoDocumentoId: [null, [Validators.required]],
       documento: ['', [Validators.required]]
@@ -86,20 +88,15 @@ export default class MiPerfilComponent implements OnInit {
   validarInputNumerico(event: any): void {
       const input = event.target;
       input.value = input.value.replace(/[^0-9]/g, '');
-      this.actualizarControl(input, this.perfilForm);
+      const controlName = input.getAttribute('formControlName');
+      if (controlName) this.perfilForm.get(controlName)?.setValue(input.value);
   }
 
   validarInputTexto(event: any): void {
       const input = event.target;
       input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
-      this.actualizarControl(input, this.perfilForm);
-  }
-  
-  private actualizarControl(input: any, form: FormGroup) {
       const controlName = input.getAttribute('formControlName');
-      if (controlName && form.get(controlName)) {
-          form.get(controlName)?.setValue(input.value);
-      }
+      if (controlName) this.perfilForm.get(controlName)?.setValue(input.value);
   }
 
   loadTiposDocumento(): void {
@@ -125,20 +122,16 @@ export default class MiPerfilComponent implements OnInit {
       const tipoSeleccionado = this.tiposDocumento.find(t => t.id === idNumerico);
       const nombreTipo = tipoSeleccionado ? tipoSeleccionado.nombreCorto.toUpperCase() : '';
       
-      switch (nombreTipo) {
-        case 'DNI':
+      if (nombreTipo === 'DNI') {
           this.maxDocumentoLength = 8;
           validadores.push(Validators.minLength(7), Validators.maxLength(8));
-          break;  
-        case 'CUIT':
+      } else if (nombreTipo === 'CUIT') {
           this.maxDocumentoLength = 11;
           validadores.push(Validators.minLength(11), Validators.maxLength(11));
-          break;
-        case 'PAS':
-          this.maxDocumentoLength = 20; 
+      } else if (nombreTipo === 'PAS') {
+          this.maxDocumentoLength = 20;
           validadores.push(Validators.minLength(6));
-          break;
-        default:
+      } else {
           this.maxDocumentoLength = 20;
       }
       docControl.setValidators(validadores);
@@ -151,29 +144,33 @@ export default class MiPerfilComponent implements OnInit {
     this.perfilForm.disable(); 
     this.clienteService.getMiPerfil().subscribe({
       next: (data) => {
-        // --- MENTOR: LÓGICA INTELIGENTE DE SEPARACIÓN (+549) ---
+        // 🟢 PARSEO +549
         let telefonoFull = data.telefono || '';
         let codigo = '+54';
-        let numero = telefonoFull;
+        let numero = '';
 
-        if (telefonoFull.startsWith('+549')) { 
-            codigo = '+54';
-            numero = telefonoFull.substring(4); // Quitamos +549
-        } else {
-            const pais = this.paises.find(p => telefonoFull.startsWith(p.codigo));
-            if (pais) {
-                codigo = pais.codigo;
-                numero = telefonoFull.substring(codigo.length);
+        if (telefonoFull) {
+            if (telefonoFull.startsWith('+549')) { 
+                codigo = '+54';
+                numero = telefonoFull.substring(4); 
+            } else {
+                const pais = this.paises.find(p => telefonoFull.startsWith(p.codigo));
+                if (pais) {
+                    codigo = pais.codigo;
+                    numero = telefonoFull.substring(codigo.length);
+                } else {
+                    numero = telefonoFull;
+                }
             }
         }
 
         this.perfilForm.patchValue({
           nombre: data.nombre,
           apellido: data.apellido,
-          telefono: numero,
-          codigoPais: codigo, 
           tipoDocumentoId: data.tipoDocumentoId,
-          documento: data.documento
+          documento: data.documento,
+          codigoPais: codigo, 
+          telefono: numero
         });
         this.perfilForm.enable();
         this.isLoading = false;
@@ -195,10 +192,10 @@ export default class MiPerfilComponent implements OnInit {
     this.isSubmitting = true;
     const formValue = this.perfilForm.value;
     
-    // 1. Lógica de unión de teléfono
-    let telefonoFinal = '';
+    // 🟢 UNIÓN Y REGLA DEL 9
     let numeroLimpio = formValue.telefono ? formValue.telefono.trim() : '';
     let codigoPais = formValue.codigoPais;
+    let telefonoFinal = '';
 
     if (numeroLimpio) {
         if (codigoPais === '+54' && !numeroLimpio.startsWith('9')) {
@@ -208,12 +205,10 @@ export default class MiPerfilComponent implements OnInit {
         }
     }
 
-    // 2. CREAMOS EL OBJETO LIMPIO (Solución al Error 500)
-    // Mapeamos campo a campo para evitar enviar 'codigoPais'
     const updateDTO: ClientePerfilUpdateDTO = {
         nombre: formValue.nombre,
         apellido: formValue.apellido,
-        telefono: telefonoFinal, // Usamos el procesado
+        telefono: telefonoFinal,
         tipoDocumentoId: formValue.tipoDocumentoId,
         documento: formValue.documento
     };
@@ -222,12 +217,10 @@ export default class MiPerfilComponent implements OnInit {
       next: () => {
         mostrarToast('¡Perfil actualizado!', 'success');
         this.isSubmitting = false;
-        // Opcional: recargar los datos para asegurar sincronización
         this.loadPerfil(); 
       },
       error: (err) => {
         this.isSubmitting = false;
-        console.error(err);
         mostrarToast('Error al actualizar perfil', 'danger');
       }
     });
@@ -235,10 +228,8 @@ export default class MiPerfilComponent implements OnInit {
 
   onChangePassword(): void {
     if (this.passwordForm.invalid) return;
-
     this.isSubmittingPass = true;
     const { passwordActual, passwordNueva } = this.passwordForm.value;
-
     this.clienteService.cambiarPassword({ passwordActual, passwordNueva }).subscribe({
       next: () => {
         mostrarToast('Contraseña cambiada exitosamente.', 'success');

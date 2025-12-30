@@ -46,6 +46,7 @@
                   </select>
                   <div class="invalid-feedback">Seleccione uno.</div>
                 </div>
+
                 <div class="col-md-7">
                   <label class="form-label">N° Documento</label>
                   <input type="text" class="form-control" formControlName="documento"
@@ -66,12 +67,24 @@
               </div>
 
               <div class="mb-4">
-                 <label class="form-label">Teléfono / Celular</label>
-                 <input type="tel" class="form-control" formControlName="telefono" placeholder="+54 9 ..."
-                        maxlength="15"
-                        (input)="validarInputNumerico($event)"
-                        [class.is-invalid]="perfilForm.get('telefono')?.invalid && perfilForm.get('telefono')?.touched">
-                 <div class="invalid-feedback">Solo números (mín 8).</div>
+                  <label class="form-label">Teléfono / Celular</label>
+                  <div class="input-group">
+                     <select class="form-select text-center" formControlName="codigoPais" style="max-width: 110px;">
+                        <option *ngFor="let pais of paises" [value]="pais.codigo">
+                            {{ pais.bandera }} {{ pais.codigo }}
+                        </option>
+                     </select>
+                     <input type="tel" class="form-control" formControlName="telefono" placeholder="11 1234 5678"
+                            maxlength="15"
+                            (input)="validarInputNumerico($event)"
+                            [class.is-invalid]="perfilForm.get('telefono')?.invalid && perfilForm.get('telefono')?.touched">
+                  </div>
+                  <div class="d-block invalid-feedback" *ngIf="perfilForm.get('telefono')?.invalid && perfilForm.get('telefono')?.touched">
+                     Requerido (solo números, mín 8).
+                  </div>
+                  <div class="form-text text-white-50 small mt-1" *ngIf="perfilForm.get('codigoPais')?.value === '+54'">
+                      <i class="bi bi-info-circle me-1"></i> Para Argentina, el sistema agregará automáticamente el "9" si lo olvidas.
+                  </div>
               </div>
 
               <div class="d-grid">

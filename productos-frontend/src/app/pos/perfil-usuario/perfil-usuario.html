@@ -66,20 +66,24 @@
             </div>
 
             <div class="mb-4">
-              <label class="form-label masterserv-label">Teléfono / Celular <span class="text-danger">*</span></label>
+              <label class="form-label masterserv-label">Teléfono / Celular (Whatsapp) <span class="text-danger">*</span></label>
               <div class="input-group">
-                  <select class="form-select masterserv-input" formControlName="codigoPais" style="max-width: 100px;">
+                  <select class="form-select masterserv-input text-center" formControlName="codigoPais" style="max-width: 110px;">
                       <option *ngFor="let pais of paises" [value]="pais.codigo">
                           {{ pais.bandera }} {{ pais.codigo }}
                       </option>
                   </select>
                   <input type="tel" class="form-control masterserv-input" formControlName="telefono"
+                         placeholder="Ej: 11 1234 5678"
                          maxlength="15"
                          (input)="validarInputNumerico($event)"
                          [class.is-invalid]="perfilForm.get('telefono')?.invalid && perfilForm.get('telefono')?.touched">
               </div>
               <div class="d-block invalid-feedback" *ngIf="perfilForm.get('telefono')?.invalid && perfilForm.get('telefono')?.touched">
-                  Requerido (mín 8 números).
+                  Requerido (solo números, mín 8).
+              </div>
+              <div class="form-text text-white-50 small mt-1" *ngIf="perfilForm.get('codigoPais')?.value === '+54'">
+                  <i class="bi bi-info-circle me-1"></i> Para Argentina, el sistema agregará automáticamente el "9" si lo olvidas.
               </div>
             </div>
 
