@@ -28,7 +28,7 @@ public class MovimientoStock {
     @Column(nullable = false)
     private LocalDateTime fecha;
 
-    @Column(length = 255)
+    @Column(length = 500)
     private String motivo;
 
     // --- Relaciones ---
@@ -41,7 +41,5 @@ public class MovimientoStock {
     @JoinColumn(name = "usuario_id", nullable = false) // El usuario que registró el movimiento
     private Usuario usuario;
     
-    // NOTA: Faltarían FKs a 'venta_id' o 'pedido_id' para trazarlo
-    // automáticamente, pero por velocidad lo dejamos así. El 'motivo' y 'tipo'
-    // nos darán la pista.
+    
 }

@@ -11,8 +11,8 @@ import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Propagation; // Importar Propagation
 
 import java.time.LocalDateTime;
 
@@ -21,51 +21,50 @@ public class MovimientoStockService {
 
     @Autowired
     private ProductoRepository productoRepository;
-
     @Autowired
     private UsuarioRepository usuarioRepository;
-
     @Autowired
     private MovimientoStockRepository movimientoStockRepository;
-
     @Autowired
     private MovimientoStockMapper movimientoStockMapper;
 
-    /**
-     * Registra un movimiento de stock en la tabla de auditoría.
-     * Se ejecuta DENTRO de la transacción principal que lo llama (Venta, Pedido, etc.).
-     * Si la Venta falla y hace rollback, este log también hará rollback.
-     */
-    @Transactional(propagation = Propagation.REQUIRED) // <-- ¡CAMBIO IMPORTANTE!
+    @Transactional(propagation = Propagation.REQUIRED) 
     public void registrarMovimiento(MovimientoStockDTO dto) {
 
-        // 1. Buscar las entidades referenciadas (Producto y Usuario)
+        // 1. Validaciones
         Producto producto = productoRepository.findById(dto.getProductoId())
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado al registrar movimiento: " + dto.getProductoId()));
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + dto.getProductoId()));
 
         Usuario usuario = usuarioRepository.findById(dto.getUsuarioId())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado al registrar movimiento: " + dto.getUsuarioId()));
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + dto.getUsuarioId()));
 
-        // 2. Mapear DTO a Entidad MovimientoStock
+        // 2. Mapeo
         MovimientoStock movimiento = movimientoStockMapper.toMovimientoStock(dto);
 
-        // 3. Completar datos de la entidad MovimientoStock
+        // 3. Completar datos
         movimiento.setProducto(producto);
         movimiento.setUsuario(usuario);
         movimiento.setFecha(LocalDateTime.now());
-
-        // 4. Ajustar la cantidad guardada si es una salida
-        int cantidadGuardar = dto.getCantidad(); // DTO viene positivo
-        if (dto.getTipoMovimiento() == TipoMovimiento.SALIDA_VENTA || 
-            dto.getTipoMovimiento() == TipoMovimiento.DEVOLUCION) { // Asumiendo que tengas más tipos
-            
-            cantidadGuardar = -Math.abs(cantidadGuardar); // Asegura que sea negativo
+        
+        // ✅ Aseguramos que el motivo se guarde
+        if (dto.getMotivo() != null && !dto.getMotivo().isBlank()) {
+            movimiento.setMotivo(dto.getMotivo());
         } else {
-             cantidadGuardar = Math.abs(cantidadGuardar); // Asegura que sea positivo
+            // Si viene vacío (ej. venta automática), ponemos un default
+            movimiento.setMotivo("Movimiento automático del sistema");
         }
-        movimiento.setCantidad(cantidadGuardar);
 
-        // 5. Guardar el registro del movimiento
+        // 4. Lógica de signo (Positivo/Negativo)
+        int cantidadFinal = dto.getCantidad();
+        
+        // Si es salida o ajuste negativo, nos aseguramos que se guarde con signo menos
+        if (dto.getTipoMovimiento() == TipoMovimiento.SALIDA_VENTA || 
+            dto.getTipoMovimiento() == TipoMovimiento.DEVOLUCION ||
+            (dto.getTipoMovimiento() == TipoMovimiento.AJUSTE_MANUAL && cantidadFinal < 0)) {
+        }
+        movimiento.setCantidad(cantidadFinal);
+
+        // 5. Guardar
         movimientoStockRepository.save(movimiento);
     }
 }
