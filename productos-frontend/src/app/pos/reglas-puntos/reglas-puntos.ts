@@ -56,7 +56,8 @@ export default class ReglasPuntosComponent implements OnInit {
       descripcion: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(100)]],
       montoGasto: [1000, [Validators.required, Validators.min(1)]],
       puntosGanados: [100, [Validators.required, Validators.min(1)]],
-      equivalenciaPuntos: [1, [Validators.min(0.01)]], 
+      // ✅ CAMBIO: Deshabilitado para cálculo automático
+      equivalenciaPuntos: [{value: 10, disabled: true}], 
       caducidadPuntosMeses: [12, [Validators.required, Validators.min(1), Validators.max(60)]]
     });
 
@@ -78,6 +79,22 @@ export default class ReglasPuntosComponent implements OnInit {
     if (modalElement) {
       this.recompensaModal = new bootstrap.Modal(modalElement);
     }
+
+    // ✅ LÓGICA DE CÁLCULO AUTOMÁTICO
+    this.reglaForm.valueChanges.subscribe(val => {
+        const gasto = val.montoGasto || 0;
+        const puntos = val.puntosGanados || 1; 
+        
+        let equivalencia = 0;
+        if (puntos > 0) {
+            equivalencia = parseFloat((gasto / puntos).toFixed(2));
+        }
+
+        const control = this.reglaForm.get('equivalenciaPuntos');
+        if (control?.value !== equivalencia) {
+            control?.setValue(equivalencia, { emitEvent: false });
+        }
+    });
     
     this.recompensaForm.get('tipoDescuento')?.valueChanges
       .pipe(distinctUntilChanged())
@@ -104,7 +121,6 @@ export default class ReglasPuntosComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
 
-    // 1. Regla Activa
     this.reglaPuntosService.getReglaActiva().subscribe({
       next: (data) => {
         this.reglaActiva = data;
@@ -113,7 +129,6 @@ export default class ReglasPuntosComponent implements OnInit {
             descripcion: data.descripcion,
             montoGasto: data.montoGasto,
             puntosGanados: data.puntosGanados,
-            equivalenciaPuntos: data.equivalenciaPuntos || 1,
             caducidadPuntosMeses: data.caducidadPuntosMeses
           });
         }
@@ -130,13 +145,11 @@ export default class ReglasPuntosComponent implements OnInit {
       }
     });
 
-    // 2. Historial
     this.reglaPuntosService.listarReglas().subscribe({
         next: (data) => this.historialReglas = data.filter(r => r.estadoRegla !== 'ACTIVA'),
         error: () => console.warn('Error historial')
     });
 
-    // 3. Recompensas (INDEPENDIENTES)
     this.recompensaService.listarTodas().subscribe({
         next: (data) => {
             this.listaRecompensas = data;
@@ -155,7 +168,9 @@ export default class ReglasPuntosComponent implements OnInit {
 
     this.isSubmitting = true;
     
-    const formValue = this.reglaForm.value;
+    // ✅ IMPORTANTE: getRawValue() incluye campos disabled
+    const formValue = this.reglaForm.getRawValue();
+    
     const nuevaReglaDTO: ReglaPuntosDTO = { 
       descripcion: formValue.descripcion,
       montoGasto: formValue.montoGasto,
@@ -168,7 +183,7 @@ export default class ReglasPuntosComponent implements OnInit {
       next: () => {
         mostrarToast('¡Nueva regla activada!', 'success');
         this.isSubmitting = false;
-        this.reglaForm.reset({ montoGasto: 1000, puntosGanados: 100, equivalenciaPuntos: 1, caducidadPuntosMeses: 12 });
+        this.reglaForm.reset({ montoGasto: 1000, puntosGanados: 100, equivalenciaPuntos: 10, caducidadPuntosMeses: 12 });
         this.cargarDatos(); 
       },
       error: (err) => { 
@@ -247,7 +262,6 @@ export default class ReglasPuntosComponent implements OnInit {
 
     const recompensaData = this.recompensaForm.getRawValue() as RecompensaDTO;
     
-    
     if (this.aplicarA === 'TODO' || recompensaData.tipoDescuento === TipoDescuento.FIJO) {
         recompensaData.categoriaId = null; 
     }
@@ -261,7 +275,7 @@ export default class ReglasPuntosComponent implements OnInit {
         mostrarToast(`Recompensa ${this.esEdicionRecompensa ? 'actualizada' : 'creada'}`, 'success');
         this.isSubmittingRecompensa = false;
         this.cerrarModalRecompensa();
-        this.cargarDatos(); // Recarga la lista independiente
+        this.cargarDatos(); 
       },
       error: (err: HttpErrorResponse) => {
         this.isSubmittingRecompensa = false;

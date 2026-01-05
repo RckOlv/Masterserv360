@@ -20,6 +20,7 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -38,6 +39,8 @@ public class ProcesoAutomaticoService {
     private final ItemCotizacionRepository itemCotizacionRepository;
     private final WhatsappService whatsappService;
     private final PedidoRepository pedidoRepository;
+    private final MovimientoPuntosRepository movimientoRepository;
+    private final CuentaPuntosRepository cuentaRepository;
 
     /**
      * 🟢 TAREA 1: Generar pedidos automáticos (AGRUPADO POR PROVEEDOR).
@@ -47,11 +50,8 @@ public class ProcesoAutomaticoService {
     public void generarPrePedidosAgrupados() {
         logger.info("⏰ [AUTO] Iniciando ciclo de reabastecimiento...");
 
-        // PASO 1: Operación Transaccional (Rápida - Solo DB)
         List<Cotizacion> cotizacionesParaNotificar = crearCotizacionesEnTransaccion();
 
-        // PASO 2: Operación de Red (Lenta - Envío de Emails)
-        // Se hace fuera de la transacción para no bloquear la conexión a la BD mientras se envían correos.
         if (!cotizacionesParaNotificar.isEmpty()) {
             logger.info("📨 Iniciando envío de {} solicitudes agrupadas...", cotizacionesParaNotificar.size());
             for (Cotizacion cotizacion : cotizacionesParaNotificar) {
@@ -62,19 +62,14 @@ public class ProcesoAutomaticoService {
         }
     }
 
-    /**
-     * Método transaccional HELPER: Solo interactúa con la Base de Datos.
-     */
     @Transactional
     protected List<Cotizacion> crearCotizacionesEnTransaccion() {
-        // Buscamos productos con stock bajo (Asegúrate de tener este @Query en el Repo)
         List<Producto> productosFaltantes = productoRepository.findProductosConStockBajo(); 
 
         if (productosFaltantes.isEmpty()) return Collections.emptyList();
 
         List<Proveedor> proveedoresActivos = proveedorRepository.findByEstado(EstadoUsuario.ACTIVO);
         
-        // CORRECCIÓN AQUI: Eliminado el código duplicado y la llave abierta
         if (proveedoresActivos.isEmpty()) {
             logger.warn("⚠️ No hay proveedores activos para reponer stock.");
             return Collections.emptyList();
@@ -86,10 +81,7 @@ public class ProcesoAutomaticoService {
             List<Producto> productosParaEsteProveedor = new ArrayList<>();
 
             for (Producto p : productosFaltantes) {
-                // A. ¿Vende esta categoría?
                 if (proveedorVendeCategoria(proveedor, p.getCategoria())) {
-                    
-                    // B. ¿Ya se pidió? (Evitamos duplicados)
                     boolean yaPedido = itemCotizacionRepository.existePedidoActivo(
                         p, proveedor, 
                         Arrays.asList(EstadoCotizacion.PENDIENTE_PROVEEDOR, EstadoCotizacion.RECIBIDA, EstadoCotizacion.CONFIRMADA_ADMIN)
@@ -101,7 +93,6 @@ public class ProcesoAutomaticoService {
                 }
             }
 
-            // C. Si hay productos, creamos UNA cotización agrupada
             if (!productosParaEsteProveedor.isEmpty()) {
                 Cotizacion nueva = guardarCotizacion(proveedor, productosParaEsteProveedor);
                 nuevasCotizaciones.add(nueva);
@@ -112,14 +103,12 @@ public class ProcesoAutomaticoService {
         return nuevasCotizaciones;
     }
 
-    // Helper privado para guardar en BD
-    // Helper privado para guardar en BD
     private Cotizacion guardarCotizacion(Proveedor proveedor, List<Producto> productos) {
         Cotizacion cotizacion = new Cotizacion();
         cotizacion.setProveedor(proveedor);
         cotizacion.setEstado(EstadoCotizacion.PENDIENTE_PROVEEDOR);
         cotizacion.setToken(UUID.randomUUID().toString());
-        cotizacion.setFechaCreacion(java.time.LocalDateTime.now()); 
+        cotizacion.setFechaCreacion(LocalDateTime.now()); 
 
         Set<ItemCotizacion> items = new HashSet<>();
         for (Producto producto : productos) {
@@ -137,13 +126,12 @@ public class ProcesoAutomaticoService {
         cotizacion.setItems(items);
         return cotizacionRepository.save(cotizacion);
     }
-    // Helper para enviar email (Sin Transactional)
+
     private void notificarProveedor(Cotizacion cotizacion) {
         Proveedor proveedor = cotizacion.getProveedor();
         if (proveedor.getEmail() == null || proveedor.getEmail().isBlank()) return;
 
         try {
-            // Ajusta la URL a tu dominio real o variable de entorno
             String linkOferta = "https://masterserv360.vercel.app/oferta/" + cotizacion.getToken();
 
             Context context = new Context();
@@ -221,7 +209,6 @@ public class ProcesoAutomaticoService {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleStockActualizado(StockActualizadoEvent event) {
         if (event.stockNuevo() <= 0) return;
-        
         procesarListaEspera(event.productoId());
     }
 
@@ -256,6 +243,63 @@ public class ProcesoAutomaticoService {
             }
         }
         listaEsperaRepository.saveAll(esperas);
+    }
+
+    /**
+     * 🟢 TAREA 4: EXPIRACIÓN DE PUNTOS
+     * Ejecución: 03:00 AM diario.
+     */
+    @Scheduled(cron = "0 0 3 * * ?") 
+    @Transactional
+    public void procesarVencimientoPuntos() {
+        logger.info("⏳ [AUTO] Iniciando verificación de puntos vencidos...");
+        
+        LocalDateTime ahora = LocalDateTime.now();
+
+        // 1. Buscar movimientos GANADO cuya fecha de caducidad ya pasó
+        List<MovimientoPuntos> candidatosVencidos = movimientoRepository
+            .findByFechaCaducidadPuntosBeforeAndTipoMovimiento(ahora, TipoMovimientoPuntos.GANADO);
+
+        int procesados = 0;
+
+        for (MovimientoPuntos movOriginal : candidatosVencidos) {
+            
+            // 2. Verificar si ya expiraron anteriormente o fueron revertidos
+            boolean yaExpirado = movimientoRepository.existsByVentaAndTipoMovimiento(movOriginal.getVenta(), TipoMovimientoPuntos.EXPIRADO);
+            boolean yaRevertido = movimientoRepository.existsByVentaAndTipoMovimiento(movOriginal.getVenta(), TipoMovimientoPuntos.REVERSION);
+
+            if (!yaExpirado && !yaRevertido) {
+                CuentaPuntos cuenta = movOriginal.getCuentaPuntos();
+                int puntosAVencer = movOriginal.getPuntos();
+                
+                if (cuenta.getSaldoPuntos() > 0) {
+                    // Ajuste: No dejar saldo negativo
+                    int puntosRealesAQuitar = Math.min(cuenta.getSaldoPuntos(), puntosAVencer);
+                    
+                    if (puntosRealesAQuitar > 0) {
+                        MovimientoPuntos expiracion = new MovimientoPuntos();
+                        expiracion.setCuentaPuntos(cuenta);
+                        expiracion.setVenta(movOriginal.getVenta()); 
+                        expiracion.setPuntos(-puntosRealesAQuitar); 
+                        expiracion.setTipoMovimiento(TipoMovimientoPuntos.EXPIRADO);
+                        expiracion.setDescripcion("Vencimiento de puntos (Origen: Venta #" + movOriginal.getVenta().getId() + ")");
+                        
+                        cuenta.setSaldoPuntos(cuenta.getSaldoPuntos() - puntosRealesAQuitar);
+                        
+                        movimientoRepository.save(expiracion);
+                        cuentaRepository.save(cuenta);
+                        
+                        procesados++;
+                    }
+                }
+            }
+        }
+        
+        if (procesados > 0) {
+            logger.info("✅ [AUTO] Puntos expirados en {} ventas antiguas.", procesados);
+        } else {
+            logger.info("ℹ️ [AUTO] No hubo puntos para expirar hoy.");
+        }
     }
 
     private boolean proveedorVendeCategoria(Proveedor proveedor, Categoria categoria) {

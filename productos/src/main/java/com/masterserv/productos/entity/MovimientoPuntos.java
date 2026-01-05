@@ -15,35 +15,23 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString // ✅ Se eliminó el parámetro 'exclude'
-public class MovimientoPuntos extends AuditableEntity { // Hereda fechaCreacion/fechaModificacion
+@ToString 
+public class MovimientoPuntos extends AuditableEntity { 
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Puntos que ingresan (positivo) o salen (negativo).
-     */
     @Column(nullable = false)
     private Integer puntos;
 
-    /**
-     * Tipo de transacción: GANADO, CANJEADO, EXPIRADO, AJUSTE.
-     */
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_movimiento", nullable = false, length = 50)
     private TipoMovimientoPuntos tipoMovimiento;
 
-    /**
-     * Fecha en que caducarán estos puntos específicos (si la regla lo define).
-     */
     @Column(name = "fecha_caducidad_puntos")
     private LocalDateTime fechaCaducidadPuntos;
 
-    /**
-     * Descripción o referencia del movimiento.
-     */
     @Column(length = 255)
     private String descripcion;
 
@@ -57,7 +45,7 @@ public class MovimientoPuntos extends AuditableEntity { // Hereda fechaCreacion/
 
     // FK a la Venta que generó los puntos
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "venta_id") // No es nullable, ya que no todos los movimientos son por venta (ej. ajuste)
-    @ToString.Exclude // ✅ Correcto uso del nuevo estilo
+    @JoinColumn(name = "venta_id") 
+    @ToString.Exclude 
     private Venta venta;
 }
