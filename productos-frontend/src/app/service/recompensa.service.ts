@@ -10,9 +10,18 @@ import { RecompensaDTO } from '../models/recompensa.model';
 export class RecompensaService {
 
   private http = inject(HttpClient);
-  private apiUrl = `${API_URL}/recompensas`; // (Necesitaremos crear este Controller en el Backend)
+  // Asegúrate que API_URL termine en /api o ajusta aquí según tu backend
+  private apiUrl = `${API_URL}/recompensas`; 
 
-  // (Por ahora solo definimos los métodos, el backend lo hacemos después)
+  // Para el Admin (Panel de Gestión)
+  listarTodas(): Observable<RecompensaDTO[]> {
+    return this.http.get<RecompensaDTO[]>(this.apiUrl);
+  }
+
+  // Para el Cliente (Catálogo de Canje)
+  listarDisponibles(): Observable<RecompensaDTO[]> {
+    return this.http.get<RecompensaDTO[]>(`${this.apiUrl}/disponibles`);
+  }
 
   crear(recompensa: RecompensaDTO): Observable<RecompensaDTO> {
     return this.http.post<RecompensaDTO>(this.apiUrl, recompensa);
@@ -25,7 +34,4 @@ export class RecompensaService {
   eliminar(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
-  
-  // (No necesitamos un 'listar' porque las recompensas vendrán
-  // anidadas dentro de la ReglaPuntosDTO)
 }

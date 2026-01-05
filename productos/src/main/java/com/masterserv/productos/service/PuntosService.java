@@ -217,9 +217,9 @@ public class PuntosService {
     }
     
     
-    /**
+   /**
      * Obtiene el saldo de puntos y su equivalencia en dinero para un cliente específico.
-     * También incluye la lista de recompensas disponibles de la regla activa.
+     * También incluye la lista de recompensas disponibles (GLOBALES).
      */
     @Transactional(readOnly = true) 
     public SaldoPuntosDTO getSaldoByEmail(String clienteEmail) {
@@ -232,48 +232,46 @@ public class PuntosService {
             saldoDTO.setSaldoPuntos(0);
             saldoDTO.setValorMonetario(BigDecimal.ZERO);
             saldoDTO.setEquivalenciaActual("N/A");
-            saldoDTO.setRecompensasDisponibles(new ArrayList<>()); // Lista vacía
+            saldoDTO.setRecompensasDisponibles(new ArrayList<>()); 
             return saldoDTO;
         }
         
         CuentaPuntos cuenta = cuentaOpt.get();
         saldoDTO.setSaldoPuntos(cuenta.getSaldoPuntos());
         
-        // 2. Buscar la regla activa
+        // 2. Buscar la regla activa (SOLO para calcular el valor monetario)
         Optional<ReglaPuntos> reglaOpt = reglaPuntosService.getReglaActiva();
         
-        if (reglaOpt.isEmpty()) {
-            saldoDTO.setValorMonetario(BigDecimal.ZERO);
-            saldoDTO.setEquivalenciaActual("Equivalencia no disponible");
-            saldoDTO.setRecompensasDisponibles(new ArrayList<>());
-            return saldoDTO;
-        }
-        
-        ReglaPuntos regla = reglaOpt.get();
-        
-        // 3. Calcular valor monetario (informativo) usando la equivalencia (si existe)
-        if (regla.getEquivalenciaPuntos() != null && regla.getEquivalenciaPuntos().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal valorMonetario = regla.getEquivalenciaPuntos()
-                                            .multiply(new BigDecimal(cuenta.getSaldoPuntos()));
-            valorMonetario = valorMonetario.setScale(2, RoundingMode.HALF_UP);
-            saldoDTO.setValorMonetario(valorMonetario);
-            
-            String equivalenciaStr = String.format("1 Punto = $%.2f ARS", regla.getEquivalenciaPuntos());
-            saldoDTO.setEquivalenciaActual(equivalenciaStr);
+        if (reglaOpt.isPresent()) {
+            ReglaPuntos regla = reglaOpt.get();
+            if (regla.getEquivalenciaPuntos() != null && regla.getEquivalenciaPuntos().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal valorMonetario = regla.getEquivalenciaPuntos()
+                        .multiply(new BigDecimal(cuenta.getSaldoPuntos()));
+                valorMonetario = valorMonetario.setScale(2, RoundingMode.HALF_UP);
+                saldoDTO.setValorMonetario(valorMonetario);
+                
+                String equivalenciaStr = String.format("1 Punto = $%.2f ARS", regla.getEquivalenciaPuntos());
+                saldoDTO.setEquivalenciaActual(equivalenciaStr);
+            } else {
+                saldoDTO.setValorMonetario(BigDecimal.ZERO);
+                saldoDTO.setEquivalenciaActual("Ver catálogo de canjes");
+            }
         } else {
-             saldoDTO.setValorMonetario(BigDecimal.ZERO);
-             saldoDTO.setEquivalenciaActual("Ver catálogo de canjes");
+            saldoDTO.setValorMonetario(BigDecimal.ZERO);
+            saldoDTO.setEquivalenciaActual("Sin regla activa");
         }
 
-        // 4. Cargar y convertir las recompensas disponibles
-        if (regla.getRecompensas() != null && !regla.getRecompensas().isEmpty()) {
-            List<RecompensaDTO> recompensasDTO = regla.getRecompensas().stream()
+        // 3. Cargar recompensas (INDEPENDIENTE DE LA REGLA)
+        // Buscamos todas las que tengan stock y estén activas
+        List<Recompensa> recompensasActivas = recompensaRepository.findAll().stream()
+                .filter(r -> Boolean.TRUE.equals(r.getActivo()) && r.getStock() > 0)
+                .collect(Collectors.toList());
+
+        List<RecompensaDTO> recompensasDTO = recompensasActivas.stream()
                 .map(recompensaMapper::toDto)
                 .collect(Collectors.toList());
-            saldoDTO.setRecompensasDisponibles(recompensasDTO);
-        } else {
-            saldoDTO.setRecompensasDisponibles(new ArrayList<>());
-        }
+        
+        saldoDTO.setRecompensasDisponibles(recompensasDTO);
 
         return saldoDTO;
     }

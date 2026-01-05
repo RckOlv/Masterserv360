@@ -12,7 +12,6 @@ public interface RecompensaMapper {
     // --- MENTOR: CORRECCIÓN DEL MAPPEO ---
     // Forzamos la extracción de ID y Nombre de la categoría
     @Mappings({
-        @Mapping(source = "reglaPuntos.id", target = "reglaPuntosId"),
         @Mapping(source = "categoria.id", target = "categoriaId"),
         @Mapping(source = "categoria.nombre", target = "categoriaNombre")
     })
@@ -20,9 +19,7 @@ public interface RecompensaMapper {
 
     @Mappings({
         @Mapping(target = "id", ignore = true),
-        @Mapping(target = "reglaPuntos", source = "reglaPuntosId", qualifiedByName = "idToReglaPuntos"),
         @Mapping(target = "categoria", source = "categoriaId", qualifiedByName = "idToCategoria"),
-        // El stock viaja directo, no hace falta mapearlo explícitamente si se llaman igual
         @Mapping(target = "stock", source = "stock") 
     })
     Recompensa toEntity(RecompensaDTO dto);

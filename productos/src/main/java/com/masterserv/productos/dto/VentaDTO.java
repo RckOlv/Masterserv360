@@ -22,8 +22,7 @@ public class VentaDTO {
     private Long clienteId;
     private String clienteNombre; 
     
-    // --- AQUÍ ESTABA EL FALTANTE ---
-    private Long vendedorId;      // <--- FALTABA ESTE CAMPO
+    private Long vendedorId;     
     private String vendedorNombre;
     // -------------------------------
     

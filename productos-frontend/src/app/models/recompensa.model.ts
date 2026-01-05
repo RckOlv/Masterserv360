@@ -5,13 +5,10 @@ export interface RecompensaDTO {
   descripcion: string;
   puntosRequeridos: number;
   tipoDescuento: TipoDescuento;
-  valor: number; 
-  
-  // --- MENTOR: AGREGADO ---
+  valor: number;
   stock: number;
-  // ------------------------
-
-  reglaPuntosId?: number; 
-  categoriaId?: number | null; 
-  categoriaNombre?: string; 
+  
+  activo?: boolean;
+  categoriaId?: number | null;
+  categoriaNombre?: string;
 }

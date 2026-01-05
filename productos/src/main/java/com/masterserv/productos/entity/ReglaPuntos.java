@@ -21,7 +21,7 @@ import java.util.HashSet; // <-- Mentor: Importar HashSet
 @NoArgsConstructor
 @AllArgsConstructor
 @AttributeOverride(name = "fechaCreacion", column = @Column(name = "fecha_inicio_vigencia"))
-@ToString(exclude = "recompensas") // <-- Mentor: Añadido para evitar bucles
+@ToString 
 public class ReglaPuntos extends AuditableEntity { 
 
     @Id
@@ -37,17 +37,9 @@ public class ReglaPuntos extends AuditableEntity {
     @Column(name = "puntos_ganados", nullable = false)
     private Integer puntosGanados;
 
-    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
     // Este campo ya no define el canje, solo el valor informativo
     @Column(name = "equivalencia_puntos", nullable = true, precision = 10, scale = 2)
     private BigDecimal equivalenciaPuntos; // Se vuelve 'nullable' (opcional)
-
-    // Nueva relación: Una regla tiene muchas recompensas
-    // (CascadeType.ALL significa que si guardas/borras una Regla, se guardan/borran sus recompensas)
-    @OneToMany(mappedBy = "reglaPuntos", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @JsonManagedReference
-    private Set<Recompensa> recompensas = new HashSet<>();
-    // --- Mentor: FIN DE LA MODIFICACIÓN ---
 
     @Column(name = "estado_regla", length = 20, nullable = false)
     private String estadoRegla;

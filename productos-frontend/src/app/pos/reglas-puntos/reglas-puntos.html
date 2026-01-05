@@ -17,8 +17,7 @@
         </div>
         <div class="card-body masterserv-card-body">
           <form [formGroup]="reglaForm" (ngSubmit)="onSubmitRegla()">
-            
-            <div class="row g-3">
+             <div class="row g-3">
               <div class="col-12">
                 <label for="descripcion" class="form-label masterserv-label">Descripción de la Regla <span class="text-danger">*</span></label>
                 <input type="text" id="descripcion" class="form-control masterserv-input"
@@ -27,7 +26,6 @@
                        [ngClass]="{ 'is-invalid': fRegla['descripcion'].invalid && fRegla['descripcion'].touched }">
                 <div class="invalid-feedback">Requerido (mín 5 letras).</div>
               </div>
-              
               <div class="col-sm-6">
                 <label for="montoGasto" class="form-label masterserv-label">Por cada (ARS) <span class="text-danger">*</span></label>
                 <div class="input-group">
@@ -36,11 +34,7 @@
                          formControlName="montoGasto" min="1" step="50"
                          [ngClass]="{ 'is-invalid': fRegla['montoGasto'].invalid && fRegla['montoGasto'].touched }">
                 </div>
-                <div class="invalid-feedback d-block" *ngIf="fRegla['montoGasto'].invalid && fRegla['montoGasto'].touched">
-                    Debe ser mayor a 0.
-                </div>
               </div>
-
               <div class="col-sm-6">
                 <label for="puntosGanados" class="form-label masterserv-label">Se ganan (Puntos) <span class="text-danger">*</span></label>
                  <div class="input-group">
@@ -49,11 +43,7 @@
                           [ngClass]="{ 'is-invalid': fRegla['puntosGanados'].invalid && fRegla['puntosGanados'].touched }">
                    <span class="input-group-text masterserv-input"><i class="bi bi-star-fill"></i></span>
                  </div>
-                 <div class="invalid-feedback d-block" *ngIf="fRegla['puntosGanados'].invalid && fRegla['puntosGanados'].touched">
-                    Debe ser mayor a 0.
-                 </div>
               </div>
-              
               <div class="col-sm-6">
                   <label for="caducidadPuntosMeses" class="form-label masterserv-label">Caducidad (Meses) <span class="text-danger">*</span></label>
                   <div class="input-group">
@@ -62,11 +52,7 @@
                              [ngClass]="{ 'is-invalid': fRegla['caducidadPuntosMeses'].invalid && fRegla['caducidadPuntosMeses'].touched }">
                       <span class="input-group-text masterserv-input"><i class="bi bi-calendar-x"></i></span>
                   </div>
-                  <div class="invalid-feedback d-block" *ngIf="fRegla['caducidadPuntosMeses'].invalid && fRegla['caducidadPuntosMeses'].touched">
-                      Mínimo 1 mes.
-                  </div>
               </div>
-
                <div class="col-sm-6">
                 <label for="equivalenciaPuntos" class="form-label masterserv-label">1 Punto = (ARS) (Informativo)</label>
                 <div class="input-group">
@@ -76,12 +62,10 @@
                 </div>
               </div>
             </div>
-
             <hr class="my-4 border-metal">
             <button type="submit" class="btn masterserv-btn-primary w-100" [disabled]="isSubmitting || reglaForm.invalid">
               <span *ngIf="!isSubmitting">Guardar y Activar Nueva Regla</span>
-              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-              <span *ngIf="isSubmitting"> Guardando...</span>
+              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm" role="status"></span>
             </button>
           </form>
         </div>
@@ -100,22 +84,12 @@
           </div>
           
           <div *ngIf="reglaActiva as regla">
-            <h5 class="text-center masterserv-name mb-3">
-              {{ regla.descripcion }}
-            </h5>
+            <h5 class="text-center masterserv-name mb-3">{{ regla.descripcion }}</h5>
             <h3 class="text-center text-success-light mb-3">
-              {{ regla.puntosGanados }} Puntos
-              <i class="bi bi-arrow-right-short"></i>
-              {{ regla.montoGasto | currency:'ARS':'symbol':'1.0-0' }}
+              {{ regla.puntosGanados }} Puntos <i class="bi bi-arrow-right-short"></i> {{ regla.montoGasto | currency:'ARS':'symbol':'1.0-0' }}
             </h3>
-            
-            <p class="text-center h5 mb-3 text-metal" *ngIf="regla.equivalenciaPuntos">
-              (1 Punto = {{ regla.equivalenciaPuntos | currency:'ARS':'symbol':'1.2-2' }})
-            </p>
-            <p class="text-metal">
-              <strong>Vigente desde:</strong> {{ regla.fechaInicioVigencia | date:'dd/MM/yyyy HH:mm' }}
-              <br>
-              <strong>Caducidad de puntos:</strong> {{ regla.caducidadPuntosMeses }} meses.
+            <p class="text-metal text-center">
+                Vigente desde: {{ regla.fechaInicioVigencia | date:'dd/MM/yyyy HH:mm' }}
             </p>
           </div>
         </div>
@@ -123,20 +97,15 @@
 
       <div class="card masterserv-card shadow-sm mb-3" *appHasPermission="'ROLES_MANAGE'">
         <div class="card-header masterserv-card-header-success d-flex justify-content-between align-items-center">
-          <h5 class="masterserv-subtitle mb-0">Recompensas de Canje</h5>
-          <button class="btn btn-sm btn-outline-light" (click)="abrirModalNuevaRecompensa()" [disabled]="!reglaActiva">
-            <i class="bi bi-plus-lg"></i> Nueva Recompensa
+          <h5 class="masterserv-subtitle mb-0">Catálogo de Recompensas</h5>
+          <button class="btn btn-sm btn-outline-light" (click)="abrirModalNuevaRecompensa()">
+            <i class="bi bi-plus-lg"></i> Nueva
           </button>
         </div>
         <div class="card-body masterserv-card-body">
-          <div *ngIf="!reglaActiva" class="alert masterserv-alert-info text-center">
-            Crea una Regla de Puntos a la izquierda para poder añadir recompensas.
-          </div>
           
-          <div *ngIf="reglaActiva as regla">
-          
-            <ul class="list-group list-group-flush" *ngIf="regla.recompensas && regla.recompensas.length > 0">
-              <li *ngFor="let rec of regla.recompensas" class="list-group-item">
+          <ul class="list-group list-group-flush" *ngIf="listaRecompensas.length > 0">
+              <li *ngFor="let rec of listaRecompensas" class="list-group-item">
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
                     <strong class="d-block masterserv-name">{{ rec.descripcion }}</strong>
@@ -152,9 +121,6 @@
                     <span *ngIf="rec.categoriaNombre" class="badge masterserv-badge masterserv-badge-warning ms-1">
                       {{ rec.categoriaNombre }}
                     </span>
-                    <span *ngIf="!rec.categoriaNombre && rec.tipoDescuento === tipoDescuentoEnum.PORCENTAJE" class="badge bg-secondary ms-1">
-                      Todo
-                    </span>
                   </div>
                   <div class="btn-group btn-group-sm">
                     <button class="btn masterserv-btn-outline-primary" (click)="abrirModalEditarRecompensa(rec)">
@@ -166,30 +132,25 @@
                   </div>
                 </div>
               </li>
-            </ul>
+          </ul>
             
-            <div *ngIf="!regla.recompensas || regla.recompensas.length === 0" class="text-center text-metal">
-              No hay recompensas creadas para esta regla.
-            </div>
+          <div *ngIf="listaRecompensas.length === 0" class="text-center text-metal mt-3">
+             No hay recompensas creadas en el catálogo.
           </div>
         </div>
       </div>
 
       <div class="card masterserv-card shadow-sm">
         <div class="card-header masterserv-card-header">
-          <h5 class="masterserv-subtitle mb-0">Historial de Reglas (Caducadas)</h5>
+          <h5 class="masterserv-subtitle mb-0">Historial de Reglas</h5>
         </div>
         <div class="card-body masterserv-card-body historial-body">
-           <div *ngIf="!historialReglas || historialReglas.length === 0" class="text-center text-metal">
-             No hay reglas anteriores.
-           </div>
            <ul class="list-group list-group-flush" *ngIf="historialReglas.length > 0">
              <li *ngFor="let regla of historialReglas" class="list-group-item">
                <div class="d-flex justify-content-between align-items-center">
                  <div>
                    <strong class="d-block masterserv-name">{{ regla.descripcion }}</strong>
                    <span class="text-metal">{{ regla.puntosGanados }} pts = {{ regla.montoGasto | currency:'ARS':'symbol':'1.0-0' }}</span>
-                   <span class="badge masterserv-badge bg-dark ms-2">{{ regla.estadoRegla }}</span>
                  </div>
                  <small class="text-metal">
                    {{ regla.fechaInicioVigencia | date:'dd/MM/yy' }}
@@ -199,9 +160,8 @@
            </ul>
         </div>
       </div>
-
-    </div> 
-  </div> 
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="recompensaModal" tabindex="-1" aria-labelledby="recompensaModalLabel" aria-hidden="true">

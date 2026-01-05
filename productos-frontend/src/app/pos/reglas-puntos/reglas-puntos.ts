@@ -4,7 +4,6 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { HttpErrorResponse } from '@angular/common/http';
 import { distinctUntilChanged } from 'rxjs/operators'; 
 
-// Modelos y Servicios
 import { ReglaPuntosService } from '../../service/regla-puntos.service';
 import { CategoriaService } from '../../service/categoria.service'; 
 import { RecompensaService } from '../../service/recompensa.service'; 
@@ -12,8 +11,6 @@ import { ReglaPuntosDTO } from '../../models/regla-puntos.model';
 import { CategoriaDTO } from '../../models/categoria.model'; 
 import { RecompensaDTO } from '../../models/recompensa.model'; 
 import { TipoDescuento } from '../../models/enums/tipo-descuento.enum'; 
-
-// Utils
 import { mostrarToast } from '../../utils/toast';
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
 
@@ -22,25 +19,22 @@ declare var bootstrap: any;
 @Component({
   selector: 'app-reglas-puntos',
   standalone: true,
-  imports: [
-    CommonModule, 
-    ReactiveFormsModule,
-    HasPermissionDirective
-  ], 
+  imports: [CommonModule, ReactiveFormsModule, HasPermissionDirective], 
   templateUrl: './reglas-puntos.html',
   styleUrls: ['./reglas-puntos.css']
 })
 export default class ReglasPuntosComponent implements OnInit {
 
-  // --- Inyección de Dependencias ---
   private reglaPuntosService = inject(ReglaPuntosService);
   private recompensaService = inject(RecompensaService); 
   private categoriaService = inject(CategoriaService); 
   private fb = inject(FormBuilder);
 
-  // --- Estado del Componente ---
   public reglaActiva: ReglaPuntosDTO | null = null;
   public historialReglas: ReglaPuntosDTO[] = [];
+  
+  public listaRecompensas: RecompensaDTO[] = []; 
+  
   public categorias: CategoriaDTO[] = []; 
   public isLoading = true; 
   public isSubmitting = false; 
@@ -49,18 +43,15 @@ export default class ReglasPuntosComponent implements OnInit {
   public modalErrorMessage: string | null = null;
   public tipoDescuentoEnum = TipoDescuento; 
 
-  // --- Formularios ---
   public reglaForm: FormGroup; 
   public recompensaForm: FormGroup; 
   
   private recompensaModal: any; 
   public esEdicionRecompensa = false;
   public recompensaEditandoId: number | null = null;
-
   public aplicarA: 'TODO' | 'CATEGORIA' = 'TODO'; 
 
   constructor() {
-    // MENTOR: Validaciones estrictas para Regla
     this.reglaForm = this.fb.group({
       descripcion: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(100)]],
       montoGasto: [1000, [Validators.required, Validators.min(1)]],
@@ -69,7 +60,6 @@ export default class ReglasPuntosComponent implements OnInit {
       caducidadPuntosMeses: [12, [Validators.required, Validators.min(1), Validators.max(60)]]
     });
 
-    // MENTOR: Validaciones estrictas para Recompensa
     this.recompensaForm = this.fb.group({
       descripcion: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(100)]],
       puntosRequeridos: [null, [Validators.required, Validators.min(1)]],
@@ -93,7 +83,6 @@ export default class ReglasPuntosComponent implements OnInit {
       .pipe(distinctUntilChanged())
       .subscribe(tipo => {
         const categoriaControl = this.recompensaForm.get('categoriaId');
-        
         if (tipo === TipoDescuento.PORCENTAJE) {
           categoriaControl?.enable();
         } else {
@@ -115,6 +104,7 @@ export default class ReglasPuntosComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
 
+    // 1. Regla Activa
     this.reglaPuntosService.getReglaActiva().subscribe({
       next: (data) => {
         this.reglaActiva = data;
@@ -132,20 +122,26 @@ export default class ReglasPuntosComponent implements OnInit {
       error: (err) => {
         if (err.status !== 404) { 
           this.errorMessage = "Error al cargar la regla activa.";
-          if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+          mostrarToast(this.errorMessage!, 'danger');
         } else {
-          console.warn("No se encontró regla activa.");
           this.reglaActiva = null;
         }
         this.isLoading = false;
       }
     });
 
+    // 2. Historial
     this.reglaPuntosService.listarReglas().subscribe({
+        next: (data) => this.historialReglas = data.filter(r => r.estadoRegla !== 'ACTIVA'),
+        error: () => console.warn('Error historial')
+    });
+
+    // 3. Recompensas (INDEPENDIENTES)
+    this.recompensaService.listarTodas().subscribe({
         next: (data) => {
-          this.historialReglas = data.filter(r => r.estadoRegla !== 'ACTIVA');
+            this.listaRecompensas = data;
         },
-        error: () => mostrarToast('Error al cargar historial de reglas.', 'warning')
+        error: () => mostrarToast('Error al cargar recompensas.', 'warning')
     });
   }
 
@@ -155,13 +151,9 @@ export default class ReglasPuntosComponent implements OnInit {
       mostrarToast('Revise los campos obligatorios de la regla.', 'warning');
       return;
     }
-
-    if (!confirm("¿Está seguro de crear esta nueva regla? La regla activa anterior (si existe) será marcada como CADUCADA.")) {
-      return;
-    }
+    if (!confirm("¿Crear nueva regla? La anterior será caducada.")) return;
 
     this.isSubmitting = true;
-    this.errorMessage = null;
     
     const formValue = this.reglaForm.value;
     const nuevaReglaDTO: ReglaPuntosDTO = { 
@@ -169,36 +161,19 @@ export default class ReglasPuntosComponent implements OnInit {
       montoGasto: formValue.montoGasto,
       puntosGanados: formValue.puntosGanados,
       equivalenciaPuntos: formValue.equivalenciaPuntos, 
-      caducidadPuntosMeses: formValue.caducidadPuntosMeses,
-      recompensas: this.reglaActiva?.recompensas || [] 
+      caducidadPuntosMeses: formValue.caducidadPuntosMeses
     };
     
     this.reglaPuntosService.crearNuevaReglaActiva(nuevaReglaDTO).subscribe({
-      next: (reglaCreada) => {
-        mostrarToast('¡Nueva regla de puntos activada exitosamente!', 'success');
+      next: () => {
+        mostrarToast('¡Nueva regla activada!', 'success');
         this.isSubmitting = false;
-        this.reglaForm.reset({
-          descripcion: '',
-          montoGasto: 1000,
-          puntosGanados: 100,
-          equivalenciaPuntos: 1,
-          caducidadPuntosMeses: 12
-        });
+        this.reglaForm.reset({ montoGasto: 1000, puntosGanados: 100, equivalenciaPuntos: 1, caducidadPuntosMeses: 12 });
         this.cargarDatos(); 
       },
-      error: (err: HttpErrorResponse) => { 
-        console.error("Error al crear regla:", err);
+      error: (err) => { 
         this.isSubmitting = false;
-        
-        let mensaje = "No se pudo crear la nueva regla. Verifique los datos.";
-        if (err.status === 400 && err.error?.errors && Array.isArray(err.error.errors)) {
-          mensaje = err.error.errors.map((e: any) => e.defaultMessage).join('; ');
-        } else if (err.error?.message) {
-          mensaje = err.error.message;
-        }
-        
-        this.errorMessage = mensaje;
-        if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
+        mostrarToast('Error al crear regla.', 'danger');
       }
     });
   }
@@ -209,9 +184,7 @@ export default class ReglasPuntosComponent implements OnInit {
     this.esEdicionRecompensa = false;
     this.recompensaEditandoId = null;
     this.modalErrorMessage = null;
-    
     this.aplicarA = 'TODO';
-
     this.recompensaForm.reset({
       stock: 10, 
       tipoDescuento: TipoDescuento.FIJO,
@@ -260,28 +233,20 @@ export default class ReglasPuntosComponent implements OnInit {
 
   guardarRecompensa(): void {
     this.recompensaForm.markAllAsTouched();
-
     if (this.recompensaForm.invalid) {
       mostrarToast("Formulario inválido.", "warning");
       return;
     }
-    
-    // MENTOR: Validación extra para categoría obligatoria
     if (this.aplicarA === 'CATEGORIA' && !this.recompensaForm.get('categoriaId')?.value) {
         mostrarToast("Debe seleccionar una categoría.", "warning");
         return;
-    }
-    
-    if (!this.reglaActiva) {
-      this.modalErrorMessage = "No se puede crear una recompensa si no hay una Regla Activa.";
-      return;
     }
 
     this.isSubmittingRecompensa = true;
     this.modalErrorMessage = null;
 
     const recompensaData = this.recompensaForm.getRawValue() as RecompensaDTO;
-    recompensaData.reglaPuntosId = this.reglaActiva.id;
+    
     
     if (this.aplicarA === 'TODO' || recompensaData.tipoDescuento === TipoDescuento.FIJO) {
         recompensaData.categoriaId = null; 
@@ -296,30 +261,23 @@ export default class ReglasPuntosComponent implements OnInit {
         mostrarToast(`Recompensa ${this.esEdicionRecompensa ? 'actualizada' : 'creada'}`, 'success');
         this.isSubmittingRecompensa = false;
         this.cerrarModalRecompensa();
-        this.cargarDatos(); 
+        this.cargarDatos(); // Recarga la lista independiente
       },
       error: (err: HttpErrorResponse) => {
         this.isSubmittingRecompensa = false;
         this.modalErrorMessage = err.error?.message || "Error al guardar la recompensa.";
-        if (this.modalErrorMessage) mostrarToast(this.modalErrorMessage, 'danger');
       }
     });
   }
 
   eliminarRecompensa(id: number): void {
-    if (!confirm("¿Seguro que deseas eliminar esta recompensa?")) return;
-
-    this.isLoading = true;
+    if (!confirm("¿Eliminar recompensa?")) return;
     this.recompensaService.eliminar(id).subscribe({
       next: () => {
-        mostrarToast("Recompensa eliminada.", 'success');
-        this.cargarDatos(); 
+        mostrarToast("Eliminada.", 'success');
+        this.cargarDatos();
       },
-      error: (err: HttpErrorResponse) => {
-        this.isLoading = false;
-        const errorMsg = err.error?.message || "Error al eliminar la recompensa.";
-        mostrarToast(errorMsg, 'danger');
-      }
+      error: () => mostrarToast("Error al eliminar.", 'danger')
     });
   }
 

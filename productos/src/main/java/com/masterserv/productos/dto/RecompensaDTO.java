@@ -38,9 +38,6 @@ public class RecompensaDTO {
     private Integer stock;
     // ------------------------------------
 
-    // ID de la Regla de Puntos a la que pertenece
-    private Long reglaPuntosId;
-
     // Opcional: ID de la categoría a la que aplica
     private Long categoriaId;
 

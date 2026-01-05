@@ -36,8 +36,5 @@ public class ReglaPuntosDTO extends AuditableDTO {
     private Integer caducidadPuntosMeses;
 
     private LocalDateTime fechaInicioVigencia;
-
-    // --- MENTOR: CORRECCIÓN CRÍTICA ---
-    // Usamos el DTO, no la Entidad. Esto obliga a MapStruct a usar RecompensaMapper.
-    private List<RecompensaDTO> recompensas; 
+    
 }
