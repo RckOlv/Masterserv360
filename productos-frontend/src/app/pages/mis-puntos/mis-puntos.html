@@ -31,7 +31,9 @@
            style="background-color: #1e1e1e; border: 1px solid #333;">
         
         <div class="card-header bg-transparent border-bottom-0 pt-4 text-center">
-            <span class="badge bg-warning text-dark mb-2 me-1">{{ reward.tipoDescuento }}</span>
+            <span class="badge bg-warning text-dark mb-2 me-1">
+              {{ reward.tipoDescuento === 'PORCENTAJE' ? (reward.valor + '% OFF') : ('$' + reward.valor + ' OFF') }}
+            </span>
             
             <span *ngIf="reward.stock > 0" class="badge bg-success mb-2">Stock: {{ reward.stock }}</span>
             <span *ngIf="reward.stock === 0" class="badge bg-danger mb-2">AGOTADO</span>

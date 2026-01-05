@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { PuntosService } from '../../service/puntos.service';
 import { CommonModule } from '@angular/common';
-import { SaldoPuntos, Recompensa } from '../../models/saldo-puntos.model';
+import { SaldoPuntos } from '../../models/saldo-puntos.model';
+// ✅ IMPORTAR EL DTO CORRECTO
+import { RecompensaDTO } from '../../models/recompensa.model'; 
 import Swal from 'sweetalert2';
 
 @Component({
@@ -36,7 +38,19 @@ export class MisPuntosComponent implements OnInit {
     });
   }
 
-  confirmarCanje(recompensa: Recompensa) {
+  // ✅ CORRECCIÓN: Cambiamos el tipo a RecompensaDTO
+  confirmarCanje(recompensa: RecompensaDTO) {
+    
+    // ✅ VALIDACIÓN DE SEGURIDAD:
+    // TypeScript sabe que 'id' es opcional en el DTO, así que verificamos que exista.
+    if (!recompensa.id) {
+        console.error("Error: La recompensa seleccionada no tiene ID válido.");
+        return;
+    }
+
+    // Guardamos el ID en una variable para asegurar el tipo 'number'
+    const idRecompensa = recompensa.id;
+
     Swal.fire({
       title: '¿Estás seguro?',
       text: `Vas a canjear "${recompensa.descripcion}" por ${recompensa.puntosRequeridos} puntos.`,
@@ -48,7 +62,8 @@ export class MisPuntosComponent implements OnInit {
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.realizarCanje(recompensa.id);
+        // Ahora pasamos el ID seguro
+        this.realizarCanje(idRecompensa); 
       }
     });
   }
@@ -61,7 +76,6 @@ export class MisPuntosComponent implements OnInit {
           `Tu código es: <b>${response.codigo}</b>. Úsalo en tu próxima compra.`,
           'success'
         );
-        // Recargamos el saldo para ver cómo bajaron los puntos
         this.cargarSaldo();
       },
       error: (err) => {
