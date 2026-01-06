@@ -76,8 +76,7 @@
                             <th class="text-uppercase text-white-50 small">Usuario</th>
                             <th class="text-uppercase text-white-50 small text-center">Acción</th>
                             <th class="text-uppercase text-white-50 small">Entidad</th>
-                            <th class="text-uppercase text-white-50 small">Motivo</th> 
-                            <th class="text-uppercase text-white-50 small">Detalle Técnico</th> 
+                            <th class="text-uppercase text-white-50 small">Detalle del Movimiento</th> 
                             <th class="text-uppercase text-white-50 small text-center">Ver</th> 
                         </tr>
                     </thead>
@@ -100,19 +99,15 @@
                                 <div class="text-white-50 small font-monospace">#{{ log.entidadId }}</div>
                             </td>
                             
-                            <td class="small" style="max-width: 200px;">
-                                <span *ngIf="log.motivo" class="text-warning fw-bold">
-                                    <i class="bi bi-chat-left-quote me-1"></i> {{ log.motivo }}
-                                </span>
-                                <span *ngIf="!log.motivo" class="text-white-50 fst-italic">
-                                    -
-                                </span>
-                            </td>
-
-                            <td class="small text-truncate" style="max-width: 200px;" title="{{ log.detalle }}">
-                                <span class="text-light">
-                                    {{ log.detalle }}
-                                </span>
+                            <td class="small text-white-50">
+                                <div class="text-truncate" style="max-width: 450px;" title="{{ log.detalle }}">
+                                    <span *ngIf="log.detalle.includes('Prod:')" class="text-white">
+                                        {{ log.detalle }}
+                                    </span>
+                                    <span *ngIf="!log.detalle.includes('Prod:')">
+                                        {{ log.detalle }}
+                                    </span>
+                                </div>
                             </td>
 
                             <td class="text-center">
@@ -157,18 +152,13 @@
                         <span class="badge bg-secondary">{{ selectedLog.fecha | date:'dd/MM/yyyy HH:mm:ss' }}</span>
                         <span class="badge" [ngClass]="getBadgeClass(selectedLog.accion)">{{ selectedLog.accion }}</span>
                     </div>
-                    
-                    <div *ngIf="selectedLog.motivo" class="alert alert-dark border-warning text-warning py-2 mb-2">
-                        <strong>Motivo:</strong> {{ selectedLog.motivo }}
-                    </div>
-                    
-                    <p class="mb-0 text-white small"><strong>Detalle técnico:</strong> {{ selectedLog.detalle }}</p>
+                    <p class="mb-0 text-white small">{{ selectedLog.detalle }}</p>
                 </div>
-                
                 <div class="row g-0">
-                   <div class="col-md-6 border-end border-secondary">
+                    <div class="col-md-6 border-end border-secondary">
                         <div class="p-2 text-center bg-dark border-bottom border-secondary text-danger fw-bold"><i class="bi bi-clock-history me-1"></i> ANTES</div>
                         <div class="p-3" style="max-height: 400px; overflow-y: auto;">
+                            <div *ngIf="datosAnteriores.length === 0" class="text-white-50 text-center fst-italic small mt-3">No hay datos anteriores</div>
                             <ul class="list-unstyled mb-0">
                                 <li *ngFor="let item of datosAnteriores; let i = index" class="mb-2 border-bottom border-secondary pb-1">
                                     <small class="text-white-50 d-block">{{ item.key }}</small>
@@ -180,6 +170,7 @@
                     <div class="col-md-6">
                         <div class="p-2 text-center bg-dark border-bottom border-secondary text-success fw-bold"><i class="bi bi-check-circle me-1"></i> DESPUÉS</div>
                         <div class="p-3" style="max-height: 400px; overflow-y: auto;">
+                            <div *ngIf="datosNuevos.length === 0" class="text-white-50 text-center fst-italic small mt-3">Datos eliminados</div>
                             <ul class="list-unstyled mb-0">
                                 <li *ngFor="let item of datosNuevos; let i = index" class="mb-2 border-bottom border-secondary pb-1">
                                     <small class="text-white-50 d-block">{{ item.key }}</small>

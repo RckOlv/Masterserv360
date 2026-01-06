@@ -20,5 +20,4 @@ public class AuditoriaDTO {
     // Nuevos campos
     private String valorAnterior;
     private String valorNuevo;
-    private String motivo;
 }

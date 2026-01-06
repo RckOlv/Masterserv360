@@ -63,46 +63,55 @@ public class MovimientoStockService {
         }
         movimiento.setCantidad(cantidadGuardar);
 
-        // 1. Guardamos el movimiento de stock
+        // 1. Guardamos el movimiento de stock (Tabla específica)
         movimientoStockRepository.save(movimiento);
 
-        // 2. Registramos en Auditoría General (SIN try-catch silencioso)
+        // 2. Registramos en Auditoría General (Tabla genérica)
         registrarEnAuditoriaGeneral(producto, usuario, dto.getTipoMovimiento(), cantidadGuardar, motivoFinal);
     }
 
     private void registrarEnAuditoriaGeneral(Producto producto, Usuario usuario, TipoMovimiento tipo, int cantidad, String motivo) {
-        // NOTA: Eliminamos el try-catch. Si esto falla, queremos que falle todo (@Transactional)
         
         Auditoria audit = new Auditoria();
         audit.setFecha(LocalDateTime.now());
         audit.setUsuario(usuario.getEmail()); 
         
-        audit.setEntidad("Producto (Stock)");
+        audit.setEntidad("Producto"); // Más limpio que "Producto (Stock)"
         audit.setEntidadId(producto.getId().toString());
         audit.setAccion("AJUSTE_STOCK");
         
-        // Validación de longitud para evitar crash por DataTruncation
-        if (motivo != null && motivo.length() > 255) {
-            motivo = motivo.substring(0, 255);
-        }
-        audit.setMotivo(motivo); 
-
-        // --- Detalle Técnico Limpio ---
-        String detalle = String.format("Tipo: %s | Cantidad: %d", tipo, cantidad);
-        if (detalle.length() > 255) {
-            detalle = detalle.substring(0, 255);
-        }
-        audit.setDetalle(detalle);
+        // --- LÓGICA DE DETALLE ENRIQUECIDO ---
         
-        // --- Valores Anterior/Nuevo (Estimado) ---
-        // Asumimos que el producto.getStockActual() aún tiene el valor base
+        // Obtenemos el nombre de la categoría de forma segura (avoid NullPointerException)
+        String nombreCategoria = "Sin Categoría";
+        if (producto.getCategoria() != null) {
+            nombreCategoria = producto.getCategoria().getNombre();
+        }
+
+        // Formato final: "Prod: Aceite (Lubricantes) | AJUSTE: -5 | Motivo: Rotura"
+        String detalleCompleto = String.format("Prod: %s (%s) | %s: %d | Motivo: %s", 
+                producto.getNombre(), 
+                nombreCategoria,
+                tipo,
+                cantidad, 
+                motivo);
+
+        // Recorte de seguridad (Max 255 chars)
+        if (detalleCompleto.length() > 255) {
+            detalleCompleto = detalleCompleto.substring(0, 255);
+        }
+        
+        audit.setDetalle(detalleCompleto); 
+
+        // --- Valores Anterior/Nuevo ---
         int stockAnterior = producto.getStockActual();
+        // Nota: Asumimos que el stock se actualizará después o en paralelo
         int stockNuevo = stockAnterior + cantidad;
 
-        audit.setValorAnterior(String.valueOf(stockAnterior)); 
-        audit.setValorNuevo(String.valueOf(stockNuevo)); 
+        audit.setValorAnterior("Stock: " + stockAnterior); 
+        audit.setValorNuevo("Stock: " + stockNuevo); 
 
-        // Guardamos. Si falla, Spring hará Rollback del stock también.
+        // Guardamos. Si falla, Spring hará Rollback de todo.
         auditoriaRepository.save(audit); 
     }
 }

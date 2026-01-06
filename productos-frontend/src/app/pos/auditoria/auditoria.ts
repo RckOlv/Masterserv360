@@ -24,7 +24,6 @@ export default class AuditoriaListComponent implements OnInit {
   currentPage = 0;
   pageSize = 20;
 
-  // --- FILTROS SIMPLIFICADOS ---
   mostrarFiltros = false;
   filtro: any = {
     accion: '', 
@@ -32,7 +31,6 @@ export default class AuditoriaListComponent implements OnInit {
     fechaDesde: null,
     fechaHasta: null
   };
-  // -----------------------------
 
   selectedLog: Auditoria | null = null;
   datosAnteriores: any[] = [];
@@ -76,12 +74,26 @@ export default class AuditoriaListComponent implements OnInit {
     this.mostrarFiltros = !this.mostrarFiltros;
   }
 
-  // --- MÉTODOS DEL MODAL Y TABLA (Igual que antes) ---
   verDetalles(log: Auditoria) {
     this.selectedLog = log;
     
-    const rawAnteriores = log.valorAnterior ? JSON.parse(log.valorAnterior) : {};
-    const rawNuevos = log.valorNuevo ? JSON.parse(log.valorNuevo) : {};
+    // ✅ CORRECCIÓN: Tipamos explícitamente como 'any' o 'Record<string, any>'
+    // para permitir el acceso por índice [key]
+    let rawAnteriores: any = {};
+    let rawNuevos: any = {};
+
+    try { 
+        rawAnteriores = log.valorAnterior ? JSON.parse(log.valorAnterior) : {}; 
+    } catch (e) { 
+        rawAnteriores = { "Valor": log.valorAnterior }; 
+    } 
+
+    try { 
+        rawNuevos = log.valorNuevo ? JSON.parse(log.valorNuevo) : {}; 
+    } catch (e) { 
+        rawNuevos = { "Valor": log.valorNuevo }; 
+    } 
+
     const allKeys = new Set([...Object.keys(rawAnteriores), ...Object.keys(rawNuevos)]);
 
     this.datosAnteriores = [];
@@ -90,20 +102,19 @@ export default class AuditoriaListComponent implements OnInit {
     allKeys.forEach(key => {
        if (['passwordHash', 'hibernateLazyInitializer', 'handler', 'roles', 'permisos', 'password'].includes(key)) return;
 
+       // Ahora TypeScript ya no se quejará aquí:
        const rawValAntes = rawAnteriores[key];
        const rawValNuevo = rawNuevos[key];
-       const valAntesFmt = rawAnteriores.hasOwnProperty(key) ? this.formatValue(rawValAntes) : null;
-       const valNuevoFmt = rawNuevos.hasOwnProperty(key) ? this.formatValue(rawValNuevo) : null;
-
+       
        this.datosAnteriores.push({
            key: this.formatKey(key),
-           value: valAntesFmt, 
+           value: this.formatValue(rawValAntes), 
            rawValue: rawValAntes
        });
 
        this.datosNuevos.push({
            key: this.formatKey(key),
-           value: valNuevoFmt,
+           value: this.formatValue(rawValNuevo),
            rawValue: rawValNuevo
        });
     });
@@ -117,9 +128,7 @@ export default class AuditoriaListComponent implements OnInit {
   
   esModificado(index: number): boolean {
       if (!this.datosAnteriores[index] || !this.datosNuevos[index]) return true;
-      const valAntes = this.datosAnteriores[index].rawValue;
-      const valNuevo = this.datosNuevos[index].rawValue;
-      return JSON.stringify(valAntes) !== JSON.stringify(valNuevo);
+      return JSON.stringify(this.datosAnteriores[index].rawValue) !== JSON.stringify(this.datosNuevos[index].rawValue);
   }
 
   cerrarModal() {
@@ -130,28 +139,14 @@ export default class AuditoriaListComponent implements OnInit {
  private formatValue(val: any): string {
     if (val === null || val === undefined) return '-';
     if (typeof val === 'boolean') return val ? 'Sí' : 'No';
-
     if (Array.isArray(val)) {
         if (val.length === 0) return 'Ninguno';
         return val.map(item => this.formatValue(item)).join(', ');
     }
-
     if (typeof val === 'object') {
-        // --- AGREGA ESTAS LÍNEAS PARA CUBRIR MÁS CASOS ---
-        if (val.descripcion) return val.descripcion; // <--- Probablemente sea este para TipoDoc
-        if (val.tipo) return val.tipo;
-        if (val.detalle) return val.detalle;
-        // -------------------------------------------------
-
-        if (val.nombre && val.apellido) return `${val.nombre} ${val.apellido}`;
-        if (val.razonSocial) return val.razonSocial;
-        if (val.nombre) return val.nombre;
-        if (val.nombreCorto) return val.nombreCorto;
-        if (val.nombreRol) return val.nombreRol.replace('ROLE_', '');
+        if (val.nombre) return val.nombre; 
         if (val.codigo) return val.codigo;
-        
-        if (val.id) return `#${val.id}`; // Último recurso
-        
+        if (val.id) return `#${val.id}`;
         return JSON.stringify(val);
     }
     return String(val);
@@ -181,6 +176,7 @@ export default class AuditoriaListComponent implements OnInit {
       case 'CREAR': return 'bg-success'; 
       case 'ACTUALIZAR': return 'bg-warning text-dark'; 
       case 'ELIMINAR': return 'bg-danger'; 
+      case 'AJUSTE_STOCK': return 'bg-info text-dark fw-bold'; 
       default: return 'bg-secondary';
     }
   }

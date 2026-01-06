@@ -18,7 +18,6 @@ public class Auditoria {
     private String accion;       
     private String usuario;      
     private LocalDateTime fecha;
-    private String motivo;
     
     @Column(columnDefinition = "TEXT")
     private String detalle; // Resumen corto

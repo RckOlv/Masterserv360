@@ -54,8 +54,7 @@ public class AuditoriaController {
                 a.getFecha(),
                 a.getDetalle(),
                 a.getValorAnterior(),
-                a.getValorNuevo(),
-                a.getMotivo()
+                a.getValorNuevo()
         ));
     }
 }
