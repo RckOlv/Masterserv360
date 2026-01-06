@@ -70,67 +70,56 @@ public class MovimientoStockService {
         registrarEnAuditoriaGeneral(producto, usuario, dto.getTipoMovimiento(), cantidadGuardar, motivoFinal);
     }
 
-    
+
     private void registrarEnAuditoriaGeneral(Producto producto, Usuario usuario, TipoMovimiento tipo, int cantidad, String motivo) {
         
-        System.out.println(">>> [DEBUG] 1. Iniciando registrarEnAuditoriaGeneral para: " + producto.getNombre());
+        System.out.println(">>> [SERVICE] Intentando crear auditoría para: " + producto.getNombre());
 
         try {
             Auditoria audit = new Auditoria();
             audit.setFecha(LocalDateTime.now());
-            
-            // Verificación de nulidad para usuario
-            String emailUsuario = (usuario != null) ? usuario.getEmail() : "sistema@masterserv.com";
-            audit.setUsuario(emailUsuario); 
+            // Aseguramos que usuario no sea null
+            audit.setUsuario(usuario != null ? usuario.getEmail() : "sistema@masterserv.com");
             
             audit.setEntidad("Producto");
             audit.setEntidadId(producto.getId().toString());
-            audit.setAccion("AJUSTE_MANUAL"); // ✅ Esto es lo que buscamos
+            audit.setAccion("AJUSTE_MANUAL"); // Coincide con tu frontend
             
-            // --- LÓGICA DE DETALLE ---
-            String nombreCategoria = "Sin Categoría";
-            if (producto.getCategoria() != null) {
-                nombreCategoria = producto.getCategoria().getNombre();
-            }
-
+            // --- DETALLE ---
+            String nombreCategoria = (producto.getCategoria() != null) ? producto.getCategoria().getNombre() : "Sin Categoría";
+            
             String detalleCompleto = String.format("Prod: %s (%s) | %s: %d | Motivo: %s", 
-                    producto.getNombre(), 
-                    nombreCategoria,
-                    tipo,
-                    cantidad, 
-                    motivo);
+                    producto.getNombre(), nombreCategoria, tipo, cantidad, motivo);
 
-            // Recorte de seguridad extremo (por si acaso)
-            if (detalleCompleto.length() > 250) {
-                detalleCompleto = detalleCompleto.substring(0, 250);
-            }
+            // Recorte para evitar errores de base de datos
+            if (detalleCompleto.length() > 255) detalleCompleto = detalleCompleto.substring(0, 255);
             audit.setDetalle(detalleCompleto); 
 
-            // --- JSONs ---
+            // --- VALORES JSON ---
             int stockAnterior = producto.getStockActual();
             int stockNuevo = stockAnterior + cantidad;
 
-            // JSONs manuales simples
-            String jsonAnterior = String.format("{\"Stock\": \"%d\"}", stockAnterior);
-            
-            // Sanitizamos el motivo para que no rompa el JSON (ej. si tiene comillas)
-            String motivoSafe = (motivo != null) ? motivo.replace("\"", "'") : "Sin motivo";
-            String jsonNuevo = String.format("{\"Stock\": \"%d\", \"Motivo\": \"%s\"}", stockNuevo, motivoSafe);
+            // Creamos JSONs simples (Evitamos librerías externas para descartar fallos)
+            String jsonAnterior = "{ \"Stock\": \"" + stockAnterior + "\" }";
+            String jsonNuevo = "{ \"Stock\": \"" + stockNuevo + "\", \"Motivo\": \"" + motivo + "\" }";
 
             audit.setValorAnterior(jsonAnterior); 
             audit.setValorNuevo(jsonNuevo); 
 
-            System.out.println(">>> [DEBUG] 2. Objeto Auditoria preparado. Intentando guardar...");
-
-            // Guardamos Y FORZAMOS la escritura inmediata
-            auditoriaRepository.save(audit); 
-            auditoriaRepository.flush(); // <--- EL TRUCO MAESTRO
-
-            System.out.println(">>> [DEBUG] 3. ¡GUARDADO Y FLUSHEADO EXITOSAMENTE!");
+            // --- GUARDADO Y FLUSH ---
+            System.out.println(">>> [SERVICE] Guardando en repositorio...");
+            auditoriaRepository.save(audit);
+            
+            // 🚨 ESTA LÍNEA ES LA CLAVE: Obliga a la BD a guardar YA.
+            // Si hay un error (campo null, texto largo, etc), explotará aquí.
+            auditoriaRepository.flush(); 
+            
+            System.out.println(">>> [SERVICE] ¡GUARDADO EXITOSO! ID Generado: " + audit.getId());
 
         } catch (Exception e) {
-            System.err.println(">>> [ERROR CRÍTICO] No se pudo guardar la auditoría: ");
-            e.printStackTrace(); // <--- ESTO NOS DIRÁ EL PROBLEMA EXACTO
+            System.err.println(">>> [ERROR CRÍTICO] Falló el guardado de auditoría:");
+            e.printStackTrace(); // ¡Esto nos dirá el error exacto en la consola!
+            throw e; // Relanzamos para que haga rollback del stock también
         }
     }
 }

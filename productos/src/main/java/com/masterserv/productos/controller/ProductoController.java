@@ -3,6 +3,7 @@ package com.masterserv.productos.controller;
 import com.masterserv.productos.dto.MovimientoStockDTO;
 import com.masterserv.productos.dto.ProductoDTO;
 import com.masterserv.productos.dto.ProductoFiltroDTO;
+import com.masterserv.productos.service.MovimientoStockService; // ✅ IMPORTANTE
 import com.masterserv.productos.service.ProductoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ public class ProductoController {
 
     @Autowired
     private ProductoService productoService;
+
+    @Autowired
+    private MovimientoStockService movimientoStockService; // ✅ INYECTAMOS EL SERVICIO CORRECTO
 
     // --- MENTOR: ENDPOINT PARA GENERAR CÓDIGO ---
     @GetMapping("/generar-codigo")
@@ -101,9 +105,13 @@ public class ProductoController {
 
     @PostMapping("/ajuste-stock")
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
-    public ResponseEntity<Void> realizarAjusteStock(@RequestBody @Valid MovimientoStockDTO dto, Principal principal) {
-        // Pasamos el DTO y el email del usuario logueado (sacado del token)
-        productoService.ajustarStock(dto, principal.getName());
+    public ResponseEntity<Void> realizarAjusteStock(@RequestBody @Valid MovimientoStockDTO dto) {
+        
+        System.out.println(">>> [CONTROLLER] Redirigiendo a MovimientoStockService...");
+        
+        // Usamos el servicio especialista que tiene la lógica de auditoría manual
+        movimientoStockService.registrarMovimiento(dto);
+        
         return ResponseEntity.ok().build();
     }
 }
