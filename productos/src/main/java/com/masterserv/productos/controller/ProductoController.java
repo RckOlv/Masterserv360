@@ -3,6 +3,8 @@ package com.masterserv.productos.controller;
 import com.masterserv.productos.dto.MovimientoStockDTO;
 import com.masterserv.productos.dto.ProductoDTO;
 import com.masterserv.productos.dto.ProductoFiltroDTO;
+import com.masterserv.productos.entity.Usuario;
+import com.masterserv.productos.repository.UsuarioRepository;
 import com.masterserv.productos.service.MovimientoStockService; // ✅ IMPORTANTE
 import com.masterserv.productos.service.ProductoService;
 import jakarta.validation.Valid;
@@ -28,6 +30,9 @@ public class ProductoController {
 
     @Autowired
     private MovimientoStockService movimientoStockService; // ✅ INYECTAMOS EL SERVICIO CORRECTO
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     // --- MENTOR: ENDPOINT PARA GENERAR CÓDIGO ---
     @GetMapping("/generar-codigo")
@@ -110,6 +115,27 @@ public class ProductoController {
         System.out.println(">>> [CONTROLLER] Redirigiendo a MovimientoStockService...");
         
         // Usamos el servicio especialista que tiene la lógica de auditoría manual
+        movimientoStockService.registrarMovimiento(dto);
+        
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/ajuste-stock")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<Void> realizarAjusteStock(@RequestBody @Valid MovimientoStockDTO dto, Principal principal) {
+        
+        System.out.println(">>> [CONTROLLER] Recibida petición de Ajuste Stock");
+
+        // 1. Buscamos al usuario que está logueado (viene en el token)
+        // Esto evita que el frontend tenga que enviar el ID y es más seguro.
+        Usuario usuarioLogueado = usuarioRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new RuntimeException("Usuario autenticado no encontrado en BD"));
+
+        // 2. Completamos el DTO con los datos que faltan
+        dto.setUsuarioId(usuarioLogueado.getId());
+        dto.setTipoMovimiento(com.masterserv.productos.enums.TipoMovimiento.AJUSTE_MANUAL); // Forzamos el tipo
+
+        // 3. Llamamos al servicio especialista
         movimientoStockService.registrarMovimiento(dto);
         
         return ResponseEntity.ok().build();

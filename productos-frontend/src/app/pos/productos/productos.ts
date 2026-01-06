@@ -203,6 +203,8 @@ export default class ProductosComponent implements OnInit {
 
     this.isSavingAjuste = true;
 
+    // YA NO NECESITAMOS ENVIAR usuarioId NI tipoMovimiento
+    // El backend se encarga de eso por seguridad.
     this.productoService.ajustarStock({
         productoId: this.productoAjustar.id!, 
         cantidad: cantidad,
@@ -212,7 +214,7 @@ export default class ProductosComponent implements OnInit {
             mostrarToast('Stock ajustado correctamente.', 'success');
             if (this.modalAjusteInstance) this.modalAjusteInstance.hide();
             this.isSavingAjuste = false;
-            this.cargarProductos(); // Recargar tabla para ver cambios
+            this.cargarProductos(); 
         },
         error: (err) => {
             console.error(err);
