@@ -21,7 +21,7 @@
                         <option value="CREAR">Crear</option>
                         <option value="ACTUALIZAR">Actualizar</option>
                         <option value="ELIMINAR">Eliminar</option>
-                    </select>
+                        <option value="AJUSTE_STOCK">Ajuste Stock</option> </select>
                 </div>
 
                 <div class="col-md-3">
@@ -79,8 +79,7 @@
                             <th class="text-uppercase text-white-50 small">Usuario</th>
                             <th class="text-uppercase text-white-50 small text-center">Acción</th>
                             <th class="text-uppercase text-white-50 small">Entidad</th>
-                            <th class="text-uppercase text-white-50 small">Resumen</th>
-                            <th class="text-uppercase text-white-50 small text-center">Detalle</th> 
+                            <th class="text-uppercase text-white-50 small">Resumen / Motivo</th> <th class="text-uppercase text-white-50 small text-center">Detalle</th> 
                         </tr>
                     </thead>
                     <tbody>
@@ -101,9 +100,16 @@
                                 <div class="text-info fw-bold">{{ log.entidad }}</div>
                                 <div class="text-white-50 small font-monospace">#{{ log.entidadId }}</div>
                             </td>
-                            <td class="text-white-50 small text-truncate" style="max-width: 250px;" title="{{ log.detalle }}">
-                                {{ log.detalle.split('(')[0] }}...
+                            
+                            <td class="small text-truncate" style="max-width: 250px;" title="{{ log.detalle }}">
+                                <span *ngIf="log.detalle.includes('Motivo:')" class="text-warning fw-bold">
+                                    <i class="bi bi-info-circle me-1"></i> {{ log.detalle }}
+                                </span>
+                                <span *ngIf="!log.detalle.includes('Motivo:')" class="text-white-50">
+                                    {{ log.detalle.split('(')[0] }}...
+                                </span>
                             </td>
+
                             <td class="text-center">
                                 <button class="btn btn-sm btn-outline-info" 
                                         (click)="verDetalles(log)" 
