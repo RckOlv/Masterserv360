@@ -110,18 +110,6 @@ public class ProductoController {
 
     @PostMapping("/ajuste-stock")
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
-    public ResponseEntity<Void> realizarAjusteStock(@RequestBody @Valid MovimientoStockDTO dto) {
-        
-        System.out.println(">>> [CONTROLLER] Redirigiendo a MovimientoStockService...");
-        
-        // Usamos el servicio especialista que tiene la lógica de auditoría manual
-        movimientoStockService.registrarMovimiento(dto);
-        
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/ajuste-stock")
-    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
     public ResponseEntity<Void> realizarAjusteStock(@RequestBody @Valid MovimientoStockDTO dto, Principal principal) {
         
         System.out.println(">>> [CONTROLLER] Recibida petición de Ajuste Stock");
