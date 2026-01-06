@@ -176,7 +176,7 @@ export default class AuditoriaListComponent implements OnInit {
       case 'CREAR': return 'bg-success'; 
       case 'ACTUALIZAR': return 'bg-warning text-dark'; 
       case 'ELIMINAR': return 'bg-danger'; 
-      case 'AJUSTE_STOCK': return 'bg-info text-dark fw-bold'; 
+      case 'AJUSTE_MANUAL': return 'bg-info text-dark fw-bold'; 
       default: return 'bg-secondary';
     }
   }

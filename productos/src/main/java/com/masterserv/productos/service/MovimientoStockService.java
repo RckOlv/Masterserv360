@@ -78,7 +78,7 @@ public class MovimientoStockService {
         
         audit.setEntidad("Producto"); // Más limpio que "Producto (Stock)"
         audit.setEntidadId(producto.getId().toString());
-        audit.setAccion("AJUSTE_STOCK");
+        audit.setAccion("AJUSTE_MANUAL");
         
         // --- LÓGICA DE DETALLE ENRIQUECIDO ---
         
