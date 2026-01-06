@@ -70,50 +70,67 @@ public class MovimientoStockService {
         registrarEnAuditoriaGeneral(producto, usuario, dto.getTipoMovimiento(), cantidadGuardar, motivoFinal);
     }
 
+    
     private void registrarEnAuditoriaGeneral(Producto producto, Usuario usuario, TipoMovimiento tipo, int cantidad, String motivo) {
         
-        Auditoria audit = new Auditoria();
-        audit.setFecha(LocalDateTime.now());
-        audit.setUsuario(usuario.getEmail()); 
-        
-        audit.setEntidad("Producto");
-        audit.setEntidadId(producto.getId().toString());
-        audit.setAccion("AJUSTE_MANUAL"); // Coincide con tu filtro
-        
-        // 1. Lógica de Detalle (Para la tabla principal)
-        String nombreCategoria = "Sin Categoría";
-        if (producto.getCategoria() != null) {
-            nombreCategoria = producto.getCategoria().getNombre();
+        System.out.println(">>> [DEBUG] 1. Iniciando registrarEnAuditoriaGeneral para: " + producto.getNombre());
+
+        try {
+            Auditoria audit = new Auditoria();
+            audit.setFecha(LocalDateTime.now());
+            
+            // Verificación de nulidad para usuario
+            String emailUsuario = (usuario != null) ? usuario.getEmail() : "sistema@masterserv.com";
+            audit.setUsuario(emailUsuario); 
+            
+            audit.setEntidad("Producto");
+            audit.setEntidadId(producto.getId().toString());
+            audit.setAccion("AJUSTE_MANUAL"); // ✅ Esto es lo que buscamos
+            
+            // --- LÓGICA DE DETALLE ---
+            String nombreCategoria = "Sin Categoría";
+            if (producto.getCategoria() != null) {
+                nombreCategoria = producto.getCategoria().getNombre();
+            }
+
+            String detalleCompleto = String.format("Prod: %s (%s) | %s: %d | Motivo: %s", 
+                    producto.getNombre(), 
+                    nombreCategoria,
+                    tipo,
+                    cantidad, 
+                    motivo);
+
+            // Recorte de seguridad extremo (por si acaso)
+            if (detalleCompleto.length() > 250) {
+                detalleCompleto = detalleCompleto.substring(0, 250);
+            }
+            audit.setDetalle(detalleCompleto); 
+
+            // --- JSONs ---
+            int stockAnterior = producto.getStockActual();
+            int stockNuevo = stockAnterior + cantidad;
+
+            // JSONs manuales simples
+            String jsonAnterior = String.format("{\"Stock\": \"%d\"}", stockAnterior);
+            
+            // Sanitizamos el motivo para que no rompa el JSON (ej. si tiene comillas)
+            String motivoSafe = (motivo != null) ? motivo.replace("\"", "'") : "Sin motivo";
+            String jsonNuevo = String.format("{\"Stock\": \"%d\", \"Motivo\": \"%s\"}", stockNuevo, motivoSafe);
+
+            audit.setValorAnterior(jsonAnterior); 
+            audit.setValorNuevo(jsonNuevo); 
+
+            System.out.println(">>> [DEBUG] 2. Objeto Auditoria preparado. Intentando guardar...");
+
+            // Guardamos Y FORZAMOS la escritura inmediata
+            auditoriaRepository.save(audit); 
+            auditoriaRepository.flush(); // <--- EL TRUCO MAESTRO
+
+            System.out.println(">>> [DEBUG] 3. ¡GUARDADO Y FLUSHEADO EXITOSAMENTE!");
+
+        } catch (Exception e) {
+            System.err.println(">>> [ERROR CRÍTICO] No se pudo guardar la auditoría: ");
+            e.printStackTrace(); // <--- ESTO NOS DIRÁ EL PROBLEMA EXACTO
         }
-
-        String detalleCompleto = String.format("Prod: %s (%s) | %s: %d | Motivo: %s", 
-                producto.getNombre(), 
-                nombreCategoria,
-                tipo,
-                cantidad, 
-                motivo);
-
-        if (detalleCompleto.length() > 255) {
-            detalleCompleto = detalleCompleto.substring(0, 255);
-        }
-        audit.setDetalle(detalleCompleto); 
-
-        // 2. Lógica de Valores JSON (Para el Modal "Ver Detalles")
-        int stockAnterior = producto.getStockActual();
-        int stockNuevo = stockAnterior + cantidad; // Calculamos como quedaría
-
-        // Construimos JSONs manuales simples
-        // Valor Anterior: {"Stock": "10"}
-        String jsonAnterior = String.format("{\"Stock\": \"%d\"}", stockAnterior);
-        
-        // Valor Nuevo: {"Stock": "9", "Motivo": "Rotura"} 
-        // ¡AQUI AGREGAMOS EL MOTIVO PARA QUE SALGA EN EL MODAL!
-        String jsonNuevo = String.format("{\"Stock\": \"%d\", \"Motivo\": \"%s\"}", stockNuevo, motivo);
-
-        audit.setValorAnterior(jsonAnterior); 
-        audit.setValorNuevo(jsonNuevo); 
-
-        // Guardamos
-        auditoriaRepository.save(audit); 
     }
 }
