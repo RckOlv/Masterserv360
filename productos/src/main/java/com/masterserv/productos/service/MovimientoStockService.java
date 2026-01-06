@@ -76,19 +76,16 @@ public class MovimientoStockService {
         audit.setFecha(LocalDateTime.now());
         audit.setUsuario(usuario.getEmail()); 
         
-        audit.setEntidad("Producto"); // Más limpio que "Producto (Stock)"
+        audit.setEntidad("Producto");
         audit.setEntidadId(producto.getId().toString());
-        audit.setAccion("AJUSTE_MANUAL");
+        audit.setAccion("AJUSTE_MANUAL"); // Coincide con tu filtro
         
-        // --- LÓGICA DE DETALLE ENRIQUECIDO ---
-        
-        // Obtenemos el nombre de la categoría de forma segura (avoid NullPointerException)
+        // 1. Lógica de Detalle (Para la tabla principal)
         String nombreCategoria = "Sin Categoría";
         if (producto.getCategoria() != null) {
             nombreCategoria = producto.getCategoria().getNombre();
         }
 
-        // Formato final: "Prod: Aceite (Lubricantes) | AJUSTE: -5 | Motivo: Rotura"
         String detalleCompleto = String.format("Prod: %s (%s) | %s: %d | Motivo: %s", 
                 producto.getNombre(), 
                 nombreCategoria,
@@ -96,22 +93,27 @@ public class MovimientoStockService {
                 cantidad, 
                 motivo);
 
-        // Recorte de seguridad (Max 255 chars)
         if (detalleCompleto.length() > 255) {
             detalleCompleto = detalleCompleto.substring(0, 255);
         }
-        
         audit.setDetalle(detalleCompleto); 
 
-        // --- Valores Anterior/Nuevo ---
+        // 2. Lógica de Valores JSON (Para el Modal "Ver Detalles")
         int stockAnterior = producto.getStockActual();
-        // Nota: Asumimos que el stock se actualizará después o en paralelo
-        int stockNuevo = stockAnterior + cantidad;
+        int stockNuevo = stockAnterior + cantidad; // Calculamos como quedaría
 
-        audit.setValorAnterior("Stock: " + stockAnterior); 
-        audit.setValorNuevo("Stock: " + stockNuevo); 
+        // Construimos JSONs manuales simples
+        // Valor Anterior: {"Stock": "10"}
+        String jsonAnterior = String.format("{\"Stock\": \"%d\"}", stockAnterior);
+        
+        // Valor Nuevo: {"Stock": "9", "Motivo": "Rotura"} 
+        // ¡AQUI AGREGAMOS EL MOTIVO PARA QUE SALGA EN EL MODAL!
+        String jsonNuevo = String.format("{\"Stock\": \"%d\", \"Motivo\": \"%s\"}", stockNuevo, motivo);
 
-        // Guardamos. Si falla, Spring hará Rollback de todo.
+        audit.setValorAnterior(jsonAnterior); 
+        audit.setValorNuevo(jsonNuevo); 
+
+        // Guardamos
         auditoriaRepository.save(audit); 
     }
 }
