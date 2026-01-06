@@ -1,13 +1,13 @@
 package com.masterserv.productos.service;
 
 import com.masterserv.productos.dto.MovimientoStockDTO;
-import com.masterserv.productos.entity.Auditoria; // <--- Importar
+import com.masterserv.productos.entity.Auditoria;
 import com.masterserv.productos.entity.MovimientoStock;
 import com.masterserv.productos.entity.Producto;
 import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.enums.TipoMovimiento;
 import com.masterserv.productos.mapper.MovimientoStockMapper;
-import com.masterserv.productos.repository.AuditoriaRepository; // <--- Importar
+import com.masterserv.productos.repository.AuditoriaRepository;
 import com.masterserv.productos.repository.MovimientoStockRepository;
 import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.repository.UsuarioRepository;
@@ -31,7 +31,7 @@ public class MovimientoStockService {
     private MovimientoStockMapper movimientoStockMapper;
     
     @Autowired
-    private AuditoriaRepository auditoriaRepository; // ✅ Inyectamos el repo de auditoría
+    private AuditoriaRepository auditoriaRepository;
 
     @Transactional(propagation = Propagation.REQUIRED) 
     public void registrarMovimiento(MovimientoStockDTO dto) {
@@ -48,13 +48,14 @@ public class MovimientoStockService {
         movimiento.setUsuario(usuario);
         movimiento.setFecha(LocalDateTime.now());
 
+        // Aseguramos que siempre haya un motivo, aunque sea genérico
         String motivoFinal = "Movimiento registrado por el sistema";
         if (dto.getMotivo() != null && !dto.getMotivo().trim().isEmpty()) {
-            motivoFinal = dto.getMotivo();
+            motivoFinal = dto.getMotivo().trim();
         }
         movimiento.setMotivo(motivoFinal);
 
-        // Lógica de signos
+        // Lógica de signos (Negativo para salidas/devoluciones)
         int cantidadGuardar = dto.getCantidad();
         if (dto.getTipoMovimiento() == TipoMovimiento.SALIDA_VENTA || 
             dto.getTipoMovimiento() == TipoMovimiento.DEVOLUCION) {
@@ -62,35 +63,46 @@ public class MovimientoStockService {
         }
         movimiento.setCantidad(cantidadGuardar);
 
+        // 1. Guardamos el movimiento de stock
         movimientoStockRepository.save(movimiento);
 
-        // ✅ REGISTRO EN AUDITORÍA GENERAL
-        // Esto hace que aparezca en la pantalla de "Auditoría" con el motivo
+        // 2. Registramos en Auditoría General (SIN try-catch silencioso)
         registrarEnAuditoriaGeneral(producto, usuario, dto.getTipoMovimiento(), cantidadGuardar, motivoFinal);
     }
 
     private void registrarEnAuditoriaGeneral(Producto producto, Usuario usuario, TipoMovimiento tipo, int cantidad, String motivo) {
-        try {
-            Auditoria audit = new Auditoria();
-            audit.setFecha(LocalDateTime.now());
-            audit.setUsuario(usuario.getEmail()); // O getUsername()
-            audit.setEntidad("Producto (Stock)");
-            audit.setEntidadId(producto.getId().toString());
-            audit.setAccion("AJUSTE_STOCK");
-            
-            // Aquí metemos el motivo para que se vea en la tabla
-            String detalle = String.format("Ajuste: %d u. | Motivo: %s", cantidad, motivo);
-            if (detalle.length() > 255) detalle = detalle.substring(0, 255);
-            
-            audit.setDetalle(detalle);
-            
-            // Opcional: llenar valorAnterior/Nuevo si quieres ver el cambio numérico
-            audit.setValorAnterior("Stock previo"); // Podrías buscarlo si quisieras ser preciso
-            audit.setValorNuevo(String.valueOf(producto.getStockActual() + cantidad)); 
-
-            auditoriaRepository.save(audit);
-        } catch (Exception e) {
-            System.err.println("Error al guardar auditoría de stock: " + e.getMessage());
+        // NOTA: Eliminamos el try-catch. Si esto falla, queremos que falle todo (@Transactional)
+        
+        Auditoria audit = new Auditoria();
+        audit.setFecha(LocalDateTime.now());
+        audit.setUsuario(usuario.getEmail()); 
+        
+        audit.setEntidad("Producto (Stock)");
+        audit.setEntidadId(producto.getId().toString());
+        audit.setAccion("AJUSTE_STOCK");
+        
+        // Validación de longitud para evitar crash por DataTruncation
+        if (motivo != null && motivo.length() > 255) {
+            motivo = motivo.substring(0, 255);
         }
+        audit.setMotivo(motivo); 
+
+        // --- Detalle Técnico Limpio ---
+        String detalle = String.format("Tipo: %s | Cantidad: %d", tipo, cantidad);
+        if (detalle.length() > 255) {
+            detalle = detalle.substring(0, 255);
+        }
+        audit.setDetalle(detalle);
+        
+        // --- Valores Anterior/Nuevo (Estimado) ---
+        // Asumimos que el producto.getStockActual() aún tiene el valor base
+        int stockAnterior = producto.getStockActual();
+        int stockNuevo = stockAnterior + cantidad;
+
+        audit.setValorAnterior(String.valueOf(stockAnterior)); 
+        audit.setValorNuevo(String.valueOf(stockNuevo)); 
+
+        // Guardamos. Si falla, Spring hará Rollback del stock también.
+        auditoriaRepository.save(audit); 
     }
 }

@@ -1,9 +1,9 @@
 package com.masterserv.productos.controller;
 
 import com.masterserv.productos.dto.AuditoriaDTO;
-import com.masterserv.productos.dto.AuditoriaFiltroDTO; // <--- Import DTO Filtro
+import com.masterserv.productos.dto.AuditoriaFiltroDTO; 
 import com.masterserv.productos.entity.Auditoria;
-import com.masterserv.productos.service.AuditoriaService; // <--- Usamos el Service
+import com.masterserv.productos.service.AuditoriaService; 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuditoriaController {
 
     @Autowired
-    private AuditoriaService auditoriaService; // <--- Inyección del Service
+    private AuditoriaService auditoriaService; 
 
     // Endpoint GET normal (Listar todos)
     @GetMapping
@@ -54,7 +54,8 @@ public class AuditoriaController {
                 a.getFecha(),
                 a.getDetalle(),
                 a.getValorAnterior(),
-                a.getValorNuevo()
+                a.getValorNuevo(),
+                a.getMotivo()
         ));
     }
 }

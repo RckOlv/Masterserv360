@@ -8,4 +8,5 @@ export interface Auditoria {
     detalle: string;
     valorAnterior?: string;
     valorNuevo?: string;
+    motivo?: string;
 }
