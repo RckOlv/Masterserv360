@@ -220,9 +220,9 @@
                    </div>
                </div>
 
-               <div *ngIf="infoFidelidad.cuponesDisponibles.length === 0 && infoFidelidad.recompensasAlcanzables && infoFidelidad.recompensasAlcanzables.length === 0" 
-                    class="small text-muted fst-italic mt-2">
-                   El cliente no tiene cupones ni puntos suficientes.
+               <div *ngIf="infoFidelidad.cuponesDisponibles.length === 0 && (!infoFidelidad.recompensasAlcanzables || infoFidelidad.recompensasAlcanzables.length === 0)" 
+                    class="small text-white-50 fst-italic mt-2 d-flex align-items-center">
+                   <i class="bi bi-info-circle me-2"></i> El cliente no tiene cupones ni puntos suficientes.
                </div>
           </div>
 
