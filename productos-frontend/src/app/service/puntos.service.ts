@@ -29,6 +29,6 @@ export class PuntosService {
   }
 
   getFidelidadCliente(clienteId: number): Observable<ClienteFidelidadDTO> {
-    return this.http.get<ClienteFidelidadDTO>(`${this.apiUrl}/puntos/cliente/${clienteId}/fidelidad`);
+    return this.http.get<ClienteFidelidadDTO>(`${this.apiUrl}/cliente/${clienteId}/fidelidad`);
   }
 }
