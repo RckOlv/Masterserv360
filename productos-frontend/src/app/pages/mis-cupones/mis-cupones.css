@@ -1,3 +1,5 @@
+/* mis-cupones.css */
+
 .coupon-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     border-width: 2px;
@@ -33,19 +35,35 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-.text-readable-secondary {
-    color: #adb5bd !important; /* Un gris claro, casi plateado */
+/* --- CLASES PARA EL HISTORIAL OSCURO --- */
+
+/* Texto principal en tabla oscura (casi blanco) */
+.text-light-primary {
+    color: #f8f9fa !important;
 }
 
-/* Para el "OFF", que se vea sutil pero legible */
+/* Texto secundario legible sobre oscuro (gris claro) */
+.text-readable-secondary {
+    color: #adb5bd !important; 
+}
+
+/* Código en historial: Monospace y color distintivo claro */
+.history-code {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+    color: #e9ecef !important; /* Gris muy claro */
+    font-weight: 600;
+}
+
+/* Para el "OFF" en las tarjetas (sutil pero legible) */
 .text-off-label {
     color: #adb5bd; 
     font-weight: normal;
     font-size: 0.9rem;
 }
 
-/* Para la tabla vacía */
+/* Para la fila vacía */
 .table-empty-message {
-    color: #ced4da; /* Aún más claro para el mensaje de la tabla */
+    color: #adb5bd; 
     font-style: italic;
 }
