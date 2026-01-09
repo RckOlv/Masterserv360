@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -101,5 +102,16 @@ public class CuponService {
         cupon.setEstado(EstadoCupon.USADO);
         cupon.setVenta(venta);
         // Al estar en una transacción, Hibernate guarda esto automáticamente al final.
+    }
+
+    @Transactional(readOnly = true)
+    public List<CuponDTO> obtenerCuponesPorUsuario(String email) {
+        // Usamos el método optimizado del repositorio
+        List<Cupon> cupones = cuponRepository.findByCliente_EmailOrderByFechaVencimientoDesc(email);
+        
+        // Convertimos a DTO usando el mapper
+        return cupones.stream()
+                .map(cuponMapper::toCuponDTO)
+                .toList();
     }
 }

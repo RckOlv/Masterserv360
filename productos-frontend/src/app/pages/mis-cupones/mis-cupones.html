@@ -1,0 +1,104 @@
+<div class="container py-4 fade-in">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary fw-bold"><i class="bi bi-ticket-perforated-fill"></i> Mis Cupones</h2>
+        <button class="btn btn-outline-primary btn-sm rounded-pill px-3" (click)="cargarCupones()">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
+    </div>
+
+    <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+
+    <div *ngIf="!loading">
+
+        <h5 class="text-success border-bottom pb-2 mb-3">Disponibles para usar</h5>
+
+        <div *ngIf="cuponesVigentes.length === 0" class="alert alert-light border shadow-sm text-center p-4">
+            <i class="bi bi-emoji-frown fs-1 text-muted"></i>
+            <p class="mt-2 mb-3">No tienes cupones vigentes actualmente.</p>
+            <a routerLink="/mis-puntos" class="btn btn-primary btn-sm">
+                <i class="bi bi-star-fill"></i> Ir a Canjear Puntos
+            </a>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-5">
+            <div class="col" *ngFor="let c of cuponesVigentes">
+                <div class="card h-100 border-success shadow-sm coupon-card">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <span class="fw-bold"><i class="bi bi-gift-fill"></i> CUPÓN</span>
+                        <small>Vence: {{ c.fechaVencimiento | date:'dd/MM/yyyy' }}</small>
+                    </div>
+                    
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <h3 class="card-title fw-bold text-success display-6 mb-0">
+                            <span *ngIf="c.tipoDescuento === 'PORCENTAJE'">{{ c.valor }}%</span>
+                            <span *ngIf="c.tipoDescuento === 'FIJO'">${{ c.valor }}</span>
+                            <span class="fs-6 text-muted ms-1">OFF</span>
+                        </h3>
+                        
+                        <p class="card-text text-muted small mt-2" *ngIf="c.categoriaNombre">
+                            Válido en: <strong>{{ c.categoriaNombre }}</strong>
+                        </p>
+                        <p class="card-text text-muted small mt-2" *ngIf="!c.categoriaNombre">
+                            Válido en <strong>toda la tienda</strong>
+                        </p>
+
+                        <div class="input-group mt-3 dashed-border p-1 bg-light rounded cursor-pointer" 
+                             (click)="copiarCodigo(c.codigo)" title="Clic para copiar">
+                            <input type="text" class="form-control text-center fw-bold border-0 bg-transparent code-text" 
+                                   [value]="c.codigo" readonly style="cursor: pointer;">
+                            <span class="input-group-text border-0 bg-transparent text-success">
+                                <i class="bi bi-clipboard"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="text-secondary border-bottom pb-2 mt-5 mb-3">Historial / Vencidos</h5>
+
+        <div class="table-responsive shadow-sm rounded">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Código</th>
+                        <th>Descuento</th>
+                        <th>Aplica a</th>
+                        <th>Estado</th>
+                        <th>Fecha Venc.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let c of cuponesHistorial" [class.table-secondary]="c.estado === 'USADO'">
+                        <td class="font-monospace text-muted small">{{ c.codigo }}</td>
+                        <td class="fw-bold text-secondary">
+                            <span *ngIf="c.tipoDescuento === 'PORCENTAJE'">{{ c.valor }}%</span>
+                            <span *ngIf="c.tipoDescuento === 'FIJO'">${{ c.valor }}</span>
+                        </td>
+                        <td class="small">{{ c.categoriaNombre || 'Todo' }}</td>
+                        <td>
+                            <span class="badge rounded-pill" 
+                                  [ngClass]="{
+                                    'bg-secondary': c.estado === 'USADO',
+                                    'bg-danger': c.estado === 'VENCIDO' || c.estado === 'ANULADO'
+                                  }">
+                                {{ c.estado }}
+                            </span>
+                        </td>
+                        <td class="small text-muted">{{ c.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+                    </tr>
+                    <tr *ngIf="cuponesHistorial.length === 0">
+                        <td colspan="5" class="text-center text-muted py-3">
+                            <small>No hay historial disponible.</small>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>

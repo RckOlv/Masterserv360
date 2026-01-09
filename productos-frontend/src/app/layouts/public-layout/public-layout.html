@@ -35,6 +35,11 @@
                 <i class="bi bi-star-fill me-1"></i> Mis Puntos
               </a>
             </li>
+            <li class="nav-item mx-2">
+              <a class="nav-link" routerLink="/portal/mis-cupones" routerLinkActive="active">
+                <i class="bi bi-ticket-perforated-fill me-1"></i> Mis Cupones
+              </a>
+            </li>
           </ng-container>
 
           <ng-container *ngIf="(userRole$ | async) === 'ADMIN' || (userRole$ | async) === 'VENDEDOR'">

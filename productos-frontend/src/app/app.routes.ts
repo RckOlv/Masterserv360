@@ -17,13 +17,25 @@ export const routes: Routes = [
       { path: '', redirectTo: 'catalogo', pathMatch: 'full' },
       { path: 'catalogo', loadComponent: () => import('./pages/catalogo/catalogo') },
       
+      // --- ÁREA PRIVADA DEL CLIENTE (PORTAL) ---
       { 
         path: 'portal',
         canActivate: [AuthGuard], 
         children: [
            { path: 'mi-perfil', loadComponent: () => import('./pages/mi-perfil/mi-perfil') },
            { path: 'mis-compras', loadComponent: () => import('./pages/mis-compras/mis-compras') },
-           { path: 'mis-puntos', loadComponent: () => import('./pages/mis-puntos/mis-puntos').then(m => m.MisPuntosComponent) }
+           
+           // Lazy loading con .then() es la forma más segura para componentes Standalone exportados como clase
+           { 
+             path: 'mis-puntos', 
+             loadComponent: () => import('./pages/mis-puntos/mis-puntos').then(m => m.MisPuntosComponent) 
+           },
+           
+           // ✅ NUEVA RUTA AGREGADA AQUÍ:
+           { 
+             path: 'mis-cupones', 
+             loadComponent: () => import('./pages/mis-cupones/mis-cupones').then(m => m.MisCuponesComponent) 
+           }
         ]
       }
     ]
@@ -37,7 +49,7 @@ export const routes: Routes = [
       { path: 'login', loadComponent: () => import('./pages/login/login'), canActivate: [LoginGuard] },
       { path: 'register', loadComponent: () => import('./pages/reg-cli/reg-cli'), canActivate: [LoginGuard] },
       
-      // --- NUEVAS RUTAS DE RECUPERACIÓN ---
+      // --- RUTAS DE RECUPERACIÓN ---
       { 
         path: 'forgot-password', 
         loadComponent: () => import('./pages/auth/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent) 
@@ -72,7 +84,6 @@ export const routes: Routes = [
   // Redirecciones (Atajos)
   { path: 'login', redirectTo: 'auth/login' },
   { path: 'register', redirectTo: 'auth/register' },
-  // Atajos para las nuevas rutas
   { path: 'forgot-password', redirectTo: 'auth/forgot-password' },
   { path: 'reset-password', redirectTo: 'auth/reset-password' },
 

@@ -7,6 +7,7 @@ import { VentaResumenDTO } from '../models/venta-resumen.model';
 import { Page } from '../models/page.model'; 
 import { ClienteDTO } from '../models/cliente.dto'; 
 import { API_URL } from '../app.config';
+import { CuponDTO } from '../models/cupon.model';
 
 @Injectable({
   providedIn: 'root'
@@ -44,5 +45,9 @@ export class ClienteService {
   registrarDesdePos(cliente: ClienteDTO): Observable<any> {
     // CORREGIDO: Usamos baseUrl
     return this.http.post(`${this.baseUrl}/registro-pos`, cliente);
+  }
+
+  getMisCupones(): Observable<CuponDTO[]> {
+    return this.http.get<CuponDTO[]>(`${this.baseUrl}/mis-cupones`);
   }
 }

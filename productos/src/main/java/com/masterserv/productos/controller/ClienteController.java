@@ -4,9 +4,11 @@ import com.masterserv.productos.dto.CambioPasswordDTO;
 import com.masterserv.productos.dto.ClienteDTO; // <--- Importar
 import com.masterserv.productos.dto.ClientePerfilDTO;
 import com.masterserv.productos.dto.ClientePerfilUpdateDTO;
+import com.masterserv.productos.dto.CuponDTO;
 import com.masterserv.productos.dto.VentaResumenDTO;
 import com.masterserv.productos.entity.Usuario; // <--- Importar
 import com.masterserv.productos.service.ClienteService;
+import com.masterserv.productos.service.CuponService;
 import com.masterserv.productos.service.VentaService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/cliente")
@@ -26,6 +29,9 @@ public class ClienteController {
 
     @Autowired
     private VentaService ventaService;
+
+    @Autowired
+    private CuponService cuponService;
 
     // --- ENDPOINTS DE PERFIL (Cliente) ---
 
@@ -78,5 +84,14 @@ public class ClienteController {
         // Llamamos al servicio nuevo
         Usuario nuevoUsuario = clienteService.registrarClienteDesdePos(dto);
         return ResponseEntity.ok(nuevoUsuario);
+    }
+
+    @GetMapping("/mis-cupones")
+    @PreAuthorize("hasRole('CLIENTE')")
+    public ResponseEntity<List<CuponDTO>> getMisCupones(Principal principal) {
+        // Principal contiene el email extraído del Token JWT
+        String userEmail = principal.getName();
+        List<CuponDTO> misCupones = cuponService.obtenerCuponesPorUsuario(userEmail);
+        return ResponseEntity.ok(misCupones);
     }
 }

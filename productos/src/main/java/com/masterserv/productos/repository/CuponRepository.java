@@ -28,4 +28,8 @@ public interface CuponRepository extends JpaRepository<Cupon, Long> {
      * Busca cupones de un cliente por estado (ej. "VIGENTE").
      */
     List<Cupon> findByClienteAndEstado(Usuario cliente, EstadoCupon estado);
+
+    // 1. Evita tener que buscar la entidad Usuario primero.
+    // 2. Ordena para que el usuario vea primero lo que está por vencer.
+    List<Cupon> findByCliente_EmailOrderByFechaVencimientoDesc(String email);
 }
