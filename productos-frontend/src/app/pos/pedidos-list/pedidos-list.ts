@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common'; 
 import { RouterModule } from '@angular/router'; 
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormsModule } from '@angular/forms'; 
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms'; // ReactiveFormsModule agregado por si usas FormBuilder
 
 import { PedidoService } from '../../service/pedido.service';
 import { PedidoDTO } from '../../models/pedido.model';
@@ -11,6 +11,7 @@ import { Page } from '../../models/page.model';
 import { mostrarToast } from '../../utils/toast';
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
 import { ProveedorService } from '../../service/proveedor.service'; 
+import Swal from 'sweetalert2'; // <--- (1) Importamos SweetAlert
 
 @Component({
   selector: 'app-pedidos-list',
@@ -19,7 +20,8 @@ import { ProveedorService } from '../../service/proveedor.service';
     CommonModule, 
     RouterModule,
     HasPermissionDirective,
-    FormsModule 
+    FormsModule,
+    ReactiveFormsModule // Asegúrate de tener esto si usas formularios reactivos en el futuro
   ], 
   templateUrl: './pedidos-list.html',
   styleUrls: ['./pedidos-list.css'] 
@@ -41,7 +43,7 @@ export default class PedidosListComponent implements OnInit {
   public mostrarFiltros = false;
   public filtro: any = {
       proveedorId: null,
-      estado: null, // <--- CORREGIDO: Debe ser null, NO comillas vacías ''
+      estado: null, 
       fechaDesde: null,
       fechaHasta: null
   };
@@ -56,7 +58,6 @@ export default class PedidosListComponent implements OnInit {
   }
 
   cargarProveedores() {
-      // Usamos el método que me confirmaste que ya tienes
       this.proveedorService.listarProveedores().subscribe({
           next: (data: any) => this.proveedores = data,
           error: () => console.error('Error cargando proveedores para filtro')
@@ -88,7 +89,7 @@ export default class PedidosListComponent implements OnInit {
   limpiarFiltros(): void {
       this.filtro = {
           proveedorId: null,
-          estado: null, // <--- CORREGIDO: Resetear a null
+          estado: null, 
           fechaDesde: null,
           fechaHasta: null
       };
@@ -128,42 +129,95 @@ export default class PedidosListComponent implements OnInit {
     });
   }
 
+  // --- 🔥 MÉTODO COMPLETAR CON SWEETALERT ---
   marcarCompletado(id: number | undefined): void {
     if (!id) return;
-    if (confirm('¿Seguro que deseas marcar este pedido como COMPLETADO? Esta acción ingresará el stock de los productos al inventario.')) {
-      this.isLoading = true; 
-      this.pedidoService.marcarCompletado(id).subscribe({
-        next: () => {
-          mostrarToast('Pedido completado. Stock actualizado.', 'success');
-          this.cargarPedidos(); 
-          if (this.pedidoSeleccionado?.id === id) this.cerrarModal(); 
-        },
-        error: (err: HttpErrorResponse) => {
-          console.error('Error al completar pedido:', err);
-          this.handleError(err, 'completar');
-          this.isLoading = false;
-        }
-      });
-    }
+
+    Swal.fire({
+      title: '¿Confirmar Recepción?',
+      html: `
+        <p>Vas a marcar el Pedido <strong>#${id}</strong> como <span class="text-success fw-bold">COMPLETADO</span>.</p>
+        <p class="small text-muted mt-2"><i class="bi bi-info-circle"></i> El stock de los productos se sumará automáticamente al inventario.</p>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#198754', // Verde Bootstrap
+      cancelButtonColor: '#6c757d',  // Gris
+      confirmButtonText: '<i class="bi bi-box-seam me-1"></i> Sí, ingresar stock',
+      cancelButtonText: 'Cancelar',
+      background: '#1e1e1e', // Fondo Oscuro
+      color: '#ffffff',      // Texto Blanco
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.procesarCompletado(id);
+      }
+    });
   }
 
+  private procesarCompletado(id: number) {
+    this.isLoading = true; 
+    this.pedidoService.marcarCompletado(id).subscribe({
+      next: () => {
+        // Alerta de éxito bonita
+        Swal.fire({
+          title: '¡Stock Actualizado!',
+          text: 'El pedido ha sido completado y el inventario actualizado.',
+          icon: 'success',
+          background: '#1e1e1e',
+          color: '#ffffff',
+          timer: 3000,
+          showConfirmButton: false
+        });
+        
+        this.cargarPedidos(); 
+        if (this.pedidoSeleccionado?.id === id) this.cerrarModal(); 
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('Error al completar pedido:', err);
+        this.handleError(err, 'completar');
+        this.isLoading = false;
+      }
+    });
+  }
+
+  // --- 🔥 MÉTODO CANCELAR CON SWEETALERT ---
   marcarCancelado(id: number | undefined): void {
     if (!id) return;
-    if (confirm('¿Seguro que deseas CANCELAR este pedido?')) {
-      this.isLoading = true; 
-      this.pedidoService.marcarCancelado(id).subscribe({
-        next: () => {
-          mostrarToast('Pedido cancelado.', 'warning');
-          this.cargarPedidos(); 
-          if (this.pedidoSeleccionado?.id === id) this.cerrarModal();
-        },
-        error: (err: HttpErrorResponse) => {
-          console.error('Error al cancelar pedido:', err);
-          this.handleError(err, 'cancelar');
-          this.isLoading = false;
-        }
-      });
-    }
+
+    Swal.fire({
+      title: '¿Cancelar Pedido?',
+      text: `El pedido #${id} será cancelado definitivamente.`,
+      icon: 'error', // Cruz Roja
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545', // Rojo Bootstrap
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Sí, cancelar pedido',
+      cancelButtonText: 'No, volver',
+      background: '#1e1e1e',
+      color: '#ffffff',
+      reverseButtons: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.procesarCancelacion(id);
+      }
+    });
+  }
+
+  private procesarCancelacion(id: number) {
+    this.isLoading = true; 
+    this.pedidoService.marcarCancelado(id).subscribe({
+      next: () => {
+        mostrarToast('Pedido cancelado correctamente.', 'warning');
+        this.cargarPedidos(); 
+        if (this.pedidoSeleccionado?.id === id) this.cerrarModal();
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('Error al cancelar pedido:', err);
+        this.handleError(err, 'cancelar');
+        this.isLoading = false;
+      }
+    });
   }
 
   irAPagina(pageNumber: number): void {
