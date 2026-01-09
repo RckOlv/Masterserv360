@@ -161,6 +161,46 @@ export default class PuntoVentaComponent implements OnInit {
       this.aplicarCupon();
   }
 
+  // --- NUEVO: CANJEAR RECOMPENSA DESDE POS ---
+  canjearRecompensaEnPos(recompensa: any) {
+      Swal.fire({
+          title: '¿Canjear Puntos?',
+          text: `Canjear "${recompensa.descripcion}" por ${recompensa.puntosRequeridos} puntos para el cliente?`,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, canjear',
+          confirmButtonColor: '#ffc107',
+          cancelButtonColor: '#6c757d',
+          background: '#1e1e1e',
+          color: '#fff'
+      }).then((result) => {
+          if (result.isConfirmed) {
+              this.procesarCanjePos(recompensa.id);
+          }
+      });
+  }
+
+  procesarCanjePos(recompensaId: number) {
+      this.isLoadingFidelidad = true;
+      const clienteId = this.clienteForm.get('clienteId')?.value;
+
+      if (!clienteId) return;
+
+      // Usamos el servicio seguro para POS
+      this.puntosService.canjearPuntosPos(clienteId, recompensaId).subscribe({
+          next: (cuponGenerado) => {
+              mostrarToast('¡Canje exitoso! Cupón generado.', 'success');
+              // Recargar la info para ver el nuevo cupón en la lista
+              this.cargarInfoFidelidad(clienteId);
+          },
+          error: (err) => {
+              console.error(err);
+              mostrarToast(err.error?.message || 'Error al canjear puntos.', 'danger');
+              this.isLoadingFidelidad = false;
+          }
+      });
+  }
+
   abrirModalCliente() {
     const modalElement = document.getElementById('modalNuevoCliente');
     if (modalElement) {

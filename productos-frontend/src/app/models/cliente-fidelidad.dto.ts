@@ -1,4 +1,5 @@
 import { CuponDTO } from './cupon.model'; 
+import { RecompensaDTO } from './recompensa.model';
 
 export interface ClienteFidelidadDTO {
     clienteId: number;
@@ -6,4 +7,5 @@ export interface ClienteFidelidadDTO {
     puntosAcumulados: number;
     equivalenciaMonetaria: string;
     cuponesDisponibles: CuponDTO[];
+    recompensasAlcanzables: RecompensaDTO[];
 }

@@ -15,4 +15,5 @@ public class ClienteFidelidadDTO {
     
     // Cupones listos para usar
     private List<CuponDTO> cuponesDisponibles; 
+	private List<RecompensaDTO> recompensasAlcanzables;
 }

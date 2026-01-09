@@ -2,6 +2,7 @@ package com.masterserv.productos.controller;
 
 import com.masterserv.productos.dto.CuponDTO;
 import com.masterserv.productos.dto.SaldoPuntosDTO;
+import com.masterserv.productos.dto.UsuarioDTO;
 import com.masterserv.productos.service.PuntosService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +10,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.masterserv.productos.dto.ClienteFidelidadDTO;
 import java.security.Principal;
+import com.masterserv.productos.entity.Usuario;
+import com.masterserv.productos.service.UsuarioService;
+import jakarta.persistence.EntityNotFoundException;
 
 @RestController
 @RequestMapping("/puntos")
@@ -16,6 +20,9 @@ public class PuntosController {
 
     @Autowired
     private PuntosService puntosService;
+
+    @Autowired
+    private com.masterserv.productos.service.UsuarioService usuarioService;
 
     /**
      * Endpoint para el PORTAL DEL CLIENTE.
@@ -65,5 +72,19 @@ public class PuntosController {
     public ResponseEntity<ClienteFidelidadDTO> getInfoFidelidad(@PathVariable Long clienteId) {
         ClienteFidelidadDTO info = puntosService.obtenerInfoFidelidadCliente(clienteId);
         return ResponseEntity.ok(info);
+    }
+
+    @PostMapping("/canje-pos")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<CuponDTO> canjearPuntosDesdePos(
+            @RequestParam Long clienteId, 
+            @RequestParam Long recompensaId) {
+        
+        UsuarioDTO cliente = usuarioService.findById(clienteId);
+        
+        // Usamos el email del DTO para el canje
+        CuponDTO cupon = puntosService.canjearPuntos(cliente.getEmail(), recompensaId);
+        
+        return ResponseEntity.ok(cupon);
     }
 }

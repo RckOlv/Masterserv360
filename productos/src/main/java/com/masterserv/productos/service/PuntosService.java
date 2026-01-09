@@ -278,45 +278,50 @@ public class PuntosService {
         return saldoDTO;
     }
 
-    /**
-     * Obtiene la información completa de fidelización de un cliente para el POS.
-     * Muestra puntos, dinero equivalente y cupones vigentes.
-     */
     @Transactional(readOnly = true)
     public ClienteFidelidadDTO obtenerInfoFidelidadCliente(Long clienteId) {
         
-        // 1. Buscar Cliente
+        // 1. Buscar Cliente y Cuenta (Igual que antes)
         Usuario cliente = usuarioRepository.findById(clienteId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado con ID: " + clienteId));
 
-        // 2. Buscar Cuenta de Puntos (Si no existe, asumimos 0)
         CuentaPuntos cuenta = cuentaPuntosRepository.findByCliente(cliente)
                 .orElse(null);
         
         int saldoPuntos = (cuenta != null) ? cuenta.getSaldoPuntos() : 0;
 
-        // 3. Buscar Cupones VIGENTES
-        // Usamos el repo directamente o podríamos llamar a CuponService si tuviera este método expuesto
+        // 2. Buscar Cupones VIGENTES (Igual que antes)
         List<Cupon> cuponesVigentes = cuponRepository.findByCliente_IdAndEstadoOrderByFechaVencimientoAsc(
                 clienteId, EstadoCupon.VIGENTE
         );
-        
         List<CuponDTO> cuponesDto = cuponesVigentes.stream()
                 .map(cuponMapper::toCuponDTO)
                 .toList();
 
-        // 4. Calcular Equivalencia Monetaria
+        // 3. Calcular Equivalencia (Igual que antes)
         String equivalencia = "Sin valor";
         Optional<ReglaPuntos> reglaOpt = reglaPuntosService.getReglaActiva();
-        
+        // ... (Tu lógica de equivalencia monetaria se mantiene igual) ...
         if (reglaOpt.isPresent() && saldoPuntos > 0) {
-            ReglaPuntos regla = reglaOpt.get();
-            if (regla.getEquivalenciaPuntos() != null && regla.getEquivalenciaPuntos().compareTo(BigDecimal.ZERO) > 0) {
+             // ... lógica de cálculo de $ ...
+             ReglaPuntos regla = reglaOpt.get();
+             if (regla.getEquivalenciaPuntos() != null && regla.getEquivalenciaPuntos().compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal valor = regla.getEquivalenciaPuntos().multiply(new BigDecimal(saldoPuntos));
                 valor = valor.setScale(2, RoundingMode.HALF_UP);
-                equivalencia = String.format("$%,.0f", valor); // Formato moneda sin decimales si es entero
+                equivalencia = String.format("$%,.0f", valor); 
             }
         }
+
+        // --- 🔥 4. BUSCAR RECOMPENSAS ALCANZABLES ---
+        // Buscamos todas las activas con stock y filtramos las que el cliente puede pagar
+        List<Recompensa> recompensasCandidatas = recompensaRepository.findAll(); 
+        
+        List<RecompensaDTO> recompensasAlcanzables = recompensasCandidatas.stream()
+            .filter(r -> Boolean.TRUE.equals(r.getActivo()) && r.getStock() > 0) // Que existan
+            .filter(r -> saldoPuntos >= r.getPuntosRequeridos()) // Que le alcance el saldo
+            .map(recompensaMapper::toDto)
+            .collect(Collectors.toList());
+        // ---------------------------------------------
 
         // 5. Armar respuesta
         ClienteFidelidadDTO dto = new ClienteFidelidadDTO();
@@ -325,6 +330,7 @@ public class PuntosService {
         dto.setPuntosAcumulados(saldoPuntos);
         dto.setEquivalenciaMonetaria(equivalencia);
         dto.setCuponesDisponibles(cuponesDto);
+        dto.setRecompensasAlcanzables(recompensasAlcanzables); // <--- Seteamos la nueva lista
 
         return dto;
     }
