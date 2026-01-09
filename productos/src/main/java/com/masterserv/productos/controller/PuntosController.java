@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import com.masterserv.productos.dto.ClienteFidelidadDTO;
 import java.security.Principal;
 
 @RestController
@@ -58,5 +58,12 @@ public class PuntosController {
         );
         
         return ResponseEntity.ok(cuponGenerado);
+    }
+
+    @GetMapping("/cliente/{clienteId}/fidelidad")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')") // Seguridad: Solo staff
+    public ResponseEntity<ClienteFidelidadDTO> getInfoFidelidad(@PathVariable Long clienteId) {
+        ClienteFidelidadDTO info = puntosService.obtenerInfoFidelidadCliente(clienteId);
+        return ResponseEntity.ok(info);
     }
 }

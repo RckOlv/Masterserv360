@@ -10,7 +10,8 @@ import { VentaService } from '../../service/venta.service';
 import { UsuarioService } from '../../service/usuario.service';
 import { ProductoService } from '../../service/producto.service';
 import { RolService } from '../../service/rol.service';
-import { ClienteService } from '../../service/cliente.service'; // <--- (1) Importar ClienteService
+import { ClienteService } from '../../service/cliente.service';
+import { PuntosService } from '../../service/puntos.service'; // <--- (1) NUEVO
 
 // --- Modelos ---
 import { CarritoDTO } from '../../models/carrito.model';
@@ -23,7 +24,8 @@ import { ProductoDTO } from '../../models/producto.model';
 import { AddItemCarritoDTO } from '../../models/add-item-carrito.model';
 import { Page } from '../../models/page.model';
 import { CuponDTO } from '../../models/cupon.model';
-import { ClienteDTO } from '../../models/cliente.dto'; // <--- (2) Importar ClienteDTO
+import { ClienteDTO } from '../../models/cliente.dto';
+import { ClienteFidelidadDTO } from '../../models/cliente-fidelidad.dto'; // <--- (2) NUEVO
 
 // --- RxJS y ng-select ---
 import { NgSelectModule } from '@ng-select/ng-select';
@@ -50,7 +52,8 @@ export default class PuntoVentaComponent implements OnInit {
   private usuarioService = inject(UsuarioService);
   private productoService = inject(ProductoService);
   private rolService = inject(RolService);
-  private clienteService = inject(ClienteService); // <--- (3) Inyectar ClienteService
+  private clienteService = inject(ClienteService);
+  private puntosService = inject(PuntosService); // <--- (3) INYECTAR
   private router = inject(Router);
   private fb = inject(FormBuilder);
 
@@ -63,6 +66,11 @@ export default class PuntoVentaComponent implements OnInit {
   public montoDescuento: number = 0;
   public totalFinal: number = 0;
   public isValidandoCupon = false;
+
+  // --- FIDELIZACIÓN POS ---
+  public infoFidelidad: ClienteFidelidadDTO | null = null;
+  public isLoadingFidelidad = false;
+  // -------------------------
 
   public nuevoClienteForm: FormGroup;
   public isGuardandoCliente = false;
@@ -118,6 +126,39 @@ export default class PuntoVentaComponent implements OnInit {
     this.initProductoSearch();
     this.initClienteSearch();
     this.setupDocumentValidation();
+    
+    // --- ESCUCHAR CAMBIOS DE CLIENTE ---
+    this.clienteForm.get('clienteId')?.valueChanges.subscribe(clienteId => {
+        if (clienteId) {
+            this.cargarInfoFidelidad(clienteId);
+        } else {
+            this.infoFidelidad = null;
+            this.cuponAplicado = null; // Si cambia cliente, quitamos cupón
+            this.clienteForm.patchValue({ codigoCupon: null }, { emitEvent: false });
+            this.calcularTotales();
+        }
+    });
+  }
+
+  // --- CARGAR DATOS FIDELIZACIÓN ---
+  cargarInfoFidelidad(clienteId: number) {
+      this.isLoadingFidelidad = true;
+      this.puntosService.getFidelidadCliente(clienteId).subscribe({
+          next: (data) => {
+              this.infoFidelidad = data;
+              this.isLoadingFidelidad = false;
+          },
+          error: (err) => {
+              console.error('Error cargando fidelidad', err);
+              this.isLoadingFidelidad = false;
+          }
+      });
+  }
+
+  // --- APLICAR CUPÓN DESDE TARJETA ---
+  usarCuponDeLista(codigo: string) {
+      this.clienteForm.patchValue({ codigoCupon: codigo });
+      this.aplicarCupon();
   }
 
   abrirModalCliente() {
@@ -198,7 +239,6 @@ export default class PuntoVentaComponent implements OnInit {
       if (controlName) this.nuevoClienteForm.get(controlName)?.setValue(input.value);
   }
 
-  // --- (4) AQUÍ ESTÁ EL CAMBIO CLAVE ---
   guardarNuevoCliente() {
     if (this.nuevoClienteForm.invalid) {
       this.nuevoClienteForm.markAllAsTouched();
@@ -220,7 +260,6 @@ export default class PuntoVentaComponent implements OnInit {
         }
     }
 
-    // Usamos el DTO correcto
     const datosCliente: ClienteDTO = {
         nombre: formValues.nombre,
         apellido: formValues.apellido,
@@ -230,9 +269,8 @@ export default class PuntoVentaComponent implements OnInit {
         telefono: telefonoFinal
     };
 
-    // Llamamos al NUEVO servicio (que manda el email y activa la bandera)
     this.clienteService.registrarDesdePos(datosCliente).subscribe({
-      next: (nuevoUsuario: any) => { // Usamos any o UsuarioDTO
+      next: (nuevoUsuario: any) => { 
         this.isGuardandoCliente = false;
         
         if (this.modalClienteInstance) {
@@ -241,9 +279,6 @@ export default class PuntoVentaComponent implements OnInit {
         
         mostrarToast(`Cliente ${nuevoUsuario.nombre} registrado con éxito. Se envió email de bienvenida.`, 'success');
         
-        // Asignar al select
-        // Nota: ng-select necesita que el item esté en la lista [items]
-        // Creamos un array temporal con ese usuario para que ng-select lo muestre
         this.clientes$ = of([nuevoUsuario]); 
         this.clienteForm.patchValue({ clienteId: nuevoUsuario.id });
         
@@ -261,8 +296,6 @@ export default class PuntoVentaComponent implements OnInit {
     });
   }
 
-  // ... (Resto de métodos del carrito igual) ...
-  
   cargarCarrito(): void {
     this.isLoadingCarrito = true;
     this.errorMessage = null;
@@ -578,6 +611,7 @@ export default class PuntoVentaComponent implements OnInit {
         this.clienteForm.reset();
         this.productoSearchForm.reset({ cantidadAgregar: 1 });
         this.cuponAplicado = null;
+        this.infoFidelidad = null; // Resetear info fidelidad
         this.montoDescuento = 0;
         this.totalFinal = 0;
         this.isFinalizandoVenta = false;

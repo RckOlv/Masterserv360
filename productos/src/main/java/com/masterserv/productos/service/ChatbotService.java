@@ -1,7 +1,6 @@
 package com.masterserv.productos.service;
 
 import com.masterserv.productos.entity.*;
-import com.masterserv.productos.enums.EstadoCupon;
 import com.masterserv.productos.enums.EstadoListaEspera;
 import com.masterserv.productos.repository.*;
 import com.twilio.twiml.MessagingResponse;
@@ -18,7 +17,6 @@ import java.util.List;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class ChatbotService {
@@ -33,9 +31,12 @@ public class ChatbotService {
     private final PuntosService puntosService;
     private final SolicitudProductoRepository solicitudProductoRepository;
     private final RecompensaRepository recompensaRepository;
-    private final CuponRepository cuponRepository;
+    // private final CuponRepository cuponRepository; // YA NO SE USA
     private final CuentaPuntosRepository cuentaPuntosRepository;
     private final ListaEsperaRepository listaEsperaRepository;
+    
+    // 🔥 INYECCIÓN DE CUPON SERVICE
+    private final CuponService cuponService;
 
     public ChatbotService(UsuarioRepository usuarioRepository,
                           ProductoRepository productoRepository,
@@ -43,18 +44,20 @@ public class ChatbotService {
                           PuntosService puntosService,
                           SolicitudProductoRepository solicitudProductoRepository,
                           RecompensaRepository recompensaRepository,
-                          CuponRepository cuponRepository,
+                          // CuponRepository cuponRepository,
                           CuentaPuntosRepository cuentaPuntosRepository,
-                          ListaEsperaRepository listaEsperaRepository) {
+                          ListaEsperaRepository listaEsperaRepository,
+                          CuponService cuponService) { // Inyección
         this.usuarioRepository = usuarioRepository;
         this.productoRepository = productoRepository;
         this.interaccionRepository = interaccionRepository;
         this.puntosService = puntosService;
         this.solicitudProductoRepository = solicitudProductoRepository;
         this.recompensaRepository = recompensaRepository;
-        this.cuponRepository = cuponRepository;
+        // this.cuponRepository = cuponRepository;
         this.cuentaPuntosRepository = cuentaPuntosRepository;
         this.listaEsperaRepository = listaEsperaRepository;
+        this.cuponService = cuponService;
     }
 
     // Clase auxiliar interna para manejar Texto + Imagen
@@ -135,8 +138,11 @@ public class ChatbotService {
             msg.append(String.format("🏆 *Tus Puntos: %d*\n\n🎁 *Premios Disponibles:*\n", puntosActuales));
 
             for (Recompensa r : recompensas) {
-                String estado = (puntosActuales >= r.getPuntosRequeridos()) ? "✅" : "🔒";
-                msg.append(String.format("\n%s *%s* (%d pts)", estado, r.getDescripcion(), r.getPuntosRequeridos()));
+                // Solo mostramos recompensas activas y con stock
+                if (Boolean.TRUE.equals(r.getActivo()) && r.getStock() > 0) {
+                    String estado = (puntosActuales >= r.getPuntosRequeridos()) ? "✅" : "🔒";
+                    msg.append(String.format("\n%s *%s* (%d pts)", estado, r.getDescripcion(), r.getPuntosRequeridos()));
+                }
             }
             msg.append("\n\nEscribe *\"canjear [nombre]\"* para obtener tu cupón.");
             return new BotResponse(msg.toString());
@@ -155,7 +161,6 @@ public class ChatbotService {
         }
 
         // 6. BUSCADOR INTELIGENTE (Detecta intención de búsqueda implícita)
-        // Si escribe algo largo y no es un comando, asumimos que busca un producto
         if (texto.length() > 2) {
             String termino = limpiarPrefijo(texto);
             if (!termino.isEmpty()) {
@@ -173,16 +178,14 @@ public class ChatbotService {
             return formatearRespuestaProducto(productoPorCodigo.get());
         }
 
-        // B. Buscar por Nombre "Flexible" (Ignora acentos y mayúsculas)
+        // B. Buscar por Nombre "Flexible"
         Pageable top5 = PageRequest.of(0, 5); 
         List<Producto> productos;
         try {
-            // CORRECCIÓN AQUÍ: Usamos el nuevo método buscarFlexible y extraemos el contenido
             Page<Producto> page = productoRepository.buscarFlexible(termino, top5);
             productos = page.getContent();
         } catch (Exception e) {
-            // Fallback: Si la BD no tiene la extensión, usamos ILIKE normal
-            System.err.println("⚠️ Fallback búsqueda (posiblemente falta extensión unaccent): " + e.getMessage());
+            System.err.println("⚠️ Fallback búsqueda: " + e.getMessage());
             productos = productoRepository.findByNombreILike(termino, top5);
         }
 
@@ -192,13 +195,10 @@ public class ChatbotService {
                 "📝 ¿Quieres solicitarlo?\nEscribe: *\"solicitar " + termino + "\"*"
             );
         } else if (productos.size() == 1) {
-            // ¡Bingo! Un solo resultado -> Mostramos foto y detalle
             return formatearRespuestaProducto(productos.get(0));
         } else {
-            // Múltiples resultados -> Lista de texto
             StringBuilder respuesta = new StringBuilder("🔎 *Encontré varias opciones:*\n");
             for (Producto p : productos) {
-                // Formateo seguro de precio para lista
                 String precio = (p.getPrecioVenta() != null) ? String.format("$%,.0f", p.getPrecioVenta().doubleValue()) : "Consultar";
                 respuesta.append(String.format("\n▪ %s (%s)", p.getNombre(), precio));
             }
@@ -229,7 +229,6 @@ public class ChatbotService {
         sb.append("🏷️ Código: ").append(p.getCodigo()).append("\n\n");
         sb.append("📍 *Te esperamos en nuestro local para realizar tu compra.*");
 
-        // Si el producto tiene foto (y es una URL válida http...), la preparamos
         String imagen = (p.getImagenUrl() != null && p.getImagenUrl().startsWith("http")) 
                         ? p.getImagenUrl() : null;
 
@@ -239,11 +238,9 @@ public class ChatbotService {
     private BotResponse procesarSolicitud(Usuario usuario, String termino) {
         if (termino.length() < 3) return new BotResponse("⚠️ Escribe qué producto necesitas.");
 
-        // Verificar si existe realmente (usando búsqueda flexible)
         Pageable top1 = PageRequest.of(0, 1);
         List<Producto> matches;
         try {
-             // CORRECCIÓN AQUÍ TAMBIÉN: Usar buscarFlexible
              Page<Producto> page = productoRepository.buscarFlexible(termino, top1);
              matches = page.getContent();
         } catch (Exception e) {
@@ -272,6 +269,7 @@ public class ChatbotService {
         }
     }
 
+    // --- 🔥 MÉTODO REFACTORIZADO USANDO CUPONSERVICE ---
     private String procesarCanje(Usuario usuario, String nombrePremio) {
         Optional<Recompensa> recompensaOpt = recompensaRepository.findByDescripcionContainingIgnoreCase(nombrePremio)
                 .stream().findFirst();
@@ -279,6 +277,8 @@ public class ChatbotService {
         if (recompensaOpt.isEmpty()) return "❌ Premio no encontrado.";
         Recompensa recompensa = recompensaOpt.get();
         
+        if (recompensa.getStock() <= 0) return "❌ Lo sentimos, este premio se ha agotado.";
+
         var cuentaOpt = cuentaPuntosRepository.findByCliente(usuario);
         if (cuentaOpt.isEmpty() || cuentaOpt.get().getSaldoPuntos() < recompensa.getPuntosRequeridos()) {
              return "🚫 Puntos insuficientes.";
@@ -288,31 +288,22 @@ public class ChatbotService {
             CuentaPuntos cuenta = cuentaOpt.get();
             cuenta.setSaldoPuntos(cuenta.getSaldoPuntos() - recompensa.getPuntosRequeridos());
             cuentaPuntosRepository.save(cuenta);
+            
             recompensa.setStock(recompensa.getStock() - 1);
             recompensaRepository.save(recompensa);
             
-            Cupon cupon = new Cupon();
-            cupon.setCodigo(generarCodigoCupon(recompensa.getDescripcion()));
-            cupon.setValor(recompensa.getValor());
-            cupon.setTipoDescuento(recompensa.getTipoDescuento());
-            cupon.setCategoria(recompensa.getCategoria());
-            cupon.setFechaVencimiento(LocalDate.now().plusDays(30));
-            cupon.setEstado(EstadoCupon.VIGENTE);
-            cupon.setCliente(usuario);
-            cuponRepository.save(cupon);
+            // --- DELEGAMOS LA CREACIÓN AL EXPERTO ---
+            Cupon cupon = cuponService.crearCuponPorCanje(usuario, recompensa);
+            // ----------------------------------------
             
-            return "🎉 *CUPÓN GENERADO*: " + cupon.getCodigo();
+            return "🎉 *CUPÓN GENERADO*: " + cupon.getCodigo() + "\nVence: " + cupon.getFechaVencimiento();
         } catch (Exception e) {
+            e.printStackTrace();
             return "Error al canjear.";
         }
     }
 
     // --- UTILIDADES ---
-    private String generarCodigoCupon(String nombre) {
-        String prefix = nombre.length() > 3 ? nombre.substring(0, 3).toUpperCase() : "PRM";
-        return prefix + "-" + UUID.randomUUID().toString().substring(0, 5).toUpperCase();
-    }
-
     private boolean esSaludo(String t) {
         return t.equals("hola") || t.equals("hi") || t.equals("buen dia") || t.equals("buenas") || t.equals("menu");
     }
@@ -334,21 +325,12 @@ public class ChatbotService {
         interaccionRepository.save(i);
     }
 
-    // --- CONSTRUCCIÓN XML CON IMAGEN ---
     private String construirRespuestaTwiML(BotResponse respuesta) {
         Message.Builder messageBuilder = new Message.Builder();
-        
-        // 1. Agregar Cuerpo del Mensaje
         messageBuilder.body(new Body.Builder(respuesta.texto).build());
-
-        // 2. Agregar Imagen (si existe)
         if (respuesta.mediaUrl != null && !respuesta.mediaUrl.isEmpty()) {
             messageBuilder.media(new Media.Builder(respuesta.mediaUrl).build());
         }
-
-        return new MessagingResponse.Builder()
-                .message(messageBuilder.build())
-                .build()
-                .toXml();
+        return new MessagingResponse.Builder().message(messageBuilder.build()).build().toXml();
     }
 }

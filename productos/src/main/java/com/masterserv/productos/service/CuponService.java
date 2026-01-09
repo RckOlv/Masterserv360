@@ -2,6 +2,7 @@ package com.masterserv.productos.service;
 
 import com.masterserv.productos.dto.CuponDTO;
 import com.masterserv.productos.entity.Cupon;
+import com.masterserv.productos.entity.Recompensa;
 import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.entity.Venta;
 import com.masterserv.productos.enums.EstadoCupon;
@@ -113,5 +114,32 @@ public class CuponService {
         return cupones.stream()
                 .map(cuponMapper::toCuponDTO)
                 .toList();
+    }
+
+    /**
+     * 🔥 MÉTODO CENTRALIZADO (DRY)
+     * Crea un cupón de recompensa estandarizado.
+     * Usado por: PuntosService (Web) y ChatbotService (WhatsApp).
+     */
+    @Transactional(propagation = Propagation.MANDATORY) // Requiere transacción activa del llamador
+    public Cupon crearCuponPorCanje(Usuario cliente, Recompensa recompensa) {
+        Cupon cupon = new Cupon();
+        cupon.setCliente(cliente);
+        
+        // 1. Generación de Código Única (Formato: CANJE-IDCLIENTE-RANDOM)
+        String randomSuffix = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        String codigo = String.format("CANJE-%d-%s", cliente.getId(), randomSuffix);
+        cupon.setCodigo(codigo);
+
+        // 2. Datos de la Recompensa
+        cupon.setValor(recompensa.getValor());
+        cupon.setTipoDescuento(recompensa.getTipoDescuento());
+        cupon.setCategoria(recompensa.getCategoria());
+        
+        // 3. Reglas de Negocio Únicas (Vencimiento y Estado)
+        cupon.setEstado(EstadoCupon.VIGENTE);
+        cupon.setFechaVencimiento(LocalDate.now().plusDays(90)); // Unificamos a 90 días para todos
+
+        return cuponRepository.save(cupon);
     }
 }

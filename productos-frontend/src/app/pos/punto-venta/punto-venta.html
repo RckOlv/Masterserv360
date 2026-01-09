@@ -127,7 +127,7 @@
         
         <div class="card-body masterserv-card-body text-white" [formGroup]="clienteForm">
           
-          <div class="mb-4">
+          <div class="mb-3">
             <label for="clienteSelect" class="form-label text-danger small fw-bold text-uppercase">Cliente *</label>
             
             <div class="d-flex gap-2">
@@ -166,10 +166,50 @@
             </div>
           </div>
 
+          <div class="mb-4 p-3 rounded border border-warning position-relative" 
+               *ngIf="infoFidelidad" 
+               style="background: linear-gradient(135deg, #3a2c0f 0%, #1e1e1e 100%);">
+               
+               <span class="position-absolute top-0 end-0 badge bg-warning text-dark m-2">
+                   <i class="bi bi-star-fill"></i> CLUB
+               </span>
+
+               <div class="d-flex align-items-center mb-3">
+                   <div class="me-3">
+                       <h3 class="text-warning mb-0 fw-bold">{{ infoFidelidad.puntosAcumulados }}</h3>
+                       <small class="text-white-50">Puntos</small>
+                   </div>
+                   <div class="border-start border-secondary ps-3">
+                       <span class="text-white small d-block">Valor aprox:</span>
+                       <span class="text-success fw-bold">{{ infoFidelidad.equivalenciaMonetaria }}</span>
+                   </div>
+               </div>
+
+               <div *ngIf="infoFidelidad.cuponesDisponibles.length > 0">
+                   <label class="small text-white-50 mb-1">Cupones Disponibles:</label>
+                   <div class="d-flex flex-wrap gap-2">
+                       <button *ngFor="let c of infoFidelidad.cuponesDisponibles" 
+                               type="button" 
+                               class="btn btn-sm btn-outline-warning d-flex align-items-center"
+                               (click)="usarCuponDeLista(c.codigo)"
+                               [disabled]="cuponAplicado?.codigo === c.codigo">
+                           <span>
+                               {{ c.tipoDescuento === 'PORCENTAJE' ? c.valor + '%' : '$' + c.valor }} OFF
+                           </span>
+                           <i class="bi bi-check-lg ms-1" *ngIf="cuponAplicado?.codigo === c.codigo"></i>
+                       </button>
+                   </div>
+               </div>
+               
+               <div *ngIf="infoFidelidad.cuponesDisponibles.length === 0" class="small text-muted fst-italic">
+                   Sin cupones vigentes.
+               </div>
+          </div>
+
           <hr class="border-secondary">
 
           <div class="mb-4">
-            <label class="form-label text-danger small fw-bold text-uppercase">Código de Cupón (Opcional)</label>
+            <label class="form-label text-danger small fw-bold text-uppercase">Código de Cupón (Manual)</label>
             <div class="input-group">
               <input type="text" 
                      class="form-control masterserv-input-dark" 
@@ -262,7 +302,6 @@
         
         <div class="modal-body">
           <form [formGroup]="nuevoClienteForm">
-            
             <div class="row g-2">
               <div class="col-6">
                 <label class="small text-white">Nombre *</label>

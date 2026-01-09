@@ -6,7 +6,6 @@ import com.masterserv.productos.dto.SaldoPuntosDTO;
 import com.masterserv.productos.entity.*;
 import com.masterserv.productos.enums.EstadoCupon;
 import com.masterserv.productos.enums.EstadoVenta;
-import com.masterserv.productos.enums.TipoDescuento;
 import com.masterserv.productos.enums.TipoMovimientoPuntos;
 import com.masterserv.productos.mapper.CuponMapper;
 import com.masterserv.productos.mapper.RecompensaMapper;
@@ -15,15 +14,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.masterserv.productos.dto.ClienteFidelidadDTO; 
+import jakarta.persistence.EntityNotFoundException; 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,20 +29,30 @@ public class PuntosService {
 
     @Autowired
     private ReglaPuntosService reglaPuntosService;
+    
     @Autowired
     private CuentaPuntosRepository cuentaPuntosRepository;
+    
     @Autowired
     private MovimientoPuntosRepository movimientoPuntosRepository;
-    @Autowired
+
+    @Autowired 
     private CuponRepository cuponRepository;
+
     @Autowired
     private UsuarioRepository usuarioRepository; 
+    
     @Autowired
     private CuponMapper cuponMapper; 
+    
     @Autowired 
     private RecompensaRepository recompensaRepository;
+    
     @Autowired 
     private RecompensaMapper recompensaMapper;
+    
+    @Autowired
+    private CuponService cuponService; 
 
     /**
      * Lógica principal para asignar puntos después de una venta.
@@ -157,6 +165,7 @@ public class PuntosService {
 
     /**
      * Canjea puntos de un cliente por una Recompensa específica (que se convierte en Cupón).
+     * REFACTORIZADO: Usa CuponService para generar el cupón.
      */
     @Transactional(propagation = Propagation.REQUIRED)
     public CuponDTO canjearPuntos(String clienteEmail, Long recompensaId) {
@@ -165,11 +174,10 @@ public class PuntosService {
         Recompensa recompensa = recompensaRepository.findById(recompensaId)
                 .orElseThrow(() -> new RuntimeException("La recompensa seleccionada no existe."));
         
-        // --- 🔥 CORRECCIÓN DEL MENTOR: VALIDACIÓN DE STOCK ---
+        // --- VALIDACIÓN DE STOCK ---
         if (recompensa.getStock() <= 0) {
             throw new RuntimeException("Lo sentimos, esta recompensa se ha agotado (Stock 0).");
         }
-        // ----------------------------------------------------
 
         int puntosRequeridos = recompensa.getPuntosRequeridos();
 
@@ -184,10 +192,9 @@ public class PuntosService {
             ));
         }
         
-        // --- 🔥 CORRECCIÓN DEL MENTOR: DESCONTAR STOCK ---
+        // --- DESCONTAR STOCK ---
         recompensa.setStock(recompensa.getStock() - 1);
         recompensaRepository.save(recompensa); // Guardamos el nuevo stock en la BD
-        // -------------------------------------------------
 
         // 3. Crear el Movimiento (restar puntos al usuario)
         MovimientoPuntos movimiento = new MovimientoPuntos();
@@ -201,34 +208,18 @@ public class PuntosService {
         // 4. Actualizar el saldo de la cuenta
         cuenta.setSaldoPuntos(cuenta.getSaldoPuntos() - puntosRequeridos);
         
-        // 5. Crear el Cupón basado en la Recompensa
-        Cupon cupon = new Cupon();
-        cupon.setCliente(cuenta.getCliente());
-        cupon.setCodigo(generarCodigoCupon(cuenta.getCliente().getId()));
-        cupon.setValor(recompensa.getValor());
-        cupon.setTipoDescuento(recompensa.getTipoDescuento());
-        cupon.setCategoria(recompensa.getCategoria()); // Asigna la categoría (o null)
-        cupon.setEstado(EstadoCupon.VIGENTE); // O 'DISPONIBLE' según tu Enum
-        cupon.setFechaVencimiento(LocalDate.now().plusDays(90)); // 90 días de validez
-        
-        // 6. Guardar todo
+        // 5. Guardar cambios en puntos
         cuentaPuntosRepository.save(cuenta);
         movimientoPuntosRepository.save(movimiento);
-        Cupon cuponGuardado = cuponRepository.save(cupon);
+        
+        // --- 🔥 REFACTOR: DELEGAMOS CREACIÓN AL EXPERTO ---
+        Cupon cuponGuardado = cuponService.crearCuponPorCanje(cuenta.getCliente(), recompensa);
+        // -------------------------------------------------
         
         return cuponMapper.toCuponDTO(cuponGuardado);
     }
     
     /**
-     * Helper para generar un código de cupón único y legible.
-     */
-    private String generarCodigoCupon(Long clienteId) {
-        String randomChars = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
-        return String.format("CANJE-%d-%s", clienteId, randomChars);
-    }
-    
-    
-   /**
      * Obtiene el saldo de puntos y su equivalencia en dinero para un cliente específico.
      * También incluye la lista de recompensas disponibles (GLOBALES).
      */
@@ -285,5 +276,56 @@ public class PuntosService {
         saldoDTO.setRecompensasDisponibles(recompensasDTO);
 
         return saldoDTO;
+    }
+
+    /**
+     * Obtiene la información completa de fidelización de un cliente para el POS.
+     * Muestra puntos, dinero equivalente y cupones vigentes.
+     */
+    @Transactional(readOnly = true)
+    public ClienteFidelidadDTO obtenerInfoFidelidadCliente(Long clienteId) {
+        
+        // 1. Buscar Cliente
+        Usuario cliente = usuarioRepository.findById(clienteId)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado con ID: " + clienteId));
+
+        // 2. Buscar Cuenta de Puntos (Si no existe, asumimos 0)
+        CuentaPuntos cuenta = cuentaPuntosRepository.findByCliente(cliente)
+                .orElse(null);
+        
+        int saldoPuntos = (cuenta != null) ? cuenta.getSaldoPuntos() : 0;
+
+        // 3. Buscar Cupones VIGENTES
+        // Usamos el repo directamente o podríamos llamar a CuponService si tuviera este método expuesto
+        List<Cupon> cuponesVigentes = cuponRepository.findByCliente_IdAndEstadoOrderByFechaVencimientoAsc(
+                clienteId, EstadoCupon.VIGENTE
+        );
+        
+        List<CuponDTO> cuponesDto = cuponesVigentes.stream()
+                .map(cuponMapper::toCuponDTO)
+                .toList();
+
+        // 4. Calcular Equivalencia Monetaria
+        String equivalencia = "Sin valor";
+        Optional<ReglaPuntos> reglaOpt = reglaPuntosService.getReglaActiva();
+        
+        if (reglaOpt.isPresent() && saldoPuntos > 0) {
+            ReglaPuntos regla = reglaOpt.get();
+            if (regla.getEquivalenciaPuntos() != null && regla.getEquivalenciaPuntos().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal valor = regla.getEquivalenciaPuntos().multiply(new BigDecimal(saldoPuntos));
+                valor = valor.setScale(2, RoundingMode.HALF_UP);
+                equivalencia = String.format("$%,.0f", valor); // Formato moneda sin decimales si es entero
+            }
+        }
+
+        // 5. Armar respuesta
+        ClienteFidelidadDTO dto = new ClienteFidelidadDTO();
+        dto.setClienteId(cliente.getId());
+        dto.setNombreCompleto(cliente.getNombre() + " " + cliente.getApellido());
+        dto.setPuntosAcumulados(saldoPuntos);
+        dto.setEquivalenciaMonetaria(equivalencia);
+        dto.setCuponesDisponibles(cuponesDto);
+
+        return dto;
     }
 }

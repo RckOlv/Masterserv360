@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { SaldoPuntos } from '../models/saldo-puntos.model';
 import { API_URL } from '../app.config';
+import { ClienteFidelidadDTO } from '../models/cliente-fidelidad.dto';
 
 @Injectable({
   providedIn: 'root'
@@ -25,5 +26,9 @@ export class PuntosService {
   canjearPuntos(recompensaId: number): Observable<any> {
     const params = new HttpParams().set('recompensaId', recompensaId.toString());
     return this.http.post<any>(`${this.apiUrl}/canje`, null, { params });
+  }
+
+  getFidelidadCliente(clienteId: number): Observable<ClienteFidelidadDTO> {
+    return this.http.get<ClienteFidelidadDTO>(`${this.apiUrl}/puntos/cliente/${clienteId}/fidelidad`);
   }
 }

@@ -32,4 +32,8 @@ public interface CuponRepository extends JpaRepository<Cupon, Long> {
     // 1. Evita tener que buscar la entidad Usuario primero.
     // 2. Ordena para que el usuario vea primero lo que está por vencer.
     List<Cupon> findByCliente_EmailOrderByFechaVencimientoDesc(String email);
+
+    // Busca cupones por ID del cliente y Estado.
+    // Ordenamos por vencimiento ascendente (primero los que vencen pronto)
+    List<Cupon> findByCliente_IdAndEstadoOrderByFechaVencimientoAsc(Long clienteId, EstadoCupon estado);
 }
