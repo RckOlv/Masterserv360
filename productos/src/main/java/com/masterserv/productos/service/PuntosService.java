@@ -165,20 +165,31 @@ public class PuntosService {
         Recompensa recompensa = recompensaRepository.findById(recompensaId)
                 .orElseThrow(() -> new RuntimeException("La recompensa seleccionada no existe."));
         
+        // --- 🔥 CORRECCIÓN DEL MENTOR: VALIDACIÓN DE STOCK ---
+        if (recompensa.getStock() <= 0) {
+            throw new RuntimeException("Lo sentimos, esta recompensa se ha agotado (Stock 0).");
+        }
+        // ----------------------------------------------------
+
         int puntosRequeridos = recompensa.getPuntosRequeridos();
 
-        // 2. Validar la cuenta y el saldo
+        // 2. Validar la cuenta y el saldo del cliente
         CuentaPuntos cuenta = cuentaPuntosRepository.findByCliente_Email(clienteEmail)
                 .orElseThrow(() -> new RuntimeException("No se encontró una cuenta de puntos para el cliente: " + clienteEmail));
         
         if (cuenta.getSaldoPuntos() < puntosRequeridos) {
             throw new IllegalArgumentException(String.format(
-                "Saldo insuficiente. Saldo actual: %d puntos, Puntos requeridos: %d puntos.",
+                "Saldo insuficiente. Tienes %d puntos, necesitas %d.",
                 cuenta.getSaldoPuntos(), puntosRequeridos
             ));
         }
         
-        // 3. Crear el Movimiento (restar puntos)
+        // --- 🔥 CORRECCIÓN DEL MENTOR: DESCONTAR STOCK ---
+        recompensa.setStock(recompensa.getStock() - 1);
+        recompensaRepository.save(recompensa); // Guardamos el nuevo stock en la BD
+        // -------------------------------------------------
+
+        // 3. Crear el Movimiento (restar puntos al usuario)
         MovimientoPuntos movimiento = new MovimientoPuntos();
         movimiento.setPuntos(-puntosRequeridos);
         movimiento.setTipoMovimiento(TipoMovimientoPuntos.CANJEADO);
@@ -197,7 +208,7 @@ public class PuntosService {
         cupon.setValor(recompensa.getValor());
         cupon.setTipoDescuento(recompensa.getTipoDescuento());
         cupon.setCategoria(recompensa.getCategoria()); // Asigna la categoría (o null)
-        cupon.setEstado(EstadoCupon.VIGENTE);
+        cupon.setEstado(EstadoCupon.VIGENTE); // O 'DISPONIBLE' según tu Enum
         cupon.setFechaVencimiento(LocalDate.now().plusDays(90)); // 90 días de validez
         
         // 6. Guardar todo
