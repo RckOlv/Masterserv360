@@ -17,8 +17,8 @@
         <h5 class="text-success border-bottom pb-2 mb-3">Disponibles para usar</h5>
 
         <div *ngIf="cuponesVigentes.length === 0" class="alert alert-light border shadow-sm text-center p-4">
-            <i class="bi bi-emoji-frown fs-1 text-muted"></i>
-            <p class="mt-2 mb-3">No tienes cupones vigentes actualmente.</p>
+            <i class="bi bi-emoji-frown fs-1 text-secondary"></i>
+            <p class="mt-2 mb-3 text-secondary">No tienes cupones vigentes actualmente.</p>
             <a routerLink="/mis-puntos" class="btn btn-primary btn-sm">
                 <i class="bi bi-star-fill"></i> Ir a Canjear Puntos
             </a>
@@ -36,13 +36,13 @@
                         <h3 class="card-title fw-bold text-success display-6 mb-0">
                             <span *ngIf="c.tipoDescuento === 'PORCENTAJE'">{{ c.valor }}%</span>
                             <span *ngIf="c.tipoDescuento === 'FIJO'">${{ c.valor }}</span>
-                            <span class="fs-6 text-muted ms-1">OFF</span>
+                            <span class="fs-6 text-off-label ms-1">OFF</span>
                         </h3>
                         
-                        <p class="card-text text-muted small mt-2" *ngIf="c.categoriaNombre">
+                        <p class="card-text text-readable-secondary small mt-2" *ngIf="c.categoriaNombre">
                             Válido en: <strong>{{ c.categoriaNombre }}</strong>
                         </p>
-                        <p class="card-text text-muted small mt-2" *ngIf="!c.categoriaNombre">
+                        <p class="card-text text-readable-secondary small mt-2" *ngIf="!c.categoriaNombre">
                             Válido en <strong>toda la tienda</strong>
                         </p>
 
@@ -74,7 +74,8 @@
                 </thead>
                 <tbody>
                     <tr *ngFor="let c of cuponesHistorial" [class.table-secondary]="c.estado === 'USADO'">
-                        <td class="font-monospace text-muted small">{{ c.codigo }}</td>
+                        <td class="font-monospace text-readable-secondary small">{{ c.codigo }}</td>
+                        
                         <td class="fw-bold text-secondary">
                             <span *ngIf="c.tipoDescuento === 'PORCENTAJE'">{{ c.valor }}%</span>
                             <span *ngIf="c.tipoDescuento === 'FIJO'">${{ c.valor }}</span>
@@ -89,10 +90,10 @@
                                 {{ c.estado }}
                             </span>
                         </td>
-                        <td class="small text-muted">{{ c.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+                        <td class="small text-readable-secondary">{{ c.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
                     </tr>
                     <tr *ngIf="cuponesHistorial.length === 0">
-                        <td colspan="5" class="text-center text-muted py-3">
+                        <td colspan="5" class="text-center table-empty-message py-3">
                             <small>No hay historial disponible.</small>
                         </td>
                     </tr>
