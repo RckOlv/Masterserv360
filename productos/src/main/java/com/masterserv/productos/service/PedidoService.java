@@ -23,11 +23,12 @@ import com.masterserv.productos.specification.PedidoSpecification;
 import jakarta.persistence.EntityNotFoundException;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory; // <--- Importar Logger
+import org.slf4j.LoggerFactory; 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value; // <--- Importante
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +40,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID; // <--- Importante para el Token
+import java.util.UUID; 
 import java.util.stream.Collectors;
 
 @Service
@@ -56,10 +57,14 @@ public class PedidoService {
     @Autowired private MovimientoStockService movimientoStockService;
     @Autowired private PedidoSpecification pedidoSpecification;
     
+    @org.springframework.beans.factory.annotation.Value("${app.frontend.url}")
+    private String frontendUrl;
+
     // --- INYECCIONES PARA NOTIFICACIÓN ---
     @Autowired private PdfService pdfService;
     @Autowired private EmailService emailService;
-    @Autowired private TemplateEngine templateEngine; // Para el HTML bonito
+    @Autowired private TemplateEngine templateEngine;
+    
     // -------------------------------------
 
     /**
@@ -120,12 +125,12 @@ public class PedidoService {
             if (proveedor.getEmail() != null && !proveedor.getEmail().isBlank()) {
                 logger.info("📧 Generando Orden de Compra #{} para proveedor '{}'...", pedidoGuardado.getId(), proveedor.getRazonSocial());
                 
-                // A. Generar PDF (VERSIÓN PROVEEDOR - SIN PRECIOS)
+                // A. Generar PDF
                 byte[] pdfBytes = pdfService.generarOrdenCompraProveedor(pedidoGuardado);
                 
-                // B. Generar Link y HTML
-                // (Recuerda crear el endpoint y pantalla en Angular para /proveedor/pedido/{token})
-                String linkConfirmacion = "http://localhost:4200/proveedor/pedido/" + pedidoGuardado.getToken();
+                // B. Generar Link y HTML (CORREGIDO)
+                // Usamos la variable inyectada en lugar de hardcodear localhost
+                String linkConfirmacion = frontendUrl + "/proveedor/pedido/" + pedidoGuardado.getToken();
                 
                 Context context = new Context();
                 context.setVariable("proveedorNombre", proveedor.getRazonSocial());
@@ -150,15 +155,13 @@ public class PedidoService {
             }
         } catch (Exception e) {
             logger.error("🔴 Error al notificar proveedor: {}", e.getMessage());
-            // No bloqueamos la creación del pedido si falla el email, solo logueamos.
         }
-        // -------------------------------------------------------
         
         return pedidoMapper.toPedidoDTO(pedidoGuardado);
     }
     
-    // ... (Métodos completar, cancelar, detalles, findAll, findById SE MANTIENEN IGUAL) ...
-    // ... CÓPIALOS TAL CUAL ESTABAN EN TU CÓDIGO ORIGINAL ...
+    // ... (El resto de tus métodos se mantienen exactamente igual) ...
+    // Asegúrate de copiarlos aquí abajo (marcarPedidoCompletado, cancelar, obtenerDetalles, etc.)
     
     @Transactional
     public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
@@ -262,12 +265,8 @@ public class PedidoService {
         return pedidoMapper.toPedidoDTO(pedido);
     }
 
-    /**
-     * Procesa la respuesta del proveedor: actualiza fecha, precios y estado.
-     */
     @Transactional
     public void confirmarPedidoPorProveedor(String token, ConfirmacionPedidoDTO dto) {
-        // 1. Buscar pedido por token
         Pedido pedido = pedidoRepository.findByToken(token)
                 .orElseThrow(() -> new EntityNotFoundException("Pedido no encontrado o token inválido."));
 
@@ -275,33 +274,26 @@ public class PedidoService {
             throw new IllegalStateException("Este pedido ya no está pendiente de confirmación.");
         }
 
-        // 2. Guardar la fecha prometida (¡Esto servirá para tus alertas!)
         pedido.setFechaEntregaEstimada(dto.getFechaEntrega());
 
-        // 3. Actualizar Precios si cambiaron
         BigDecimal nuevoTotal = BigDecimal.ZERO;
         
         if (dto.getItems() != null) {
             for (DetallePedido detalle : pedido.getDetalles()) {
-                // Buscamos si vino un precio nuevo para este ID de producto
                 dto.getItems().stream()
                     .filter(item -> item.getProductoId().equals(detalle.getProducto().getId()))
                     .findFirst()
                     .ifPresent(item -> {
-                        // Si mandó precio y es mayor a 0, actualizamos
                         if (item.getNuevoPrecio() != null && item.getNuevoPrecio().compareTo(BigDecimal.ZERO) >= 0) {
                             detalle.setPrecioUnitario(item.getNuevoPrecio());
                         }
                     });
     
-                // Recalculamos el subtotal con el precio (viejo o nuevo)
                 nuevoTotal = nuevoTotal.add(detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad())));
             }
             pedido.setTotalPedido(nuevoTotal);
         }
 
-        // 4. Cambiar estado (Semáforo Verde)
-        // Asegúrate de agregar EN_CAMINO a tu enum EstadoPedido
         pedido.setEstado(EstadoPedido.EN_CAMINO); 
 
         pedidoRepository.save(pedido);
@@ -310,13 +302,8 @@ public class PedidoService {
 
     @Transactional(readOnly = true)
     public Page<PedidoDTO> filter(PedidoFiltroDTO filtro, Pageable pageable) {
-        // Convierte DTO a Specification
         var spec = pedidoSpecification.getByFilters(filtro);
-    
-        // Busca usando los filtros + paginación
         Page<Pedido> pedidosPage = pedidoRepository.findAll(spec, pageable);
-    
-        // Convierte a DTO
         return pedidosPage.map(pedidoMapper::toPedidoDTO);
     }
 }
