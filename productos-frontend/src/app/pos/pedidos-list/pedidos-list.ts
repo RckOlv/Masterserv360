@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common'; 
 import { RouterModule } from '@angular/router'; 
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms'; // ReactiveFormsModule agregado por si usas FormBuilder
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms'; 
 
 import { PedidoService } from '../../service/pedido.service';
 import { PedidoDTO } from '../../models/pedido.model';
@@ -11,7 +11,7 @@ import { Page } from '../../models/page.model';
 import { mostrarToast } from '../../utils/toast';
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
 import { ProveedorService } from '../../service/proveedor.service'; 
-import Swal from 'sweetalert2'; // <--- (1) Importamos SweetAlert
+import Swal from 'sweetalert2'; 
 
 @Component({
   selector: 'app-pedidos-list',
@@ -21,7 +21,7 @@ import Swal from 'sweetalert2'; // <--- (1) Importamos SweetAlert
     RouterModule,
     HasPermissionDirective,
     FormsModule,
-    ReactiveFormsModule // Asegúrate de tener esto si usas formularios reactivos en el futuro
+    ReactiveFormsModule 
   ], 
   templateUrl: './pedidos-list.html',
   styleUrls: ['./pedidos-list.css'] 
@@ -129,7 +129,7 @@ export default class PedidosListComponent implements OnInit {
     });
   }
 
-  // --- 🔥 MÉTODO COMPLETAR CON SWEETALERT ---
+  // --- 🔥 MÉTODO COMPLETAR (CORREGIDO EL COLOR DE TEXTO) ---
   marcarCompletado(id: number | undefined): void {
     if (!id) return;
 
@@ -137,11 +137,11 @@ export default class PedidosListComponent implements OnInit {
       title: '¿Confirmar Recepción?',
       html: `
         <p>Vas a marcar el Pedido <strong>#${id}</strong> como <span class="text-success fw-bold">COMPLETADO</span>.</p>
-        <p class="small text-muted mt-2"><i class="bi bi-info-circle"></i> El stock de los productos se sumará automáticamente al inventario.</p>
+        <p class="small text-white-50 mt-2"><i class="bi bi-info-circle"></i> El stock de los productos se sumará automáticamente al inventario.</p>
       `,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#198754', // Verde Bootstrap
+      confirmButtonColor: '#198754', // Verde
       cancelButtonColor: '#6c757d',  // Gris
       confirmButtonText: '<i class="bi bi-box-seam me-1"></i> Sí, ingresar stock',
       cancelButtonText: 'Cancelar',
@@ -159,7 +159,6 @@ export default class PedidosListComponent implements OnInit {
     this.isLoading = true; 
     this.pedidoService.marcarCompletado(id).subscribe({
       next: () => {
-        // Alerta de éxito bonita
         Swal.fire({
           title: '¡Stock Actualizado!',
           text: 'El pedido ha sido completado y el inventario actualizado.',
@@ -181,16 +180,16 @@ export default class PedidosListComponent implements OnInit {
     });
   }
 
-  // --- 🔥 MÉTODO CANCELAR CON SWEETALERT ---
+  // --- MÉTODO CANCELAR ---
   marcarCancelado(id: number | undefined): void {
     if (!id) return;
 
     Swal.fire({
       title: '¿Cancelar Pedido?',
       text: `El pedido #${id} será cancelado definitivamente.`,
-      icon: 'error', // Cruz Roja
+      icon: 'error', 
       showCancelButton: true,
-      confirmButtonColor: '#dc3545', // Rojo Bootstrap
+      confirmButtonColor: '#dc3545', // Rojo
       cancelButtonColor: '#6c757d',
       confirmButtonText: 'Sí, cancelar pedido',
       cancelButtonText: 'No, volver',
