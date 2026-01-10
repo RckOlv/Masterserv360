@@ -29,6 +29,7 @@ public class PedidoDTO extends AuditableDTO {
     private LocalDateTime fechaPedido;
     private EstadoPedido estado;
     private BigDecimal totalPedido;
+    private String token;
 
     // Lista de detalles
     @Valid // Valida los DTOs anidados

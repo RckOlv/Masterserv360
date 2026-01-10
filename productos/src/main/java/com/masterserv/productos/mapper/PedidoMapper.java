@@ -55,7 +55,8 @@ public interface PedidoMapper {
         @Mapping(target = "fechaModificacion", ignore = true),
         @Mapping(source = "proveedorId", target = "proveedor"), // Usa helper
         @Mapping(source = "usuarioId", target = "usuario"),     // Usa helper
-        @Mapping(source = "detalles", target = "detalles")  // Usa helper de detalles
+        @Mapping(source = "detalles", target = "detalles"), // Usa helper de detalles
+        @Mapping(target = "token", ignore = true)
     })
     Pedido toPedido(PedidoDTO pedidoDTO);
 

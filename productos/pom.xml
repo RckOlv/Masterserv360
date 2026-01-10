@@ -6,7 +6,8 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.1.5</version>
-        <relativePath/> </parent>
+        <relativePath/> 
+    </parent>
     <groupId>com.masterserv</groupId>
     <artifactId>productos</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -38,10 +39,10 @@
         </dependency>
 
         <dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-text</artifactId>
-			<version>1.10.0</version>
-		</dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+            <version>1.10.0</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -130,7 +131,8 @@
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct-processor</artifactId>
             <version>${org.mapstruct.version}</version>
-            <scope>provided</scope> </dependency>
+            <scope>provided</scope> 
+        </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -144,7 +146,18 @@
             <scope>test</scope>
         </dependency>
 
-    </dependencies>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        </dependencies>
 
     <build>
         <plugins>
@@ -188,7 +201,8 @@
                     <compilerArgs>
                         <compilerArg>
                             -Amapstruct.defaultComponentModel=spring
-                        </compilerArg> </compilerArgs>
+                        </compilerArg> 
+                    </compilerArgs>
                 </configuration>
             </plugin>
         </plugins>
