@@ -124,7 +124,7 @@ public class ProductoController {
         dto.setTipoMovimiento(com.masterserv.productos.enums.TipoMovimiento.AJUSTE_MANUAL); // Forzamos el tipo
 
         // 3. Llamamos al servicio especialista
-        movimientoStockService.registrarMovimiento(dto);
+        productoService.ajustarStock(dto, principal.getName());
         
         return ResponseEntity.ok().build();
     }

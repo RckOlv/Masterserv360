@@ -17,22 +17,35 @@
                  [ngClass]="sol.procesado ? 'card-procesada' : 'card-pendiente'">
                 
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <h5 class="card-title fw-bold text-light mb-0">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title fw-bold text-light mb-0 text-truncate" style="max-width: 70%;" title="{{sol.descripcion}}">
                             {{ sol.descripcion }}
                         </h5>
-                        <span class="badge" [ngClass]="sol.procesado ? 'bg-success' : 'bg-warning text-dark'">
-                            {{ sol.procesado ? 'ARCHIVADO' : 'NUEVO' }}
+                        <span class="badge" [ngClass]="sol.procesado ? 'bg-secondary' : 'bg-primary'">
+                            {{ sol.procesado ? 'PROCESADO' : 'NUEVO' }}
                         </span>
                     </div>
-                    
-                    <p class="card-text text-white-50 mb-1">
-                        <i class="bi bi-person-circle me-1"></i> {{ sol.clienteNombre }}
-                    </p>
-                    <p class="card-text text-white-50 small">
-                        <i class="bi bi-whatsapp me-1"></i> {{ sol.clienteTelefono }}
-                    </p>
-                    <p class="card-text text-secondary small text-end mt-3">
+
+                    <div class="mb-3" *ngIf="sol.estadoListaEspera && sol.estadoListaEspera !== 'NINGUNO'">
+                        <span class="badge rounded-pill border"
+                              [ngClass]="{
+                                  'bg-warning text-dark border-warning': sol.estadoListaEspera === 'PENDIENTE',
+                                  'bg-success text-white border-success': sol.estadoListaEspera === 'NOTIFICADA'
+                              }">
+                             <i class="bi" [ngClass]="sol.estadoListaEspera === 'PENDIENTE' ? 'bi-hourglass-split' : 'bi-bell-fill'"></i>
+                             {{ sol.estadoListaEspera === 'PENDIENTE' ? 'Esperando Stock' : 'Ya Notificado' }}
+                        </span>
+                    </div>
+                    <div class="p-2 rounded" style="background-color: #2c2c2c;">
+                        <p class="card-text text-white-50 mb-1 small">
+                            <i class="bi bi-person-circle me-1 text-info"></i> {{ sol.clienteNombre }}
+                        </p>
+                        <p class="card-text text-white-50 small mb-0">
+                            <i class="bi bi-whatsapp me-1 text-success"></i> {{ sol.clienteTelefono }}
+                        </p>
+                    </div>
+
+                    <p class="card-text text-secondary small text-end mt-2 mb-0">
                         {{ sol.fechaSolicitud | date:'dd/MM/yyyy HH:mm' }}
                     </p>
                 </div>
@@ -41,16 +54,16 @@
                     <a *ngIf="!sol.procesado" 
                        [routerLink]="['/pos/productos/nuevo']" 
                        [queryParams]="{ solicitudId: sol.id, nombreProducto: sol.descripcion }"
-                       class="btn btn-sm btn-primary fw-bold flex-grow-1"
+                       class="btn btn-sm btn-outline-warning fw-bold flex-grow-1"
                        title="Crear producto y avisar al cliente">
                         <i class="bi bi-magic me-1"></i> Convertir
                     </a>
 
-                    <button *ngIf="!sol.procesado" class="btn btn-sm btn-success" (click)="procesar(sol)" title="Solo marcar leído">
+                    <button *ngIf="!sol.procesado" class="btn btn-sm btn-outline-success" (click)="procesar(sol)" title="Archivar / Marcar leído">
                         <i class="bi bi-check-lg"></i>
                     </button>
                     
-                    <button class="btn btn-sm btn-outline-danger" (click)="eliminar(sol.id)" title="Eliminar">
+                    <button class="btn btn-sm btn-outline-danger ms-auto" (click)="eliminar(sol.id)" title="Eliminar definitivamente">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>

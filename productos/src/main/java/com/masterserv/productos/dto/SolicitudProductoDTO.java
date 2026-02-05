@@ -14,4 +14,6 @@ public class SolicitudProductoDTO {
     private String clienteNombre;
     private String clienteTelefono;
     private String clienteEmail;
+
+    private String estadoListaEspera;
 }

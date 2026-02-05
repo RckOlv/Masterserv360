@@ -22,4 +22,10 @@ public interface ListaEsperaRepository extends JpaRepository<ListaEspera, Long> 
      * Útil para evitar duplicados antes de guardar.
      */
     boolean existsByUsuarioIdAndProductoIdAndEstado(Long usuarioId, Long productoId, EstadoListaEspera estado);
+
+    /**
+     * Verifica si el usuario tiene CUALQUIER producto en ese estado.
+     * (Este es el que necesitas para el Controlador de Solicitudes)
+     */
+    boolean existsByUsuarioIdAndEstado(Long usuarioId, EstadoListaEspera estado);
 }

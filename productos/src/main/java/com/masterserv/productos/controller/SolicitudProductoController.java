@@ -1,13 +1,15 @@
 package com.masterserv.productos.controller;
 
-import com.masterserv.productos.dto.SolicitudProductoDTO; // Nuevo DTO
+import com.masterserv.productos.dto.SolicitudProductoDTO;
 import com.masterserv.productos.entity.SolicitudProducto;
+import com.masterserv.productos.repository.ListaEsperaRepository;
 import com.masterserv.productos.repository.SolicitudProductoRepository;
+import com.masterserv.productos.enums.EstadoListaEspera;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.transaction.annotation.Transactional; // Importante para Lazy Loading
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +22,9 @@ public class SolicitudProductoController {
 
     @Autowired
     private SolicitudProductoRepository solicitudRepository;
+
+    @Autowired
+    private ListaEsperaRepository listaEsperaRepository;
 
     /**
      * Lista todas las solicitudes convirtiéndolas a DTO.
@@ -65,8 +70,29 @@ public class SolicitudProductoController {
             dto.setClienteNombre(entity.getUsuario().getNombre() + " " + entity.getUsuario().getApellido());
             dto.setClienteTelefono(entity.getUsuario().getTelefono());
             dto.setClienteEmail(entity.getUsuario().getEmail());
+
+            // --- LÓGICA DE LISTA DE ESPERA (AGREGADO) ---
+            // Verificamos si este usuario tiene algo pendiente
+            boolean estaEsperando = listaEsperaRepository.existsByUsuarioIdAndEstado(
+                    entity.getUsuario().getId(), 
+                    EstadoListaEspera.PENDIENTE
+            );
+
+            if (estaEsperando) {
+                dto.setEstadoListaEspera("PENDIENTE");
+            } else {
+                // Si no espera, vemos si ya fue notificado
+                boolean fueNotificado = listaEsperaRepository.existsByUsuarioIdAndEstado(
+                        entity.getUsuario().getId(), 
+                        EstadoListaEspera.NOTIFICADA
+                );
+                dto.setEstadoListaEspera(fueNotificado ? "NOTIFICADO" : "NINGUNO");
+            }
+            // ----------------------------------------------
+
         } else {
             dto.setClienteNombre("Anónimo / No registrado");
+            dto.setEstadoListaEspera("NINGUNO");
         }
         
         return dto;

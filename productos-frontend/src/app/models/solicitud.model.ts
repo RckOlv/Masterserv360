@@ -8,4 +8,6 @@ export interface SolicitudProducto {
     clienteNombre: string;
     clienteTelefono: string;
     clienteEmail: string;
+
+    estadoListaEspera?: 'PENDIENTE' | 'NOTIFICADA' | 'NINGUNO';
 }
