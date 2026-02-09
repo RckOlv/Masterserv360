@@ -46,7 +46,7 @@ public class ProcesoAutomaticoService {
      * 🟢 TAREA 1: Generar pedidos automáticos (AGRUPADO POR PROVEEDOR).
      * Ejecución: Cada 10 minutos.
      */
-    @Scheduled(fixedDelay = 600000) 
+    @Scheduled(fixedDelay = 10000) 
     public void generarPrePedidosAgrupados() {
         logger.info("⏰ [AUTO] Iniciando ciclo de reabastecimiento...");
 
