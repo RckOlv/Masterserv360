@@ -26,7 +26,6 @@ export default class CategoriasComponent implements OnInit {
   private fb = inject(FormBuilder);
   private categoriaService = inject(CategoriaService);
 
-  // Estado
   categorias: CategoriaDTO[] = [];
   
   filtroForm: FormGroup;
@@ -43,7 +42,6 @@ export default class CategoriasComponent implements OnInit {
       estado: ['ACTIVO']
     });
 
-    // MENTOR: Validaciones estrictas
     this.categoriaForm = this.fb.group({
       id: [null],
       nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
@@ -198,16 +196,27 @@ export default class CategoriasComponent implements OnInit {
      }
    }
 
+  // --- MENTOR: REFACTORIZACIÓN DE ERRORES ---
   private handleError(err: HttpErrorResponse, context: string) {
     if (err.status === 403) {
       this.errorMessage = 'Acción no permitida: No tiene permisos de Administrador.';
-    } else if (err.status === 500) {
-      this.errorMessage = 'Ocurrió un error interno en el servidor.';
-    } else {
-      this.errorMessage = err.error?.message || `Error al ${context} la categoría.`;
+    } 
+    // AQUÍ EL CAMBIO CLAVE: Ya no asumimos que 500 = "Error interno" ciegamente
+    else {
+        // Intentamos sacar el mensaje real primero
+        if (err.error && typeof err.error === 'string') {
+            this.errorMessage = err.error;
+        } else if (err.error && err.error.message) {
+            this.errorMessage = err.error.message;
+        } else {
+            // Si no hay mensaje, ahí sí ponemos el genérico
+            this.errorMessage = `Ocurrió un error al ${context} la categoría.`;
+        }
     }
+    
     if (this.errorMessage) mostrarToast(this.errorMessage, 'danger');
   }
+  // -------------------------------------------
 
   get f() { return this.categoriaForm.controls; }
 }

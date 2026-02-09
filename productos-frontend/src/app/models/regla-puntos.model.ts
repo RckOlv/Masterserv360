@@ -12,4 +12,5 @@ export interface ReglaPuntosDTO {
 
   estadoRegla?: string;
   fechaInicioVigencia?: string; 
+  fechaVencimiento?: string;
 }

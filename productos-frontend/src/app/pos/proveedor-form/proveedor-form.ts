@@ -49,11 +49,8 @@ export default class ProveedorFormComponent implements OnInit {
       razonSocial: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
       cuit: ['', [Validators.required, Validators.pattern(/^[0-9]{11}$/)]], 
       email: ['', [Validators.required, Validators.email, Validators.maxLength(100)]],
-      
-      // Campos para el teléfono compuesto
       codigoPais: ['+54'], 
       telefono: ['', [Validators.minLength(8), Validators.maxLength(15)]], 
-      
       direccion: ['', [Validators.maxLength(255)]],
       estado: ['ACTIVO', [Validators.required]],
       categoriaIds: this.fb.array([]) 
@@ -75,7 +72,6 @@ export default class ProveedorFormComponent implements OnInit {
     return this.proveedorForm.get('categoriaIds') as FormArray;
   }
   
-  // Bloqueo de teclas no numéricas
   validarInputNumerico(event: any): void {
       const input = event.target;
       input.value = input.value.replace(/[^0-9]/g, '');
@@ -96,18 +92,14 @@ export default class ProveedorFormComponent implements OnInit {
         this.setupCategoriasCheckboxes(results.proveedor?.categoriaIds);
 
         if (this.esEdicion && results.proveedor) {
-          
-          // --- LÓGICA INTELIGENTE DE SEPARACIÓN ---
           let telefonoFull = results.proveedor.telefono || '';
           let codigo = '+54';
           let numero = telefonoFull;
 
-          // 1. Si es Argentina con 9 (+549...), lo detectamos y limpiamos
           if (telefonoFull.startsWith('+549')) {
               codigo = '+54';
-              numero = telefonoFull.substring(4); // Quitamos el +549
+              numero = telefonoFull.substring(4); 
           } 
-          // 2. Caso estándar para otros países o Argentina sin 9
           else {
               const paisEncontrado = this.paises.find(p => telefonoFull.startsWith(p.codigo));
               if (paisEncontrado) {
@@ -115,7 +107,6 @@ export default class ProveedorFormComponent implements OnInit {
                   numero = telefonoFull.substring(codigo.length);
               }
           }
-          // ----------------------------------------
 
           this.proveedorForm.patchValue({
               ...results.proveedor,
@@ -155,33 +146,26 @@ export default class ProveedorFormComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
 
-    // Obtener categorías seleccionadas
     const categoriasSeleccionadas = this.categoriaIdsArray.controls
       .map((control, i) => control.value ? this.categorias[i].id : null)
       .filter((id): id is number => id !== null);
 
-    // --- CORRECCIÓN CRÍTICA: DESTRUCTURING ---
-    // Extraemos 'codigoPais' para NO enviarlo suelto en el DTO (porque el backend no lo espera)
-    // 'datosLimpios' tendrá todo lo demás (razonSocial, email, etc.)
     const { codigoPais, ...datosLimpios } = this.proveedorForm.getRawValue();
 
-    // --- LÓGICA INTELIGENTE DE UNIÓN ---
     let telefonoFinal = '';
     let numeroLimpio = datosLimpios.telefono ? datosLimpios.telefono.trim() : '';
 
     if (numeroLimpio) {
-        // Si es Argentina (+54) y el número NO empieza con 9, se lo agregamos
         if (codigoPais === '+54' && !numeroLimpio.startsWith('9')) {
             telefonoFinal = `${codigoPais}9${numeroLimpio}`;
         } else {
             telefonoFinal = `${codigoPais}${numeroLimpio}`;
         }
     }
-    // -----------------------------------
 
     const proveedorData: ProveedorDTO = {
-      ...datosLimpios, // Aquí ya NO está codigoPais
-      telefono: telefonoFinal, // Sobreescribimos el teléfono con el formateado
+      ...datosLimpios, 
+      telefono: telefonoFinal,
       id: this.proveedorId,
       categoriaIds: categoriasSeleccionadas,
     };
@@ -195,15 +179,29 @@ export default class ProveedorFormComponent implements OnInit {
         mostrarToast(`Proveedor ${this.esEdicion ? 'actualizado' : 'creado'} con éxito.`, 'success');
         this.router.navigate(['/pos/proveedores']);
       },
+      // --- MENTOR: ERROR HANDLING MEJORADO ---
       error: (err: HttpErrorResponse) => {
         console.error('Error al guardar proveedor:', err);
-        this.errorMessage = err.error?.message || 'Error al guardar el proveedor.';
-        if (this.errorMessage?.includes('violates unique constraint')) {
-             this.errorMessage = 'Error: El CUIT o Razón Social ya existen.';
-        }
-        mostrarToast(this.errorMessage!, 'danger');
         this.isLoading = false;
+
+        // 1. Mensaje del Backend (Prioridad)
+        if (err.error && typeof err.error === 'string') {
+            this.errorMessage = err.error;
+        } else if (err.error && err.error.message) {
+            this.errorMessage = err.error.message;
+        } else {
+            // 2. Fallback por si acaso
+            this.errorMessage = 'Error al guardar el proveedor.';
+        }
+
+        // 3. Chequeo extra por si el backend mandó la excepción cruda de BD
+        if (this.errorMessage?.includes('violates unique constraint')) {
+              this.errorMessage = 'Error: El CUIT o Razón Social ya existen.';
+        }
+
+        mostrarToast(this.errorMessage!, 'danger');
       }
+      // -------------------------------------
     });
   }
   

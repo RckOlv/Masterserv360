@@ -94,7 +94,7 @@ public class ProductoService {
         return productosPage.map(productoMapper::toProductoDTO);
     }
 
-    // --- AQUÍ EL CAMBIO CLAVE PARA USAR LA BÚSQUEDA FLEXIBLE ---
+    // --- BÚSQUEDA FLEXIBLE ---
     @Transactional(readOnly = true)
     public Page<ProductoDTO> filter(ProductoFiltroDTO filtro, Pageable pageable) {
         
@@ -104,12 +104,11 @@ public class ProductoService {
              return productosPage.map(productoMapper::toProductoDTO);
         }
 
-        // Si no hay texto, usamos los filtros normales (categoría, precio, etc.)
+        // Si no hay texto, usamos los filtros tradicionales
         Specification<Producto> spec = productoSpecification.getProductosByFilters(filtro);
         Page<Producto> productosPage = productoRepository.findAll(spec, pageable);
         return productosPage.map(productoMapper::toProductoDTO);
     }
-    // -----------------------------------------------------------
 
     @Transactional(readOnly = true)
     public ProductoDTO findById(Long id) {
@@ -120,9 +119,19 @@ public class ProductoService {
 
     @Transactional
     public ProductoDTO create(ProductoDTO productoDTO) {
+        // --- VALIDACIÓN DE DUPLICADO (CREATE) ---
+        // ✅ CORREGIDO: Usamos .nombre() en lugar de .getNombre() porque es un Record
+        if (productoRepository.existsByNombreIgnoreCase(productoDTO.nombre())) {
+            throw new IllegalArgumentException("¡Error! Ya existe un producto con el nombre '" + productoDTO.nombre() + "'.");
+        }
+        // ----------------------------------------
+        
+        // ✅ CORREGIDO: Usamos .codigo()
         if (productoRepository.existsByCodigo(productoDTO.codigo())) {
             throw new IllegalArgumentException("Ya existe un producto con el código: " + productoDTO.codigo());
         }
+        
+        // ✅ CORREGIDO: Usamos .categoriaId()
         Categoria categoria = categoriaRepository.findById(productoDTO.categoriaId())
                 .orElseThrow(() -> new EntityNotFoundException("Error al crear producto: La Categoría con ID " + productoDTO.categoriaId() + " no existe."));
         
@@ -138,8 +147,9 @@ public class ProductoService {
         
         Producto productoGuardado = productoRepository.save(producto);
         
-        if (productoDTO.getSolicitudId() != null) {
-            procesarSolicitudPorId(productoDTO.getSolicitudId(), productoGuardado);
+        // ✅ CORREGIDO: Usamos .solicitudId()
+        if (productoDTO.solicitudId() != null) {
+            procesarSolicitudPorId(productoDTO.solicitudId(), productoGuardado);
         } else {
             vincularSolicitudesPorNombre(productoGuardado);
         }
@@ -184,11 +194,19 @@ public class ProductoService {
 
     @Transactional
     public ProductoDTO update(Long id, ProductoDTO productoDTO) {
+        // --- VALIDACIÓN DE DUPLICADO (UPDATE) ---
+        // ✅ CORREGIDO: Usamos .nombre()
+        if (productoRepository.existsByNombreIgnoreCaseAndIdNot(productoDTO.nombre(), id)) {
+            throw new IllegalArgumentException("¡Error! El nombre '" + productoDTO.nombre() + "' ya lo está usando otro producto.");
+        }
+        // ----------------------------------------
+
         Producto productoExistente = productoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
 
         productoMapper.updateProductoFromDto(productoDTO, productoExistente);
 
+        // ✅ CORREGIDO: Usamos .categoriaId()
         if (productoDTO.categoriaId() != null && 
             !productoDTO.categoriaId().equals(productoExistente.getCategoria().getId())) {
             
@@ -197,6 +215,7 @@ public class ProductoService {
             productoExistente.setCategoria(categoria);
         }
         
+        // ✅ CORREGIDO: Usamos .estado()
         if (productoDTO.estado() != null) {
             productoExistente.setEstado(productoDTO.estado());
         }
@@ -240,13 +259,11 @@ public class ProductoService {
     @Transactional(readOnly = true)
     public Page<ProductoPublicoDTO> findPublicoByCriteria(ProductoPublicoFiltroDTO filtroPublico, Pageable pageable) {
         
-        // --- AQUÍ TAMBIÉN USAMOS LA BÚSQUEDA FLEXIBLE PARA EL PÚBLICO ---
         if (filtroPublico.getNombre() != null && !filtroPublico.getNombre().isBlank()) {
              Page<Producto> productosPage = productoRepository.buscarFlexible(filtroPublico.getNombre(), pageable);
              return productosPage.map(productoMapper::toProductoPublicoDTO);
         }
 
-        // Si no hay búsqueda por texto, usamos los filtros tradicionales
         ProductoFiltroDTO filtroInterno = new ProductoFiltroDTO();
         filtroInterno.setNombre(filtroPublico.getNombre());
         filtroInterno.setCategoriaIds(filtroPublico.getCategoriaIds());

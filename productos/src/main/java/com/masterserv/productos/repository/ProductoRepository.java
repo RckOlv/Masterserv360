@@ -85,4 +85,10 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
         """,
         nativeQuery = true)
     Page<Producto> buscarFlexible(@Param("termino") String termino, Pageable pageable);
+
+
+    // --- VALIDACIÓN DE DUPLICADOS ---
+    boolean existsByNombreIgnoreCase(String nombre);
+    boolean existsByNombreIgnoreCaseAndIdNot(String nombre, Long id);
+    // ----------------------------------------
 }

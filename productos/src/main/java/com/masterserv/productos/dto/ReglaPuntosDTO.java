@@ -2,7 +2,8 @@ package com.masterserv.productos.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List; // <--- IMPORTANTE
+import java.time.LocalDate; // <--- AGREGAR ESTE IMPORT
+import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -37,4 +38,6 @@ public class ReglaPuntosDTO extends AuditableDTO {
 
     private LocalDateTime fechaInicioVigencia;
     
+    // --- NUEVO CAMPO CALCULADO ---
+    private LocalDate fechaVencimiento; 
 }

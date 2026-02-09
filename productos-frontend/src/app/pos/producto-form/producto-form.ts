@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms'; // <--- Importar ValidatorFn
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClientModule, HttpErrorResponse } from '@angular/common/http';
 
@@ -67,7 +67,7 @@ export default class ProductoFormComponent implements OnInit {
       loteReposicion: [1, [Validators.required, Validators.min(1)]],
       estado: ['ACTIVO', Validators.required], 
       categoriaId: [null, Validators.required]
-    }, { validators: this.precioVentaMayorCostoValidator }); // <--- MENTOR: Validación Cruzada
+    }, { validators: this.precioVentaMayorCostoValidator });
 
     this.categoriaForm = this.fb.group({
         nombre: ['', [Validators.required, Validators.minLength(3)]],
@@ -103,8 +103,6 @@ export default class ProductoFormComponent implements OnInit {
     });
   }
 
-  // --- MENTOR: VALIDACIÓN PERSONALIZADA ---
-  // Verifica que Precio Venta >= Precio Costo
   precioVentaMayorCostoValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
     const costo = control.get('precioCosto')?.value;
     const venta = control.get('precioVenta')?.value;
@@ -114,7 +112,6 @@ export default class ProductoFormComponent implements OnInit {
     }
     return null;
   }
-  // ---------------------------------------
 
   setupAutoCodigo() {
     const nombreControl = this.productoForm.get('nombre');
@@ -185,7 +182,6 @@ export default class ProductoFormComponent implements OnInit {
     this.productoForm.markAllAsTouched();
     
     if (this.productoForm.invalid) {
-      // Si el error es solo de precio, mostramos un toast específico
       if (this.productoForm.errors?.['ventaMenorCosto']) {
           mostrarToast("El precio de venta no puede ser menor al costo.", "warning");
       } else {
@@ -217,11 +213,23 @@ export default class ProductoFormComponent implements OnInit {
         this.isLoading = false;
         this.router.navigate(['/pos/productos']);
       },
+      // --- MENTOR: MANEJO DE ERRORES MEJORADO ---
       error: (err: HttpErrorResponse) => {
-        this.errorMessage = err.error?.message || 'Error al guardar el producto.';
-        mostrarToast(this.errorMessage!, 'danger');
+        console.error('Error al guardar producto:', err);
         this.isLoading = false;
+
+        // 1. Intentamos leer el mensaje del backend
+        if (err.error && typeof err.error === 'string') {
+           this.errorMessage = err.error;
+        } else if (err.error && err.error.message) {
+           this.errorMessage = err.error.message;
+        } else {
+           this.errorMessage = 'No se pudo guardar el producto. Verifique los datos.';
+        }
+        
+        mostrarToast(this.errorMessage!, 'danger');
       }
+      // ------------------------------------------
     });
   }
 
@@ -251,10 +259,15 @@ export default class ProductoFormComponent implements OnInit {
             this.cerrarModalCategoria();
             this.intentarGenerarCodigo();
         },
+        // --- MENTOR: ERROR CATEGORÍA ---
         error: (err) => {
-            mostrarToast('Error al crear categoría.', 'danger');
+            console.error('Error categoria:', err);
+            let msg = 'Error al crear categoría.';
+            if (err.error && err.error.message) msg = err.error.message;
+            mostrarToast(msg, 'danger');
             this.isSavingCategoria = false;
         }
+        // -------------------------------
     });
   }
 

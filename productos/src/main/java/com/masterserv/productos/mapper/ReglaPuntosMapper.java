@@ -4,10 +4,11 @@ import com.masterserv.productos.dto.ReglaPuntosDTO;
 import com.masterserv.productos.entity.ReglaPuntos;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.AfterMapping; // <--- IMPORTANTE
+import org.mapstruct.MappingTarget; // <--- IMPORTANTE
 
 import java.util.List;
 
-// MENTOR: Agregamos 'uses' para inyectar el mapper de recompensas
 @Mapper(componentModel = "spring")
 public interface ReglaPuntosMapper {
 
@@ -20,4 +21,15 @@ public interface ReglaPuntosMapper {
     List<ReglaPuntosDTO> toReglaPuntosDTOList(List<ReglaPuntos> reglaPuntosList);
 
     List<ReglaPuntos> toReglaPuntosList(List<ReglaPuntosDTO> reglaPuntosDTOList);
+
+    // --- MENTOR: Lógica para calcular vencimiento ---
+    @AfterMapping
+    default void calcularVencimiento(ReglaPuntos source, @MappingTarget ReglaPuntosDTO target) {
+        if (source.getFechaCreacion() != null && source.getCaducidadPuntosMeses() != null) {
+            target.setFechaVencimiento(
+                source.getFechaCreacion().toLocalDate().plusMonths(source.getCaducidadPuntosMeses())
+            );
+        }
+    }
+    // ------------------------------------------------
 }

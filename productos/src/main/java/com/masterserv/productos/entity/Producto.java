@@ -27,7 +27,7 @@ public class Producto extends AuditableEntity {
     @Column(name = "codigo", unique = true, length = 50) 
     private String codigo; 
 
-    @Column(name = "nombre", nullable = false, length = 255) 
+    @Column(name = "nombre", nullable = false, length = 255, unique = true) 
     private String nombre; 
 
     @Column(name = "descripcion") 
