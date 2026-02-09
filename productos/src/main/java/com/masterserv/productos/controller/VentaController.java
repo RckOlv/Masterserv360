@@ -9,7 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort; // <--- IMPORTADO
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -46,13 +46,10 @@ public class VentaController {
     }
 
     @GetMapping("/{id}/comprobante")
-    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'CLIENTE')") // MENTOR: Cliente también puede descargar su comprobante
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'CLIENTE')")
     public ResponseEntity<byte[]> descargarComprobante(@PathVariable Long id, Authentication authentication) {
-        
-        // 1. Buscamos la venta completa
         Venta ventaCompleta = ventaService.findVentaByIdWithDetails(id); 
 
-        // 2. Seguridad: Si es Cliente, verificar que sea SU compra
         if (authentication != null && authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CLIENTE"))) {
             String emailUsuario = authentication.getName();
             if (!ventaCompleta.getCliente().getEmail().equals(emailUsuario)) {
@@ -60,7 +57,6 @@ public class VentaController {
             }
         }
 
-        // 3. Generamos el PDF
         byte[] pdfBytes = pdfService.generarComprobanteVenta(ventaCompleta);
 
         HttpHeaders headers = new HttpHeaders();
@@ -71,28 +67,23 @@ public class VentaController {
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }
 
-    // --- MENTOR: MÉTODO CORREGIDO PARA EL PORTAL ---
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'CLIENTE')") // 1. Permitimos Cliente
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR', 'CLIENTE')")
     public ResponseEntity<?> getVentaById(@PathVariable Long id, Authentication authentication) {
         try {
-            // 2. Buscamos la entidad para validar propiedad (más seguro)
             Venta ventaEntity = ventaService.findVentaByIdWithDetails(id);
 
-            // 3. Validación de Seguridad
             boolean esCliente = authentication.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_CLIENTE"));
 
             if (esCliente) {
                 String emailUsuario = authentication.getName();
-                // Si el email del cliente de la venta NO coincide con el del usuario logueado...
                 if (!ventaEntity.getCliente().getEmail().equals(emailUsuario)) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN)
                             .body("No tienes permiso para ver esta venta.");
                 }
             }
 
-            // 4. Si pasó la seguridad, devolvemos el DTO
             VentaDTO ventaDTO = ventaService.findById(id);
             return ResponseEntity.ok(ventaDTO);
 
@@ -102,11 +93,11 @@ public class VentaController {
                     .body("Error al cargar la venta.");
         }
     }
-    // -----------------------------------------------
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
     public ResponseEntity<Page<VentaDTO>> getAllVentas(
+            // ✅ ORDENADO POR FECHA DESCENDENTE
             @PageableDefault(page = 0, size = 10, sort = "fechaVenta", direction = Sort.Direction.DESC) 
             Pageable pageable) {
         
@@ -118,6 +109,7 @@ public class VentaController {
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
     public ResponseEntity<Page<VentaDTO>> findVentasByCriteria(
             @RequestBody VentaFiltroDTO filtro, 
+            // ✅ ORDENADO POR FECHA DESCENDENTE TAMBIÉN EN FILTRO
             @PageableDefault(page = 0, size = 10, sort = "fechaVenta", direction = Sort.Direction.DESC)
             Pageable pageable,
             Authentication authentication) {
@@ -130,12 +122,10 @@ public class VentaController {
 
         if (!isAdmin && isVendedor) {
             String vendedorEmail = authentication.getName();
-            logger.info("Filtrando ventas solo para el VENDEDOR: {}", vendedorEmail);
             Page<VentaDTO> ventasFiltradas = ventaService.findByCriteriaForVendedor(filtro, pageable, vendedorEmail);
             return ResponseEntity.ok(ventasFiltradas);
 
         } else if (isAdmin) {
-            logger.info("Filtrando ventas como ADMIN.");
             Page<VentaDTO> ventasFiltradas = ventaService.findByCriteria(filtro, pageable);
             return ResponseEntity.ok(ventasFiltradas);
         }
@@ -146,11 +136,11 @@ public class VentaController {
     @PatchMapping("/{id}/cancelar")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> cancelarVenta(@PathVariable Long id, Principal principal) {
-           if (principal == null || principal.getName() == null) {
-               return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-           }
-           String usuarioEmailCancela = principal.getName();
-           ventaService.cancelarVenta(id, usuarioEmailCancela);
-           return ResponseEntity.noContent().build();
+            if (principal == null || principal.getName() == null) {
+                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+            }
+            String usuarioEmailCancela = principal.getName();
+            ventaService.cancelarVenta(id, usuarioEmailCancela);
+            return ResponseEntity.noContent().build();
     }
 }

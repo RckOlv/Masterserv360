@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Sort;
 
 import java.security.Principal;
 import java.util.List;
@@ -56,12 +57,12 @@ public class ProductoController {
 
     @PostMapping("/filtrar")
     public ResponseEntity<Page<ProductoDTO>> filterProductos(
-            @RequestBody ProductoFiltroDTO filtro,
-            @PageableDefault(page = 0, size = 10) Pageable pageable) {
-        
-        Page<ProductoDTO> productoPage = productoService.filter(filtro, pageable);
-        return ResponseEntity.ok(productoPage);
-    }
+        @RequestBody ProductoFiltroDTO filtro,
+        @PageableDefault(page = 0, size = 10, sort = "nombre", direction = Sort.Direction.ASC) Pageable pageable) {
+    
+    Page<ProductoDTO> productoPage = productoService.filter(filtro, pageable);
+    return ResponseEntity.ok(productoPage);
+}
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
