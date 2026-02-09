@@ -42,7 +42,7 @@ public class ProcesoAutomaticoService {
     private final MovimientoPuntosRepository movimientoRepository;
     private final CuentaPuntosRepository cuentaRepository;
 
-    /**
+/**
      * 🟢 TAREA 1: Generar pedidos automáticos (AGRUPADO POR PROVEEDOR).
      * Ejecución: Cada 10 minutos.
      */
@@ -54,9 +54,20 @@ public class ProcesoAutomaticoService {
 
         if (!cotizacionesParaNotificar.isEmpty()) {
             logger.info("📨 Iniciando envío de {} solicitudes agrupadas...", cotizacionesParaNotificar.size());
+            
             for (Cotizacion cotizacion : cotizacionesParaNotificar) {
+                // Enviamos el correo
                 notificarProveedor(cotizacion);
+                
+                // 🛑 PAUSA TÁCTICA PARA MAILTRAP (2 segundos)
+                try {
+                    Thread.sleep(2000); 
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    logger.warn("⚠️ Interrupción en la pausa de envío de correos.");
+                }
             }
+            
         } else {
             logger.info("✅ Todo el stock está en orden o ya fue solicitado.");
         }
