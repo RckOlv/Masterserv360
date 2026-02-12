@@ -192,10 +192,9 @@ public class ProductoService {
         }
     }
 
-    @Transactional
+   @Transactional
     public ProductoDTO update(Long id, ProductoDTO productoDTO) {
         // --- VALIDACIÓN DE DUPLICADO (UPDATE) ---
-        // ✅ CORREGIDO: Usamos .nombre()
         if (productoRepository.existsByNombreIgnoreCaseAndIdNot(productoDTO.nombre(), id)) {
             throw new IllegalArgumentException("¡Error! El nombre '" + productoDTO.nombre() + "' ya lo está usando otro producto.");
         }
@@ -204,9 +203,11 @@ public class ProductoService {
         Producto productoExistente = productoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
 
+        // (1) CAPTURAMOS STOCK ANTERIOR
+        int stockAnterior = productoExistente.getStockActual();
+
         productoMapper.updateProductoFromDto(productoDTO, productoExistente);
 
-        // ✅ CORREGIDO: Usamos .categoriaId()
         if (productoDTO.categoriaId() != null && 
             !productoDTO.categoriaId().equals(productoExistente.getCategoria().getId())) {
             
@@ -215,12 +216,24 @@ public class ProductoService {
             productoExistente.setCategoria(categoria);
         }
         
-        // ✅ CORREGIDO: Usamos .estado()
         if (productoDTO.estado() != null) {
             productoExistente.setEstado(productoDTO.estado());
         }
 
+        // (2) GUARDAMOS
         Producto productoActualizado = productoRepository.save(productoExistente);
+
+        // (3) DISPARAMOS EL EVENTO SI SUBIÓ EL STOCK
+        int stockNuevo = productoActualizado.getStockActual();
+        if (stockAnterior <= 0 && stockNuevo > 0) {
+            System.out.println("📢 STOCK RECUPERADO: Disparando evento para " + productoActualizado.getNombre());
+            eventPublisher.publishEvent(new StockActualizadoEvent(
+                productoActualizado.getId(),
+                stockAnterior,
+                stockNuevo
+            ));
+        }
+
         return productoMapper.toProductoDTO(productoActualizado);
     }
 
