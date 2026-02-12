@@ -223,11 +223,20 @@ public class ProductoService {
         // (2) GUARDAMOS
         Producto productoActualizado = productoRepository.save(productoExistente);
 
-        // (3) DISPARAMOS EL EVENTO SI SUBIÓ EL STOCK
+        // (3) DEBUGGING 🕵️‍♂️ (Agrega esto temporalmente)
         int stockNuevo = productoActualizado.getStockActual();
+        
+        System.out.println("--- 🕵️ DEBUG UPDATE ---");
+        System.out.println("Producto: " + productoActualizado.getNombre());
+        System.out.println("Stock Anterior: " + stockAnterior);
+        System.out.println("Stock Nuevo: " + stockNuevo);
+        System.out.println("¿Entra al IF?: " + (stockAnterior <= 0 && stockNuevo > 0));
+        System.out.println("-----------------------");
+
+        // (3) DISPARAMOS EL EVENTO
         if (stockAnterior <= 0 && stockNuevo > 0) {
-            System.out.println("📢 STOCK RECUPERADO: Disparando evento para " + productoActualizado.getNombre());
-            eventPublisher.publishEvent(new StockActualizadoEvent(
+             System.out.println("📢 STOCK RECUPERADO: Disparando evento...");
+             eventPublisher.publishEvent(new StockActualizadoEvent(
                 productoActualizado.getId(),
                 stockAnterior,
                 stockNuevo
