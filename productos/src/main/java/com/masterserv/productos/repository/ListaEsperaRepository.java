@@ -2,6 +2,7 @@ package com.masterserv.productos.repository;
 
 import com.masterserv.productos.entity.ListaEspera;
 import com.masterserv.productos.entity.Producto;
+import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.enums.EstadoListaEspera;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -28,4 +29,10 @@ public interface ListaEsperaRepository extends JpaRepository<ListaEspera, Long> 
      * (Este es el que necesitas para el Controlador de Solicitudes)
      */
     boolean existsByUsuarioIdAndEstado(Long usuarioId, EstadoListaEspera estado);
+
+    /**
+     * Verifica si un usuario ya está en espera para un producto con cierto estado.
+     * Útil para evitar duplicados antes de guardar.
+     */
+    boolean existsByUsuarioAndProductoAndEstado(Usuario usuario, Producto producto, EstadoListaEspera estado);
 }

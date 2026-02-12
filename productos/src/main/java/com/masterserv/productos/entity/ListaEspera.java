@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "listas_espera",
@@ -32,6 +33,9 @@ public class ListaEspera {
     @Column(nullable = false, length = 20)
     private EstadoListaEspera estado; 
 
+    @Column(name = "fecha_solicitud")
+    private LocalDateTime fechaSolicitud;
+
     // --- Relaciones ---
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -41,4 +45,6 @@ public class ListaEspera {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "producto_id", nullable = false)
     private Producto producto;
+
+    
 }
