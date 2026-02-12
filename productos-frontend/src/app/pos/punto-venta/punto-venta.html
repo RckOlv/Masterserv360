@@ -5,9 +5,11 @@
 
       <form [formGroup]="productoSearchForm" (ngSubmit)="agregarAlCarrito()" class="p-3 masterserv-filter rounded border mb-3">
         <h5 class="masterserv-label mb-3"><i class="bi bi-search me-2"></i>Buscar Producto</h5>
-        <div class="row g-2 align-items-center">
+        
+        <div class="row g-2 align-items-end">
+          
           <div class="col-sm-8">
-            <label for="productoSelect" class="form-label visually-hidden">Producto</label>
+            <label for="productoSelect" class="form-label text-white small mb-1">Nombre o Código</label>
             <ng-select
               id="productoSelect"
               class="masterserv-select-dark custom-dark-select" 
@@ -15,7 +17,7 @@
               [items]="(productos$ | async) ?? []"
               [typeahead]="productoSearch$"
               bindLabel="nombre"
-              placeholder="Escriba nombre o código del producto..."
+              placeholder="Escriba..."
               [loading]="isLoadingProductos">
               <ng-template ng-option-tmp let-item="item">
                 <div class="text-white">{{item.nombre}}</div>
@@ -26,16 +28,19 @@
               </ng-template>
             </ng-select>
           </div>
+
           <div class="col-sm-2">
-            <label for="cantidadAgregar" class="form-label visually-hidden">Cantidad</label>
+            <label for="cantidadAgregar" class="form-label text-warning small fw-bold mb-1">Cant.</label>
             <input type="number" id="cantidadAgregar" class="form-control text-center masterserv-input-dark"
                    formControlName="cantidadAgregar" min="1">
           </div>
+
           <div class="col-sm-2 d-grid">
             <button class="btn masterserv-btn-primary" type="submit" [disabled]="productoSearchForm.invalid || isLoadingCarrito">
               <i class="bi bi-cart-plus"></i> Agregar
             </button>
           </div>
+
         </div>
       </form>
 
