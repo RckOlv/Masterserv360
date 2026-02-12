@@ -378,13 +378,17 @@ public class ProductoService {
         int cantidadAjuste = dto.getCantidad(); 
         int nuevoStock = stockAnterior + cantidadAjuste;
 
+        System.out.println("🚀 [AJUSTE MANUAL] Prod: " + producto.getNombre());
+        System.out.println("   --> Stock Anterior: " + stockAnterior + " | Nuevo: " + nuevoStock);
+
         if (nuevoStock < 0) {
-            throw new StockInsuficienteException("El ajuste dejaría el stock en negativo (" + nuevoStock + ").");
+            throw new StockInsuficienteException("El ajuste dejaría el stock en negativo.");
         }
 
         producto.setStockActual(nuevoStock);
         productoRepository.save(producto);
 
+        // Registro de movimiento... (igual que antes)
         MovimientoStock movimiento = new MovimientoStock();
         movimiento.setFecha(LocalDateTime.now());
         movimiento.setCantidad(cantidadAjuste);
@@ -392,9 +396,10 @@ public class ProductoService {
         movimiento.setMotivo(dto.getMotivo());
         movimiento.setProducto(producto);
         movimiento.setUsuario(usuario);
-        
         movimientoStockRepository.save(movimiento);
 
+        // DISPARAR EVENTO
+        System.out.println("📢 Disparando evento desde AJUSTE_MANUAL...");
         eventPublisher.publishEvent(new StockActualizadoEvent(producto.getId(), stockAnterior, nuevoStock));
     }
 }

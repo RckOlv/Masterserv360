@@ -46,7 +46,7 @@ public class ProcesoAutomaticoService {
      * 🟢 TAREA 1: Generar pedidos automáticos (AGRUPADO POR PROVEEDOR).
      * Ejecución: Cada 10 minutos.
      */
-    @Scheduled(fixedDelay = 10000) 
+    @Scheduled(fixedDelay = 60000) 
     public void generarPrePedidosAgrupados() {
         logger.info("⏰ [AUTO] Iniciando ciclo de reabastecimiento...");
 
@@ -216,10 +216,16 @@ public class ProcesoAutomaticoService {
      * 🟢 TAREA 3: LISTA DE ESPERA (Reactiva)
      * Se ejecuta cuando entra stock (evento).
      */
-    @Async
+   @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleStockActualizado(StockActualizadoEvent event) {
-        if (event.stockNuevo() <= 0) return;
+        System.out.println("👂 [LISTENER] Evento recibido para ID: " + event.productoId());
+        System.out.println("   --> Stock recibido en evento: " + event.stockNuevo());
+        
+        if (event.stockNuevo() <= 0) {
+            System.out.println("   --> 🛑 Bloqueado: El stock nuevo es 0 o menor.");
+            return;
+        }
         procesarListaEspera(event.productoId());
     }
 
