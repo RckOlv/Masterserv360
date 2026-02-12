@@ -413,13 +413,19 @@ public class ChatbotService {
         return new BotResponse("✅ *¡Sí hay stock!*\n📦 " + p.getNombre() + "\n💲 " + precioStr + "\n🟢 Disponibles: " + p.getStockActual() + "\n📍 Ven al local.", imagen);
     }
     
+   @org.springframework.scheduling.annotation.Async // (Opcional) Para que no frene la respuesta
     private void registrarInteraccion(String in, String out, Usuario u) {
-        InteraccionChatbot i = new InteraccionChatbot();
-        i.setFecha(LocalDateTime.now());
-        i.setMensajeUsuario(in);
-        i.setRespuestaBot(out);
-        i.setUsuario(u); 
-        interaccionRepository.save(i);
+        try {
+            InteraccionChatbot i = new InteraccionChatbot();
+            i.setFecha(LocalDateTime.now());
+            i.setMensajeUsuario(in);
+            i.setRespuestaBot(out);
+            i.setUsuario(u); 
+            interaccionRepository.save(i);
+        } catch (Exception e) {
+            // Si falla guardar el log, NO IMPORTA. El bot debe seguir funcionando.
+            System.err.println("⚠️ No se pudo guardar el log del chat: " + e.getMessage());
+        }
     }
 
     private String construirRespuestaTwiML(BotResponse respuesta) {

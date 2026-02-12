@@ -11,13 +11,14 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class InteraccionChatbot extends AuditableEntity {
+// ❌ YA NO EXTIENDE AuditableEntity PARA EVITAR EL BUCLE
+public class InteraccionChatbot { 
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Lob // Para textos largos
+    @Lob
     @Column(name = "mensaje_usuario", columnDefinition = "TEXT")
     private String mensajeUsuario;
 
@@ -28,13 +29,19 @@ public class InteraccionChatbot extends AuditableEntity {
     @Column(nullable = false)
     private LocalDateTime fecha;
 
-    // --- Relaciones ---
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_id") // Anulable (para chats anónimos)
+    @JoinColumn(name = "usuario_id") 
     private Usuario usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "producto_id") // Anulable (si la consulta no es de un producto)
+    @JoinColumn(name = "producto_id")
     private Producto producto;
+
+    // ✅ ESTO REEMPLAZA LA AUDITORÍA AUTOMÁTICA
+    @PrePersist
+    public void prePersist() {
+        if (this.fecha == null) {
+            this.fecha = LocalDateTime.now();
+        }
+    }
 }
