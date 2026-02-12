@@ -436,8 +436,25 @@ export default class PuntoVentaComponent implements OnInit {
       switchMap(term => {
         if (!term || term.length < 2) return of([]);
         const filtro = { nombre: term, estado: 'ACTIVO' };
+        
         return this.productoService.filtrarProductos(filtro, 0, 20).pipe(
-          map((page: Page<ProductoDTO>) => page.content),
+          map((page: Page<ProductoDTO>) => {
+            const productos = page.content;
+            // ---------- AJUSTE DE STOCK SEGÚN CARRITO ACTUAL ----------
+            // Recorremos los productos encontrados
+            return productos.map(prod => {
+              // Buscamos si este producto ya está en el carrito actual
+              const itemEnCarrito = this.carrito?.items?.find(item => item.productoId === prod.id);
+              
+              if (itemEnCarrito) {
+                // Si existe, restamos la cantidad del carrito al stock que viene de BD
+                // (Aseguramos que no sea negativo visualmente con Math.max)
+                prod.stockActual = Math.max(0, prod.stockActual - itemEnCarrito.cantidad);
+              }
+              return prod;
+            });
+            // ------------------------------------------
+          }),
           catchError(() => {
             mostrarToast('Error al buscar productos', 'danger');
             return of([]);
