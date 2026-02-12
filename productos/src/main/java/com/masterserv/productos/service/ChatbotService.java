@@ -8,16 +8,13 @@ import com.twilio.twiml.messaging.Message;
 import com.twilio.twiml.messaging.Body;
 import com.twilio.twiml.messaging.Media;
 
-import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.text.Normalizer;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,11 +29,9 @@ public class ChatbotService {
     // --- MEMORIA TEMPORAL DEL BOT (RAM) ---
     private final Map<String, String> usuarioEstado = new ConcurrentHashMap<>();
     private final Map<String, Long> usuarioUltimoProducto = new ConcurrentHashMap<>();
-    
-    // Para canje de premios (lista de recompensas)
     private final Map<String, List<Recompensa>> usuarioOpcionesCanje = new ConcurrentHashMap<>();
     
-    // NUEVO: Para desambiguar productos (lista de productos encontrados)
+    // Lista para desambiguar productos (cuando hay varios con mismo nombre)
     private final Map<String, List<Producto>> usuarioOpcionesBusqueda = new ConcurrentHashMap<>();
 
     private final UsuarioRepository usuarioRepository;
@@ -47,8 +42,7 @@ public class ChatbotService {
     private final RecompensaRepository recompensaRepository;
     private final CuentaPuntosRepository cuentaPuntosRepository;
     private final ListaEsperaRepository listaEsperaRepository;
-    private final CuponService cuponService;
-    private final AlertaService alertaService;
+    private final CuponService cuponService; 
 
     public ChatbotService(UsuarioRepository usuarioRepository,
                           ProductoRepository productoRepository,
@@ -58,8 +52,7 @@ public class ChatbotService {
                           RecompensaRepository recompensaRepository,
                           CuentaPuntosRepository cuentaPuntosRepository,
                           ListaEsperaRepository listaEsperaRepository,
-                          CuponService cuponService,
-                          AlertaService alertaService) {
+                          CuponService cuponService) {
         this.usuarioRepository = usuarioRepository;
         this.productoRepository = productoRepository;
         this.interaccionRepository = interaccionRepository;
@@ -69,7 +62,6 @@ public class ChatbotService {
         this.cuentaPuntosRepository = cuentaPuntosRepository;
         this.listaEsperaRepository = listaEsperaRepository;
         this.cuponService = cuponService;
-        this.alertaService = alertaService;
     }
 
     private static class BotResponse {
@@ -84,6 +76,10 @@ public class ChatbotService {
         String telefono = from.replace("whatsapp:", "").trim();
         Optional<Usuario> usuarioOpt = usuarioRepository.findByTelefono(telefono);
         
+        // Log para ver qué llega
+        System.out.println("📩 Msg de " + telefono + ": " + body);
+
+        // Registrar Entrada
         try { registrarInteraccion(body, null, usuarioOpt.orElse(null)); } catch (Exception e) {}
 
         BotResponse respuesta;
@@ -95,6 +91,7 @@ public class ChatbotService {
             resetearEstado(telefono); 
         }
         
+        // Registrar Salida
         try { registrarInteraccion(null, respuesta.texto, usuarioOpt.orElse(null)); } catch (Exception e) {}
         
         return construirRespuestaTwiML(respuesta);
@@ -115,7 +112,7 @@ public class ChatbotService {
 
         Usuario usuario = usuarioOpt.get();
 
-        // 2. COMANDOS GLOBALES
+        // 2. COMANDOS GLOBALES DE RESET
         if (detectarIntencion(texto, List.of("hola", "menu", "inicio", "salir", "cancelar", "chau", "atras"))) {
             resetearEstado(telefono);
             return mostrarMenuPrincipal(usuario.getNombre());
@@ -123,6 +120,7 @@ public class ChatbotService {
 
         // 3. MÁQUINA DE ESTADOS
         String estadoActual = usuarioEstado.getOrDefault(telefono, "MENU");
+        System.out.println("🤖 Estado actual para " + telefono + ": " + estadoActual); // Log de Debug
 
         switch (estadoActual) {
             case "MENU":
@@ -131,7 +129,7 @@ public class ChatbotService {
             case "BUSCANDO":
                 return procesarBusquedaProducto(texto, telefono, usuario);
 
-            case "SELECCIONANDO_PRODUCTO": // <--- NUEVO ESTADO
+            case "SELECCIONANDO_PRODUCTO": // Estado intermedio si hay varios productos
                 return procesarSeleccionProductoBuscado(texto, telefono, usuario);
 
             case "CONFIRMANDO_ESPERA":
@@ -159,34 +157,28 @@ public class ChatbotService {
     }
 
     private BotResponse procesarOpcionMenu(String input, String telefono, Usuario usuario) {
-        if (input.equals("1")) {
+        // Usamos .contains para ser más flexibles (por si mandan "1." o "1 ")
+        if (input.contains("1")) {
             usuarioEstado.put(telefono, "BUSCANDO");
             return new BotResponse("🔎 *Buscador de Repuestos*\n\nEscribe el nombre o código del producto que buscas.\n_(Ej: bujia, aceite, espejo)_");
         } 
-        else if (input.equals("2")) {
+        else if (input.contains("2")) {
             usuarioEstado.put(telefono, "CANJEANDO");
             return mostrarPremiosDisponibles(usuario, telefono);
         }
-        else if (input.equals("3")) {
-            alertaService.crearAlerta(
-                "🆘 Solicitud de Humano",
-                "El cliente " + usuario.getNombre() + " (" + telefono + ") solicita hablar con un humano.",
-                usuario,
-                "/clientes/detalle/" + usuario.getId() 
-            );
-            return new BotResponse("💬 Entendido. He enviado una alerta a nuestros asesores. 🔔\n\nEn breve te contactarán. Si es urgente, llama al local.");
+        else if (input.contains("3")) {
+            return new BotResponse("💬 Entendido. Un asesor verá este chat pronto.");
         }
         else {
             return new BotResponse("⚠️ Opción no válida. Escribe *1*, *2* o *3*.");
         }
     }
 
-    // --- 🛍️ LÓGICA DE BÚSQUEDA MEJORADA (DESAMBIGUACIÓN) ---
+    // --- 🛍️ LÓGICA DE BÚSQUEDA Y ESPERA ---
 
     private BotResponse procesarBusquedaProducto(String termino, String telefono, Usuario usuario) {
         if (termino.length() < 3) return new BotResponse("⚠️ Escribe un nombre más largo para buscar mejor.");
 
-        // MENTOR: Buscamos hasta 5 coincidencias, no solo 1
         Pageable top5 = PageRequest.of(0, 5);
         List<Producto> encontrados;
         try {
@@ -195,20 +187,19 @@ public class ChatbotService {
              encontrados = productoRepository.findByNombreILike(termino, top5);
         }
 
-        // CASO A: NADA (Anti-Choripán)
+        // CASO A: NO EXISTE
         if (encontrados.isEmpty()) {
-            return new BotResponse("🚫 Disculpa, no encontré nada con ese nombre.\n\nIntenta ser más específico o escribe *Hola* para volver.");
+            return new BotResponse("🚫 Disculpa, no tenemos ese producto en nuestro catálogo.\n\nIntenta con otro nombre o escribe *Hola* para volver al menú.");
         }
 
-        // CASO B: EXACTAMENTE 1 (Directo al grano)
+        // CASO B: EXACTAMENTE 1
         if (encontrados.size() == 1) {
             return evaluarStockProducto(encontrados.get(0), telefono);
         }
 
         // CASO C: VARIOS (Desambiguación)
-        // Guardamos la lista en memoria y pedimos elegir
         usuarioOpcionesBusqueda.put(telefono, encontrados);
-        usuarioEstado.put(telefono, "SELECCIONANDO_PRODUCTO");
+        usuarioEstado.put(telefono, "SELECCIONANDO_PRODUCTO"); // Guardamos estado intermedio
 
         StringBuilder msg = new StringBuilder("🔎 *Encontré varias opciones:*\n");
         for (int i = 0; i < encontrados.size(); i++) {
@@ -219,7 +210,7 @@ public class ChatbotService {
         return new BotResponse(msg.toString());
     }
 
-    // NUEVO MÉTODO: Procesa la elección del usuario (1, 2, 3...)
+    // Cuando el usuario elige "1" de la lista de productos encontrados
     private BotResponse procesarSeleccionProductoBuscado(String input, String telefono, Usuario usuario) {
         List<Producto> opciones = usuarioOpcionesBusqueda.get(telefono);
         
@@ -232,7 +223,7 @@ public class ChatbotService {
             int indice = Integer.parseInt(input) - 1;
             if (indice >= 0 && indice < opciones.size()) {
                 Producto elegido = opciones.get(indice);
-                // Una vez elegido, evaluamos su stock
+                // Aquí llamamos al método centralizado de stock
                 return evaluarStockProducto(elegido, telefono);
             } else {
                 return new BotResponse("⚠️ Número inválido. Elige una opción de la lista.");
@@ -242,15 +233,18 @@ public class ChatbotService {
         }
     }
 
-    // Lógica común para verificar stock (usada por búsqueda directa o selección)
+    // --- 🔥 MÉTODO UNIFICADO DE EVALUACIÓN DE STOCK 🔥 ---
+    // Este método asegura que el estado CONFIRMANDO_ESPERA se fije correctamente
     private BotResponse evaluarStockProducto(Producto producto, String telefono) {
         if (producto.getStockActual() > 0) {
-            resetearEstado(telefono);
+            resetearEstado(telefono); // Si hay stock, terminamos el flujo
             return formatearRespuestaProducto(producto);
         } else {
-            // No hay stock -> Ofrecer Lista de Espera
+            // NO HAY STOCK -> FIJAMOS ESTADO DE ESPERA
             usuarioEstado.put(telefono, "CONFIRMANDO_ESPERA");
             usuarioUltimoProducto.put(telefono, producto.getId());
+            
+            System.out.println("🔴 Stock 0. Fijando estado CONFIRMANDO_ESPERA para " + telefono);
             
             return new BotResponse(
                 "📦 *" + producto.getNombre() + "*\n" +
@@ -263,15 +257,17 @@ public class ChatbotService {
     }
 
     private BotResponse procesarConfirmacionEspera(String input, String telefono, Usuario usuario) {
+        // Verificar si tenemos el producto en memoria
         if (!usuarioUltimoProducto.containsKey(telefono)) {
             resetearEstado(telefono);
-            return new BotResponse("⏳ Pasó mucho tiempo. Vuelve a buscar el producto.");
+            return new BotResponse("⏳ Pasó mucho tiempo o se reinició el sistema. Por favor vuelve a buscar el producto.");
         }
 
         Long productoId = usuarioUltimoProducto.get(telefono);
         Producto producto = productoRepository.findById(productoId).orElse(null);
 
-        if (input.equals("1") || input.equalsIgnoreCase("si")) {
+        // Aceptamos "1", "si", "sii", "avisame"
+        if (input.contains("1") || input.contains("si") || input.contains("avi")) {
             boolean yaAnotado = listaEsperaRepository.existsByUsuarioAndProductoAndEstado(usuario, producto, EstadoListaEspera.PENDIENTE);
             
             if (!yaAnotado) {
@@ -282,15 +278,16 @@ public class ChatbotService {
                 espera.setEstado(EstadoListaEspera.PENDIENTE);
                 listaEsperaRepository.save(espera);
             }
+
             resetearEstado(telefono);
             return new BotResponse("✅ ¡Listo! Te anoté. Te avisaremos por aquí cuando entre stock de *" + producto.getNombre() + "*.");
         } 
-        else if (input.equals("2") || input.equalsIgnoreCase("no")) {
+        else if (input.contains("2") || input.contains("no")) {
             resetearEstado(telefono);
             return new BotResponse("👍 Entendido. ¿Necesitas buscar otra cosa? Escribe *1* desde el menú.");
         } 
         else {
-            return new BotResponse("⚠️ Responde *1* (Sí) o *2* (No).");
+            return new BotResponse("⚠️ No te entendí. Responde *1* (Sí) o *2* (No).");
         }
     }
 
@@ -379,7 +376,7 @@ public class ChatbotService {
         usuarioEstado.remove(telefono);
         usuarioUltimoProducto.remove(telefono);
         usuarioOpcionesCanje.remove(telefono);
-        usuarioOpcionesBusqueda.remove(telefono); // Limpiamos también la búsqueda
+        usuarioOpcionesBusqueda.remove(telefono);
     }
 
     private String normalizarTexto(String input) {
