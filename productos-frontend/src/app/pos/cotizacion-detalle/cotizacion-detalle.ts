@@ -9,11 +9,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CotizacionAdminDTO } from '../../models/cotizacion-admin.model';
 import { ItemCotizacionAdminDTO } from '../../models/item-cotizacion-admin.model';
 import { CotizacionService } from '../../service/cotizacion.service';
-// import { PedidoDTO } from '../../models/pedido.model'; // MENTOR: Ya no lo forzamos aquí
 
 // Utils
 import { mostrarToast } from '../../utils/toast';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
+
+// ✅ 1. IMPORTAR SWEETALERT2
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-cotizacion-detalle',
@@ -73,69 +75,134 @@ export default class CotizacionDetalleComponent implements OnInit {
     this.reloadCotizacion$.next();
   }
 
-  onCancelarItem(item: ItemCotizacionAdminDTO): void {
-    if (!confirm(`¿Seguro que quieres cancelar el item "${item.productoNombre}"?`)) {
-      return;
-    }
+  // --- MÉTODOS CON SWEETALERT2 ---
 
-    this.isProcessing = true;
-    this.cotizacionService.cancelarItem(item.id).subscribe({
-      next: () => {
-        mostrarToast('Item cancelado exitosamente.', 'success');
-        this.recargarDatos(); 
-        this.isProcessing = false;
-      },
-      error: (err: HttpErrorResponse) => {
-        const errorMsg = err.error?.message || 'Error al cancelar el item.';
-        mostrarToast(errorMsg, 'danger');
-        this.isProcessing = false;
+  onCancelarItem(item: ItemCotizacionAdminDTO): void {
+    Swal.fire({
+      title: '¿Cancelar Item?',
+      text: `Vas a cancelar "${item.productoNombre}". Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Sí, cancelar',
+      cancelButtonText: 'Volver',
+      background: '#1e1e1e', color: '#ffffff' // Estilo Dark
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.isProcessing = true;
+        this.cotizacionService.cancelarItem(item.id).subscribe({
+          next: () => {
+            mostrarToast('Item cancelado exitosamente.', 'success');
+            this.recargarDatos(); 
+            this.isProcessing = false;
+          },
+          error: (err: HttpErrorResponse) => {
+            const errorMsg = err.error?.message || 'Error al cancelar el item.';
+            mostrarToast(errorMsg, 'danger');
+            this.isProcessing = false;
+          }
+        });
       }
     });
   }
 
   onCancelarCotizacion(cotizacion: CotizacionAdminDTO): void {
-    if (!confirm(`¿Seguro que quieres CANCELAR TODA la cotización #${cotizacion.id} del proveedor ${cotizacion.proveedorNombre}?`)) {
-      return;
-    }
-
-    this.isProcessing = true;
-    this.cotizacionService.cancelarCotizacion(cotizacion.id).subscribe({
-      next: () => {
-        mostrarToast('Cotización cancelada.', 'warning');
-        this.router.navigate(['/pos/cotizaciones']); 
-        this.isProcessing = false;
-      },
-      error: (err: HttpErrorResponse) => {
-        const errorMsg = err.error?.message || 'Error al cancelar la cotización.';
-        mostrarToast(errorMsg, 'danger');
-        this.isProcessing = false;
+    Swal.fire({
+      title: '¿Cancelar Cotización?',
+      text: `Se cancelará TODA la cotización #${cotizacion.id}.`,
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Sí, anular todo',
+      cancelButtonText: 'No, esperar',
+      background: '#1e1e1e', color: '#ffffff'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.isProcessing = true;
+        this.cotizacionService.cancelarCotizacion(cotizacion.id).subscribe({
+          next: () => {
+            Swal.fire({
+              title: 'Cancelada',
+              text: 'La cotización ha sido anulada.',
+              icon: 'success',
+              background: '#1e1e1e', color: '#ffffff', confirmButtonColor: '#28a745'
+            });
+            this.router.navigate(['/pos/cotizaciones']); 
+            this.isProcessing = false;
+          },
+          error: (err: HttpErrorResponse) => {
+            const errorMsg = err.error?.message || 'Error al cancelar la cotización.';
+            mostrarToast(errorMsg, 'danger');
+            this.isProcessing = false;
+          }
+        });
       }
     });
   }
 
   /**
    * Acción: Confirma la cotización y genera el Pedido.
+   * ✅ AHORA USA SWEETALERT2
    */
   onConfirmarCotizacion(cotizacion: CotizacionAdminDTO): void {
     const precioFormateado = this.currencyPipe.transform(cotizacion.precioTotalOfertado, 'ARS', 'symbol', '1.2-2');
 
-    if (!confirm(`¿Confirmar esta oferta por ${precioFormateado}? Se generará un Pedido formal.`)) {
-      return;
-    }
-
-    this.isProcessing = true;
-    this.cotizacionService.confirmarCotizacion(cotizacion.id).subscribe({
-      // MENTOR: Cambiamos el tipo a 'any' para leer la respuesta flexible del mapa
-      next: (response: any) => { 
-        // CORRECCIÓN: Usamos response.pedidoId en lugar de response.id
-        mostrarToast(`¡Éxito! Pedido #${response.pedidoId} generado correctamente.`, 'success');
-        this.router.navigate(['/pos/pedidos']); 
-        this.isProcessing = false;
-      },
-      error: (err: HttpErrorResponse) => {
-        const errorMsg = err.error?.message || 'Error al confirmar la cotización.';
-        mostrarToast(errorMsg, 'danger');
-        this.isProcessing = false;
+    Swal.fire({
+      title: '¿Confirmar Oferta?',
+      html: `
+        <p>Estás a punto de aceptar esta cotización por:</p>
+        <h2 style="color: #28a745; margin: 10px 0;">${precioFormateado}</h2>
+        <p style="font-size: 0.9em; color: #aaa;">Se generará un <b>Pedido Formal</b> automáticamente.</p>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#28a745', // Verde éxito
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, Generar Pedido',
+      cancelButtonText: 'Cancelar',
+      background: '#1e1e1e', // Fondo oscuro
+      color: '#ffffff',      // Texto blanco
+      showLoaderOnConfirm: true,
+      preConfirm: () => {
+        // Opcional: Bloquear UI mientras carga SweetAlert
+        this.isProcessing = true;
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        
+        this.cotizacionService.confirmarCotizacion(cotizacion.id).subscribe({
+          next: (response: any) => { 
+            this.isProcessing = false;
+            
+            // Alerta de Éxito
+            Swal.fire({
+              title: '¡Pedido Generado!',
+              text: `Se creó el Pedido #${response.pedidoId} exitosamente.`,
+              icon: 'success',
+              confirmButtonText: 'Ir a Pedidos',
+              confirmButtonColor: '#E41E26',
+              background: '#1e1e1e', color: '#ffffff'
+            }).then(() => {
+              this.router.navigate(['/pos/pedidos']); 
+            });
+          },
+          error: (err: HttpErrorResponse) => {
+            this.isProcessing = false;
+            const errorMsg = err.error?.message || 'Error al confirmar la cotización.';
+            
+            // Alerta de Error
+            Swal.fire({
+              title: 'Error',
+              text: errorMsg,
+              icon: 'error',
+              background: '#1e1e1e', color: '#ffffff'
+            });
+          }
+        });
+      } else {
+        this.isProcessing = false; // Resetear si cancela
       }
     });
   }

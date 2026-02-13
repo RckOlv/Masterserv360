@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .header { background-color: #1e1e1e; padding: 20px; text-align: center; border-bottom: 3px solid #E41E26; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 24px; }
+        .content { padding: 30px; color: #333333; }
+        .product-card { background-color: #f8f9fa; border-left: 5px solid #28a745; padding: 15px; margin: 20px 0; }
+        .product-name { font-size: 18px; font-weight: bold; color: #1e1e1e; }
+        .btn { display: inline-block; padding: 12px 24px; background-color: #E41E26; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px; }
+        .btn:hover { background-color: #c91920; }
+        .footer { background-color: #eeeeee; padding: 15px; text-align: center; font-size: 12px; color: #777777; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>¡Buenas Noticias! 📦</h1>
+        </div>
+        <div class="content">
+            <p>Hola <strong th:text="${clienteNombre}">Cliente</strong>,</p>
+            <p>Te avisamos que el producto que estabas esperando ya tiene stock disponible nuevamente.</p>
+            
+            <div class="product-card">
+                <div class="product-name" th:text="${productoNombre}">Nombre del Producto</div>
+                <p style="margin: 5px 0 0 0; color: #666;">¡Corre antes de que se agote de nuevo!</p>
+            </div>
+
+            <center>
+                <a href="https://masterserv360.vercel.app/productos" class="btn">Ver en la Tienda</a>
+            </center>
+        </div>
+        <div class="footer">
+            <p>Este es un mensaje automático de Masterserv360.</p>
+        </div>
+    </div>
+</body>
+</html>

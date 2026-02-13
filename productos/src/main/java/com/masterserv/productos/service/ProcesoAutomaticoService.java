@@ -246,15 +246,22 @@ public class ProcesoAutomaticoService {
             try {
                 Usuario usuario = espera.getUsuario();
                 
-                // Email
+                // --- 📧 EMAIL MEJORADO CON THYMELEAF ---
+                Context context = new Context();
+                context.setVariable("clienteNombre", usuario.getNombre());
+                context.setVariable("productoNombre", producto.getNombre());
+                
+                String htmlContent = templateEngine.process("email-stock-recuperado", context);
+
                 emailService.enviarEmailHtml(usuario.getEmail(), 
-                    "¡Ya llegó! " + producto.getNombre(), 
-                    "Hola " + usuario.getNombre() + ", tu producto ya está disponible.");
+                    "🟢 ¡Ya llegó! " + producto.getNombre(), 
+                    htmlContent); // <--- Enviamos HTML procesado
+                // ----------------------------------------
 
                 // WhatsApp
                 if (whatsappService != null && usuario.getTelefono() != null) {
                     whatsappService.enviarMensaje(usuario.getTelefono(), 
-                        "👋 Hola " + usuario.getNombre() + ", buenas noticias: Llegó " + producto.getNombre());
+                        "👋 Hola " + usuario.getNombre() + ", buenas noticias: Llegó *" + producto.getNombre() + "* al local. 🏃‍♂️💨. Ven a buscarlo!");
                 }
 
                 espera.setEstado(EstadoListaEspera.NOTIFICADA);
