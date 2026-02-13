@@ -6,11 +6,19 @@
           <h4 class="masterserv-title mb-0">
             <i class="bi bi-basket2-fill me-2 text-warning"></i> Comparativa de Precios
           </h4>
-          <small class="text-white-50">Productos solicitados actualmente en cotizaciones abiertas.</small>
+          <small class="text-white-50">Selecciona los proveedores ganadores para generar los pedidos.</small>
       </div>
-      <button class="btn btn-sm btn-outline-secondary" (click)="cargarProductos()" title="Recargar">
-          <i class="bi bi-arrow-clockwise"></i>
-      </button>
+      <div class="d-flex gap-2">
+          <button class="btn btn-warning fw-bold text-dark" 
+                  (click)="procesarCompraMasiva()" 
+                  [disabled]="selecciones.size === 0">
+            <i class="bi bi-cart-check-fill me-1"></i> Generar Pedidos ({{ selecciones.size }})
+          </button>
+          
+          <button class="btn btn-sm btn-outline-secondary" (click)="cargarProductos()" title="Recargar">
+              <i class="bi bi-arrow-clockwise"></i>
+          </button>
+      </div>
     </div>
 
     <div class="card-body masterserv-card-body">
@@ -39,7 +47,10 @@
                     <i *ngIf="!p.imagenUrl" class="bi bi-box-seam text-dark fs-5"></i>
                   </div>
                   <div>
-                    <div class="fw-bold text-white">{{ p.nombre }}</div>
+                    <div class="fw-bold text-white">
+                        {{ p.nombre }}
+                        <i *ngIf="selecciones.has(p.productoId)" class="bi bi-check-circle-fill text-success ms-1" title="Proveedor seleccionado"></i>
+                    </div>
                     <small class="text-white-50">{{ p.codigo }}</small>
                   </div>
                 </div>
@@ -55,8 +66,12 @@
                 </span>
               </td>
               <td class="text-end pe-3">
-                <button class="btn btn-sm btn-warning fw-bold text-dark" (click)="abrirComparativa(p)">
-                  Comparar <i class="bi bi-eye-fill ms-1"></i>
+                <button class="btn btn-sm" 
+                        [class.btn-warning]="!selecciones.has(p.productoId)"
+                        [class.btn-outline-success]="selecciones.has(p.productoId)"
+                        (click)="abrirComparativa(p)">
+                  {{ selecciones.has(p.productoId) ? 'Cambiar Ganador' : 'Comparar' }}
+                  <i class="bi bi-eye-fill ms-1"></i>
                 </button>
               </td>
             </tr>
@@ -85,7 +100,7 @@
             {{ detalleProducto.nombre }}
           </span>
         </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close btn-close-white" (click)="cerrarModal()"></button>
       </div>
 
       <div class="modal-body p-0">
@@ -108,8 +123,8 @@
               <td class="ps-4">
                 <div class="fw-bold text-white">{{ item.proveedorNombre }}</div>
                 <div class="d-flex gap-1 mt-1">
-                    <span *ngIf="item.esRecomendada" class="badge bg-success text-white border border-light" style="font-size: 0.6rem;">GANADORA</span>
-                    <span *ngIf="item.precioOferta === detalleProducto?.mejorPrecio && !item.esRecomendada" class="badge bg-warning text-dark" style="font-size: 0.6rem;">MEJOR PRECIO</span>
+                    <span *ngIf="item.esRecomendada" class="badge bg-success text-white" style="font-size: 0.6rem;">RECOMENDADA</span>
+                    <span *ngIf="item.precioOferta === detalleProducto?.mejorPrecio" class="badge bg-info text-dark" style="font-size: 0.6rem;">MEJOR PRECIO</span>
                 </div>
               </td>
               <td class="text-end">
@@ -122,11 +137,9 @@
                 <i class="bi bi-calendar-event me-1"></i> {{ item.fechaEntrega | date:'dd/MM' }}
               </td>
               <td class="text-end pe-4">
-                <a [routerLink]="['/pos/cotizaciones', item.cotizacionId]" 
-                   (click)="cerrarModal()"
-                   class="btn btn-sm btn-outline-light">
-                   Ir a Cotización <i class="bi bi-arrow-right"></i>
-                </a>
+                <button (click)="seleccionarGanador(item)" class="btn btn-sm btn-warning fw-bold text-dark">
+                    Seleccionar <i class="bi bi-check2"></i>
+                </button>
               </td>
             </tr>
           </tbody>
@@ -134,7 +147,7 @@
       </div>
       
       <div class="modal-footer border-secondary bg-black py-2">
-        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-sm btn-secondary" (click)="cerrarModal()">Cerrar</button>
       </div>
 
     </div>

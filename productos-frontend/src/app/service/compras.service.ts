@@ -20,4 +20,9 @@ export class ComprasService {
   getComparativaProducto(id: number): Observable<DetalleComparativa[]> {
     return this.http.get<DetalleComparativa[]>(`${this.apiUrl}/comparativa/${id}`);
   }
+
+  // ✅ NUEVO: Enviar los IDs seleccionados para generar pedidos
+  generarPedidosMasivos(itemCotizacionIds: number[]): Observable<any> {
+    return this.http.post(`${this.apiUrl}/generar-masivo`, { itemCotizacionIds });
+  }
 }
