@@ -1,10 +1,5 @@
 package com.masterserv.productos.service;
 
-import com.masterserv.productos.event.StockActualizadoEvent;
-import com.masterserv.productos.exceptions.StockInsuficienteException;
-
-import org.springframework.context.ApplicationEventPublisher;
-
 import com.masterserv.productos.dto.MovimientoStockDTO;
 import com.masterserv.productos.dto.ProductoDTO;
 import com.masterserv.productos.dto.ProductoFiltroDTO;
@@ -26,7 +21,10 @@ import com.masterserv.productos.mapper.ProductoMapper;
 import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.specification.ProductoSpecification;
 import com.masterserv.productos.repository.CategoriaRepository;
+import com.masterserv.productos.exceptions.StockInsuficienteException; // Asegúrate de tener este import
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy; // Importante para evitar ciclos
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -49,11 +47,15 @@ public class ProductoService {
     @Autowired private ProductoMapper productoMapper;
     @Autowired private ProductoSpecification productoSpecification;
     @Autowired private CategoriaRepository categoriaRepository; 
-    @Autowired private ApplicationEventPublisher eventPublisher;
     @Autowired private MovimientoStockRepository movimientoStockRepository;
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private SolicitudProductoRepository solicitudProductoRepository;
     @Autowired private ListaEsperaRepository listaEsperaRepository;
+
+    // ✅ INYECCIÓN CLAVE (Con @Lazy para evitar dependencia circular si Proceso usa ProductoService)
+    @Autowired 
+    @Lazy
+    private ProcesoAutomaticoService procesoAutomaticoService;
 
     @Transactional(readOnly = true)
     public String generarCodigoAutomatico(Long categoriaId, String nombreProducto) {
@@ -94,17 +96,12 @@ public class ProductoService {
         return productosPage.map(productoMapper::toProductoDTO);
     }
 
-    // --- BÚSQUEDA FLEXIBLE ---
     @Transactional(readOnly = true)
     public Page<ProductoDTO> filter(ProductoFiltroDTO filtro, Pageable pageable) {
-        
-        // Si hay un texto de búsqueda (nombre), usamos la búsqueda nativa flexible
         if (filtro.getNombre() != null && !filtro.getNombre().isBlank()) {
              Page<Producto> productosPage = productoRepository.buscarFlexible(filtro.getNombre(), pageable);
              return productosPage.map(productoMapper::toProductoDTO);
         }
-
-        // Si no hay texto, usamos los filtros tradicionales
         Specification<Producto> spec = productoSpecification.getProductosByFilters(filtro);
         Page<Producto> productosPage = productoRepository.findAll(spec, pageable);
         return productosPage.map(productoMapper::toProductoDTO);
@@ -119,19 +116,13 @@ public class ProductoService {
 
     @Transactional
     public ProductoDTO create(ProductoDTO productoDTO) {
-        // --- VALIDACIÓN DE DUPLICADO (CREATE) ---
-        // ✅ CORREGIDO: Usamos .nombre() en lugar de .getNombre() porque es un Record
         if (productoRepository.existsByNombreIgnoreCase(productoDTO.nombre())) {
             throw new IllegalArgumentException("¡Error! Ya existe un producto con el nombre '" + productoDTO.nombre() + "'.");
         }
-        // ----------------------------------------
-        
-        // ✅ CORREGIDO: Usamos .codigo()
         if (productoRepository.existsByCodigo(productoDTO.codigo())) {
             throw new IllegalArgumentException("Ya existe un producto con el código: " + productoDTO.codigo());
         }
         
-        // ✅ CORREGIDO: Usamos .categoriaId()
         Categoria categoria = categoriaRepository.findById(productoDTO.categoriaId())
                 .orElseThrow(() -> new EntityNotFoundException("Error al crear producto: La Categoría con ID " + productoDTO.categoriaId() + " no existe."));
         
@@ -147,7 +138,6 @@ public class ProductoService {
         
         Producto productoGuardado = productoRepository.save(producto);
         
-        // ✅ CORREGIDO: Usamos .solicitudId()
         if (productoDTO.solicitudId() != null) {
             procesarSolicitudPorId(productoDTO.solicitudId(), productoGuardado);
         } else {
@@ -194,16 +184,13 @@ public class ProductoService {
 
    @Transactional
     public ProductoDTO update(Long id, ProductoDTO productoDTO) {
-        // --- VALIDACIÓN DE DUPLICADO (UPDATE) ---
         if (productoRepository.existsByNombreIgnoreCaseAndIdNot(productoDTO.nombre(), id)) {
             throw new IllegalArgumentException("¡Error! El nombre '" + productoDTO.nombre() + "' ya lo está usando otro producto.");
         }
-        // ----------------------------------------
 
         Producto productoExistente = productoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
 
-        // (1) CAPTURAMOS STOCK ANTERIOR
         int stockAnterior = productoExistente.getStockActual();
 
         productoMapper.updateProductoFromDto(productoDTO, productoExistente);
@@ -220,27 +207,18 @@ public class ProductoService {
             productoExistente.setEstado(productoDTO.estado());
         }
 
-        // (2) GUARDAMOS
         Producto productoActualizado = productoRepository.save(productoExistente);
 
-        // (3) DEBUGGING 🕵️‍♂️ (Agrega esto temporalmente)
         int stockNuevo = productoActualizado.getStockActual();
         
-        System.out.println("--- 🕵️ DEBUG UPDATE ---");
-        System.out.println("Producto: " + productoActualizado.getNombre());
-        System.out.println("Stock Anterior: " + stockAnterior);
-        System.out.println("Stock Nuevo: " + stockNuevo);
-        System.out.println("¿Entra al IF?: " + (stockAnterior <= 0 && stockNuevo > 0));
-        System.out.println("-----------------------");
-
-        // (3) DISPARAMOS EL EVENTO
+        // ✅ NOTIFICACIÓN DIRECTA (Si revive el stock)
         if (stockAnterior <= 0 && stockNuevo > 0) {
-             System.out.println("📢 STOCK RECUPERADO: Disparando evento...");
-             eventPublisher.publishEvent(new StockActualizadoEvent(
-                productoActualizado.getId(),
-                stockAnterior,
-                stockNuevo
-            ));
+             System.out.println("📢 STOCK RECUPERADO (Update): Llamando a notificación...");
+             try {
+                 procesoAutomaticoService.procesarListaEspera(productoActualizado.getId());
+             } catch (Exception e) {
+                 System.err.println("⚠️ Error notificando espera: " + e.getMessage());
+             }
         }
 
         return productoMapper.toProductoDTO(productoActualizado);
@@ -272,7 +250,6 @@ public class ProductoService {
     public Page<ProductoPublicoDTO> findAllPublico(Pageable pageable) {
         ProductoFiltroDTO filtroVacio = new ProductoFiltroDTO();
         filtroVacio.setEstado("ACTIVO");
-        
         Specification<Producto> spec = productoSpecification.getProductosByFilters(filtroVacio);
         Page<Producto> productosPage = productoRepository.findAll(spec, pageable);
         return productosPage.map(productoMapper::toProductoPublicoDTO);
@@ -280,12 +257,10 @@ public class ProductoService {
 
     @Transactional(readOnly = true)
     public Page<ProductoPublicoDTO> findPublicoByCriteria(ProductoPublicoFiltroDTO filtroPublico, Pageable pageable) {
-        
         if (filtroPublico.getNombre() != null && !filtroPublico.getNombre().isBlank()) {
              Page<Producto> productosPage = productoRepository.buscarFlexible(filtroPublico.getNombre(), pageable);
              return productosPage.map(productoMapper::toProductoPublicoDTO);
         }
-
         ProductoFiltroDTO filtroInterno = new ProductoFiltroDTO();
         filtroInterno.setNombre(filtroPublico.getNombre());
         filtroInterno.setCategoriaIds(filtroPublico.getCategoriaIds());
@@ -293,43 +268,26 @@ public class ProductoService {
         filtroInterno.setPrecioMax(filtroPublico.getPrecioMax());
         filtroInterno.setSoloConStock(filtroPublico.getSoloConStock());
         filtroInterno.setEstado("ACTIVO"); 
-
         Specification<Producto> spec = productoSpecification.getProductosByFilters(filtroInterno);
-        
         Page<Producto> productosPage = productoRepository.findAll(spec, pageable);
         return productosPage.map(productoMapper::toProductoPublicoDTO);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
     public Producto descontarStock(Long productoId, int cantidadADescontar) {
-        if (cantidadADescontar <= 0) {
-             throw new IllegalArgumentException("La cantidad a descontar debe ser positiva.");
-        }
+        if (cantidadADescontar <= 0) throw new IllegalArgumentException("Cantidad debe ser positiva.");
         
         Producto producto = productoRepository.findById(productoId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: ID " + productoId));
 
         int stockAnterior = producto.getStockActual(); 
-
         if (stockAnterior < cantidadADescontar) {
-            throw new StockInsuficienteException(
-                String.format("Stock insuficiente para '%s' (ID:%d). Disponible: %d, Solicitado: %d",
-                             producto.getNombre(), producto.getId(),
-                             stockAnterior, cantidadADescontar)
-            );
+            throw new StockInsuficienteException("Stock insuficiente.");
         }
 
         int stockNuevo = stockAnterior - cantidadADescontar;
         producto.setStockActual(stockNuevo);
-        Producto productoGuardado = productoRepository.save(producto);
-
-        eventPublisher.publishEvent(new StockActualizadoEvent(
-            productoId,
-            stockAnterior,
-            stockNuevo
-        ));
-        
-        return productoGuardado;
+        return productoRepository.save(producto);
     }
     
     @Transactional(propagation = Propagation.REQUIRED)
@@ -339,9 +297,7 @@ public class ProductoService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public Producto reponerStock(Long productoId, int cantidadAReponer, BigDecimal nuevoCosto) {
-         if (cantidadAReponer <= 0) {
-             throw new IllegalArgumentException("La cantidad a reponer debe ser positiva.");
-         }
+         if (cantidadAReponer <= 0) throw new IllegalArgumentException("Cantidad debe ser positiva.");
 
          Producto producto = productoRepository.findById(productoId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: ID " + productoId));
@@ -350,18 +306,15 @@ public class ProductoService {
         int stockNuevo = stockAnterior + cantidadAReponer;
 
         producto.setStockActual(stockNuevo);
-        
         if (nuevoCosto != null && nuevoCosto.compareTo(BigDecimal.ZERO) > 0) {
             producto.setPrecioCosto(nuevoCosto);
         }
-
         Producto productoGuardado = productoRepository.save(producto);
 
-        eventPublisher.publishEvent(new StockActualizadoEvent(
-            productoId,
-            stockAnterior,
-            stockNuevo
-        ));
+        // ✅ NOTIFICACIÓN DIRECTA
+        if (stockAnterior <= 0 && stockNuevo > 0) {
+             try { procesoAutomaticoService.procesarListaEspera(productoId); } catch (Exception e) {}
+        }
 
          return productoGuardado;
     }
@@ -388,7 +341,6 @@ public class ProductoService {
         producto.setStockActual(nuevoStock);
         productoRepository.save(producto);
 
-        // Registro de movimiento... (igual que antes)
         MovimientoStock movimiento = new MovimientoStock();
         movimiento.setFecha(LocalDateTime.now());
         movimiento.setCantidad(cantidadAjuste);
@@ -398,8 +350,18 @@ public class ProductoService {
         movimiento.setUsuario(usuario);
         movimientoStockRepository.save(movimiento);
 
-        // DISPARAR EVENTO
-        System.out.println("📢 Disparando evento desde AJUSTE_MANUAL...");
-        eventPublisher.publishEvent(new StockActualizadoEvent(producto.getId(), stockAnterior, nuevoStock));
+        // ✅ NOTIFICACIÓN DIRECTA (¡AQUÍ ESTABA EL PROBLEMA!)
+        // Antes usabas eventPublisher, ahora llamamos directo al servicio.
+        if (stockAnterior <= 0 && nuevoStock > 0) {
+            System.out.println("📢 STOCK RECUPERADO (Ajuste Manual): Llamando a notificación DIRECTA...");
+            try {
+                // Esta llamada se ejecutará (posiblemente en hilo aparte si el método destino es @Async)
+                // pero ya no depende de la transacción ni del EventBus.
+                procesoAutomaticoService.procesarListaEspera(producto.getId());
+            } catch (Exception e) {
+                System.err.println("⚠️ Falló la llamada directa a notificaciones: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
     }
 }
