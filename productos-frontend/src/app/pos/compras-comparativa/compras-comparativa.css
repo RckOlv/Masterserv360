@@ -1,0 +1,24 @@
+.masterserv-card {
+    background-color: #1e1e1e;
+    border: 1px solid #444;
+}
+.masterserv-card-header {
+    background-color: #000;
+    border-bottom: 2px solid #ffc107; /* Amarillo */
+}
+.masterserv-table th {
+    background-color: #111;
+    color: #aaa;
+    border-bottom: 1px solid #333;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.masterserv-table td {
+    border-bottom: 1px solid #2a2a2a;
+}
+.table-hover tbody tr:hover {
+    background-color: #2d2d2d;
+}
+.modal-content {
+    background-color: #1e1e1e;
+}

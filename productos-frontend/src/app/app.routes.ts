@@ -124,7 +124,7 @@ export const routes: Routes = [
       { path: 'reglas-puntos', loadComponent: () => import('./pos/reglas-puntos/reglas-puntos') },
       { path: 'auditoria', loadComponent: () => import('./pos/auditoria/auditoria') },
       { path: 'mi-perfil', loadComponent: () => import('./pos/perfil-usuario/perfil-usuario') },
-      
+      { path: 'comparativa-precios', loadComponent: () => import('./pos/compras-comparativa/compras-comparativa').then(m => m.default)},
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

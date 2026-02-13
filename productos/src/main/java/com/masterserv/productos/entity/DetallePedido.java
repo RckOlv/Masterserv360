@@ -18,7 +18,6 @@ import java.math.BigDecimal;
 @Setter // Añadido
 @NoArgsConstructor // Añadido
 @AllArgsConstructor // Añadido
-// -------------------------
 public class DetallePedido {
 
     @Id
@@ -53,4 +52,6 @@ public class DetallePedido {
         }
         return BigDecimal.ZERO;
     }
+
+    
 }

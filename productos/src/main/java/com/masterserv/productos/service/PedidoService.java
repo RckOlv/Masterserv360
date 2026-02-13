@@ -6,14 +6,19 @@ import com.masterserv.productos.dto.MovimientoStockDTO;
 import com.masterserv.productos.dto.PedidoDTO;
 import com.masterserv.productos.dto.PedidoDetalladoDTO;
 import com.masterserv.productos.dto.PedidoFiltroDTO;
+import com.masterserv.productos.entity.Cotizacion;
 import com.masterserv.productos.entity.DetallePedido;
+import com.masterserv.productos.entity.ItemCotizacion;
 import com.masterserv.productos.entity.Pedido;
 import com.masterserv.productos.entity.Producto;
 import com.masterserv.productos.entity.Proveedor;
 import com.masterserv.productos.entity.Usuario;
+import com.masterserv.productos.enums.EstadoCotizacion;
 import com.masterserv.productos.enums.EstadoPedido;
 import com.masterserv.productos.enums.TipoMovimiento;
 import com.masterserv.productos.mapper.PedidoMapper;
+import com.masterserv.productos.repository.CotizacionRepository;
+import com.masterserv.productos.repository.ItemCotizacionRepository;
 import com.masterserv.productos.repository.PedidoRepository;
 import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.repository.ProveedorRepository;
@@ -37,8 +42,10 @@ import org.thymeleaf.context.Context;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID; 
 import java.util.stream.Collectors;
@@ -56,6 +63,11 @@ public class PedidoService {
     @Autowired private PedidoMapper pedidoMapper;
     @Autowired private MovimientoStockService movimientoStockService;
     @Autowired private PedidoSpecification pedidoSpecification;
+
+    @Autowired private ItemCotizacionRepository itemCotizacionRepository;
+    @Autowired private CotizacionRepository cotizacionRepository;
+
+    
     
     @org.springframework.beans.factory.annotation.Value("${app.frontend.url}")
     private String frontendUrl;
@@ -305,5 +317,90 @@ public class PedidoService {
         var spec = pedidoSpecification.getByFilters(filtro);
         Page<Pedido> pedidosPage = pedidoRepository.findAll(spec, pageable);
         return pedidosPage.map(pedidoMapper::toPedidoDTO);
+    }
+
+    /**
+     * 🚀 NUEVO MÉTODO: Genera pedidos automáticamente desde la comparativa.
+     */
+    @Transactional
+    public Map<String, Object> generarPedidosMasivos(List<Long> itemIds, Long usuarioId) {
+        
+        // 1. Obtener Admin
+        Usuario usuarioAdmin = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario Admin no encontrado"));
+
+        // 2. Obtener items seleccionados
+        List<ItemCotizacion> itemsSeleccionados = itemCotizacionRepository.findAllById(itemIds);
+        
+        if (itemsSeleccionados.isEmpty()) {
+            throw new IllegalArgumentException("No se encontraron ítems de cotización con los IDs provistos.");
+        }
+
+        // 3. Agrupar por Cotización (Para crear un pedido por proveedor/cotización)
+        Map<Cotizacion, List<ItemCotizacion>> itemsPorCotizacion = itemsSeleccionados.stream()
+                .collect(Collectors.groupingBy(ItemCotizacion::getCotizacion));
+
+        int pedidosCreados = 0;
+        List<Long> pedidosIds = new ArrayList<>();
+
+        // 4. Iterar y Crear Pedidos
+        for (Map.Entry<Cotizacion, List<ItemCotizacion>> entry : itemsPorCotizacion.entrySet()) {
+            Cotizacion cotizacion = entry.getKey();
+            List<ItemCotizacion> items = entry.getValue();
+
+            // A. Crear Cabecera
+            Pedido pedido = new Pedido();
+            pedido.setProveedor(cotizacion.getProveedor());
+            pedido.setUsuario(usuarioAdmin);
+            pedido.setFechaPedido(LocalDateTime.now());
+            pedido.setEstado(EstadoPedido.PENDIENTE); // Se crea pendiente para revisión o envío auto
+            pedido.setToken(UUID.randomUUID().toString());
+
+            // B. Crear Detalles
+            Set<DetallePedido> detallesPedido = new HashSet<>();
+            BigDecimal total = BigDecimal.ZERO;
+
+            for (ItemCotizacion item : items) {
+                DetallePedido detalle = new DetallePedido();
+                detalle.setPedido(pedido);
+                detalle.setProducto(item.getProducto());
+                detalle.setCantidad(item.getCantidadSolicitada());
+                
+                // Usamos el precio ofertado por el proveedor
+                detalle.setPrecioUnitario(item.getPrecioUnitarioOfertado());
+                
+                // Calculamos subtotal
+                BigDecimal subtotal = item.getPrecioUnitarioOfertado()
+                        .multiply(new BigDecimal(item.getCantidadSolicitada()));
+                detallesPedido.add(detalle);
+                total = total.add(subtotal);
+            }
+
+            pedido.setDetalles(detallesPedido);
+            pedido.setTotalPedido(total);
+
+            // C. Guardar
+            Pedido pedidoGuardado = pedidoRepository.save(pedido);
+            pedidosIds.add(pedidoGuardado.getId());
+            pedidosCreados++;
+
+            // D. Actualizar Cotización (Opcional: Marcar como Aceptada/Cerrada)
+            // Esto evita que se vuelva a usar la misma cotización por error
+            if (cotizacion.getEstado() != EstadoCotizacion.CONFIRMADA_ADMIN) {
+                cotizacion.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
+                cotizacionRepository.save(cotizacion);
+            }
+            
+            // E. Notificación (Reutilizamos la lógica si quieres que se envíe YA)
+            // O podemos dejarlo para que el usuario le de "Enviar" manualmente desde la lista de pedidos.
+            // Para este ejemplo, solo generamos el pedido sin enviar el email automático 
+            // para que el admin pueda revisarlo antes.
+        }
+
+        return Map.of(
+            "mensaje", "Se generaron " + pedidosCreados + " pedidos exitosamente.",
+            "cantidad", pedidosCreados,
+            "pedidosIds", pedidosIds
+        );
     }
 }
