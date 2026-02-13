@@ -83,7 +83,7 @@ public class ChatbotService {
         // Registro de entrada (Protegido para no romper flujo)
         registrarInteraccionSegura(body, null, usuarioOpt.orElse(null));
 
-        BotResponse respuesta;
+        BotResponse respuesta = null;
         try {
             respuesta = procesarFlujo(body.trim(), telefono, usuarioOpt);
         } catch (Exception e) {
@@ -92,6 +92,14 @@ public class ChatbotService {
             resetearSesion(telefono); 
         }
         
+        // --- 🔴 CAMBIO 1: MANEJO DEL SILENCIO (MODO HUMANO) ---
+        // Si respuesta es null, significa que el bot debe callarse.
+        // Devolvemos un XML vacío para que Twilio sepa que recibimos el mensaje OK.
+        if (respuesta == null) {
+            return new MessagingResponse.Builder().build().toXml();
+        }
+        // ------------------------------------------------------
+
         // Registro de salida (Protegido)
         registrarInteraccionSegura(null, respuesta.texto, usuarioOpt.orElse(null));
         
@@ -113,15 +121,30 @@ public class ChatbotService {
 
         Usuario usuario = usuarioOpt.get();
         SesionChat sesion = obtenerSesion(telefono);
+        String estadoActual = (sesion.getEstadoActual() != null) ? sesion.getEstadoActual() : "MENU";
+        
+        // --- 🔴 CAMBIO 2: LÓGICA DE MODO HUMANO ---
+        if ("HUMANO".equals(estadoActual)) {
+            // Palabras clave para despertar al bot
+            if (detectarIntencion(texto, List.of("bot", "menu", "chau", "adios", "fin", "gracias"))) {
+                resetearSesion(telefono);
+                return new BotResponse(
+                    "🤖 *Bot Reactivado*\n\n" +
+                    "¡Espero que te hayan ayudado! Vuelvo a estar a tus órdenes.\n\n" + 
+                    mostrarMenuPrincipal(usuario.getNombre()).texto
+                );
+            }
+            // Si no dice la palabra mágica, el bot se calla (retorna null)
+            return null;
+        }
+        // ------------------------------------------
 
         // 2. COMANDOS GLOBALES
-        if (detectarIntencion(texto, List.of("hola", "menu", "inicio", "salir", "cancelar", "chau", "atras"))) {
+        if (detectarIntencion(texto, List.of("hola", "menu", "inicio", "salir", "cancelar", "atras"))) {
             resetearSesion(telefono);
             return mostrarMenuPrincipal(usuario.getNombre());
         }
 
-        // 3. MÁQUINA DE ESTADOS
-        String estadoActual = (sesion.getEstadoActual() != null) ? sesion.getEstadoActual() : "MENU";
         System.out.println("🤖 Estado BD para " + telefono + ": " + estadoActual);
 
         switch (estadoActual) {
@@ -163,13 +186,28 @@ public class ChatbotService {
             return mostrarPremiosDisponibles(usuario, telefono);
         }
         else if (input.contains("3")) {
+            // --- 🔴 CAMBIO 3: ACTIVAR MODO HUMANO Y DAR INSTRUCCIONES ---
+            
+            // 1. Limpiamos el número para el link
+            String numeroLimpio = telefono.replace("whatsapp:", "").replace(" ", "").trim();
+            
+            // 2. Creamos alerta
             alertaService.crearAlerta(
                 "🆘 Solicitud de Humano",
                 "El cliente " + usuario.getNombre() + " (" + telefono + ") solicita hablar con un humano.",
                 usuario,
-                "/clientes/detalle/" + usuario.getId() 
+                "https://wa.me/" + numeroLimpio // Link directo a WhatsApp
             );
-            return new BotResponse("💬 Entendido. He enviado una alerta a nuestros asesores. 🔔\n\nEn breve te contactarán.");
+            
+            // 3. Cambiamos estado a HUMANO
+            actualizarEstado(sesion, "HUMANO");
+
+            return new BotResponse(
+                "💬 Entendido. He pausado mi sistema automático. ⏸️\n\n" +
+                "👤 Un asesor humano te escribirá pronto por aquí.\n\n" +
+                "👉 Si terminas y quieres volver a usar el Bot, escribe *'Bot'* o *'Menú'*."
+            );
+            // ------------------------------------------------------------
         }
         else {
             return new BotResponse("⚠️ Opción no válida. Escribe *1*, *2* o *3*.");
