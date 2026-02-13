@@ -1,27 +1,82 @@
 <aside class="sidebar">
   
-  <div class="sidebar-header">
-    <div class="brand-container">
+  <div class="sidebar-header pb-2">
+    <div class="brand-container mb-2">
       <img src="/images/Masterserv_Header2.png" alt="Masterserv Logo" class="logo-clean">
     </div>
     
-    <div class="user-info mt-3 text-center cursor-pointer" (click)="toggleUserMenu()" title="Opciones de Usuario">
-        <div class="d-flex justify-content-center align-items-center gap-2">
-            <div class="user-name text-white fw-bold">{{ userName$ | async }}</div>
-            <i class="bi bi-chevron-down arrow-icon-user" [class.rotate]="isUserMenuOpen"></i>
+    <div class="d-flex justify-content-between align-items-center px-2 mt-2 position-relative">
+        
+        <div class="user-info d-flex align-items-center gap-2 cursor-pointer flex-grow-1" 
+             (click)="toggleUserMenu()" 
+             title="Opciones de Usuario">
+            
+            <div class="d-flex flex-column">
+                <div class="d-flex align-items-center gap-1">
+                    <span class="user-name text-white fw-bold small text-truncate" style="max-width: 110px;">
+                        {{ userName$ | async }}
+                    </span>
+                    <i class="bi bi-chevron-down arrow-icon-user" style="font-size: 0.7rem;" [class.rotate]="isUserMenuOpen"></i>
+                </div>
+                <span class="user-role text-warning" style="font-size: 0.65rem;">
+                    {{ userRoleLabel$ | async }}
+                </span>
+            </div>
         </div>
-        <div class="user-role text-warning small">{{ userRoleLabel$ | async }}</div>
+
+        <div class="notification-wrapper position-relative ms-2">
+            <button class="btn btn-link text-white p-0 position-relative" (click)="toggleNotifications()">
+                <i class="bi bi-bell-fill fs-5 text-secondary hover-text-white"></i>
+                <span *ngIf="alertas.length > 0" 
+                      class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-dark"
+                      style="font-size: 0.6rem;">
+                  {{ alertas.length > 9 ? '9+' : alertas.length }}
+                </span>
+            </button>
+
+            <div *ngIf="showNotifications" 
+                 class="dropdown-menu show shadow-lg border-secondary p-0 mt-2" 
+                 style="position: absolute; left: 0; top: 100%; min-width: 260px; background-color: #1e1e1e; z-index: 1050; border: 1px solid #444;">
+                
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom border-secondary bg-dark rounded-top">
+                    <span class="text-white small fw-bold">Notificaciones</span>
+                    <button *ngIf="alertas.length > 0" (click)="limpiarTodas()" class="btn btn-sm text-muted small p-0" style="font-size: 0.7rem;">Borrar</button>
+                </div>
+
+                <div class="list-group list-group-flush custom-scrollbar" style="max-height: 250px; overflow-y: auto;">
+                    <a *ngFor="let alerta of alertas" 
+                       (click)="clickAlerta(alerta)"
+                       class="list-group-item list-group-item-action border-secondary d-flex gap-2 py-2 px-3 bg-transparent text-white"
+                       style="cursor: pointer;">
+                        <div class="text-danger fs-5"><i class="bi bi-exclamation-circle-fill"></i></div>
+                        <div class="w-100">
+                            <div class="d-flex justify-content-between">
+                                <strong class="small text-truncate" style="max-width: 140px;">{{ alerta.titulo }}</strong>
+                                <small class="text-muted" style="font-size: 0.6rem;">{{ alerta.fecha | date:'HH:mm' }}</small>
+                            </div>
+                            <p class="mb-0 opacity-75 small text-break lh-sm" style="font-size: 0.7rem;">{{ alerta.mensaje }}</p>
+                        </div>
+                    </a>
+                    
+                    <div *ngIf="alertas.length === 0" class="p-3 text-center text-muted small">
+                        <i class="bi bi-bell-slash d-block mb-1"></i>
+                        Sin novedades.
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <div class="user-menu-content" [class.show]="isUserMenuOpen">
-        <ul class="user-nav-list">
+    <div class="user-menu-content mt-2 mx-2 rounded bg-dark border border-secondary" [class.show]="isUserMenuOpen">
+        <ul class="user-nav-list p-0 m-0 list-unstyled">
             <li>
-                <a routerLink="/pos/mi-perfil" routerLinkActive="active">
-                    <i class="bi bi-person-gear me-2"></i> Mi Perfil
+                <a routerLink="/pos/mi-perfil" class="d-block p-2 text-white text-decoration-none hover-bg-secondary rounded-top">
+                    <i class="bi bi-person-gear me-2 text-warning"></i> Mi Perfil
                 </a>
             </li>
-            <li>
-                <a (click)="logout()" class="text-danger logout-link">
+            <li class="border-top border-secondary">
+                <a (click)="logout()" class="d-block p-2 text-danger text-decoration-none hover-bg-secondary rounded-bottom cursor-pointer">
                     <i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión
                 </a>
             </li>
@@ -29,7 +84,7 @@
     </div>
   </div>
 
-  <nav class="menu-container custom-scrollbar">
+  <nav class="menu-container custom-scrollbar mt-2">
     
     <div class="menu-section">
       <div class="section-header" (click)="toggleSection('general')" [class.active]="sections['general']">
