@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-// ❌ YA NO EXTIENDE AuditableEntity PARA EVITAR EL BUCLE
 public class InteraccionChatbot { 
 
     @Id
