@@ -26,7 +26,7 @@ public class ChatbotService {
 
     private static final String LINK_REGISTRO = "https://masterserv360.vercel.app/auth/register"; 
 
-    // Listas temporales para visualización (estas sí pueden estar en RAM)
+    // Listas temporales para visualización
     private final Map<String, List<Recompensa>> usuarioOpcionesCanje = new ConcurrentHashMap<>();
     private final Map<String, List<Producto>> usuarioOpcionesBusqueda = new ConcurrentHashMap<>();
 
@@ -40,7 +40,7 @@ public class ChatbotService {
     private final ListaEsperaRepository listaEsperaRepository;
     private final CuponService cuponService;
     
-    // --- NUEVOS SERVICIOS INYECTADOS ---
+    // Servicios nuevos
     private final AlertaService alertaService;
     private final SesionChatRepository sesionRepository;
 
@@ -82,8 +82,8 @@ public class ChatbotService {
         
         System.out.println("📩 Msg de " + telefono + ": " + body);
 
-        // Registrar Entrada
-        try { registrarInteraccion(body, null, usuarioOpt.orElse(null)); } catch (Exception e) {}
+        // Intentamos registrar entrada (si falla, no rompe el flujo)
+        registrarInteraccion(body, null, usuarioOpt.orElse(null));
 
         BotResponse respuesta;
         try {
@@ -94,8 +94,8 @@ public class ChatbotService {
             resetearSesion(telefono); 
         }
         
-        // Registrar Salida
-        try { registrarInteraccion(null, respuesta.texto, usuarioOpt.orElse(null)); } catch (Exception e) {}
+        // Intentamos registrar salida
+        registrarInteraccion(null, respuesta.texto, usuarioOpt.orElse(null));
         
         return construirRespuestaTwiML(respuesta);
     }
@@ -114,7 +114,7 @@ public class ChatbotService {
         }
 
         Usuario usuario = usuarioOpt.get();
-        SesionChat sesion = obtenerSesion(telefono); // <--- Recuperamos estado de la BD
+        SesionChat sesion = obtenerSesion(telefono);
 
         // 2. COMANDOS GLOBALES
         if (detectarIntencion(texto, List.of("hola", "menu", "inicio", "salir", "cancelar", "chau", "atras"))) {
@@ -413,7 +413,7 @@ public class ChatbotService {
         return new BotResponse("✅ *¡Sí hay stock!*\n📦 " + p.getNombre() + "\n💲 " + precioStr + "\n🟢 Disponibles: " + p.getStockActual() + "\n📍 Ven al local.", imagen);
     }
     
-   @org.springframework.scheduling.annotation.Async // (Opcional) Para que no frene la respuesta
+    // Método corregido: Sin @Async para evitar problemas en llamadas locales
     private void registrarInteraccion(String in, String out, Usuario u) {
         try {
             InteraccionChatbot i = new InteraccionChatbot();
@@ -423,7 +423,7 @@ public class ChatbotService {
             i.setUsuario(u); 
             interaccionRepository.save(i);
         } catch (Exception e) {
-            // Si falla guardar el log, NO IMPORTA. El bot debe seguir funcionando.
+            // El catch atrapa el "AssertionFailure" y permite que el bot siga
             System.err.println("⚠️ No se pudo guardar el log del chat: " + e.getMessage());
         }
     }
