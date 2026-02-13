@@ -59,9 +59,9 @@ public class ProcesoAutomaticoService {
                 // Enviamos el correo
                 notificarProveedor(cotizacion);
                 
-                // 🛑 PAUSA TÁCTICA PARA MAILTRAP (2 segundos)
+                // 🛑 PAUSA TÁCTICA PARA MAILTRAP (6 segundos)
                 try {
-                    Thread.sleep(2000); 
+                    Thread.sleep(6000); 
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     logger.warn("⚠️ Interrupción en la pausa de envío de correos.");
