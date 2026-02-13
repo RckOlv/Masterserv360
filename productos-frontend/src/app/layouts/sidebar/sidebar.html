@@ -10,7 +10,6 @@
         <div class="user-info d-flex align-items-center gap-2 cursor-pointer flex-grow-1" 
              (click)="toggleUserMenu()" 
              title="Opciones de Usuario">
-            
             <div class="d-flex flex-column">
                 <div class="d-flex align-items-center gap-1">
                     <span class="user-name text-white fw-bold small text-truncate" style="max-width: 110px;">
@@ -36,32 +35,43 @@
 
             <div *ngIf="showNotifications" 
                  class="dropdown-menu show shadow-lg border-secondary p-0 mt-2" 
-                 style="position: absolute; left: 0; top: 100%; min-width: 260px; background-color: #1e1e1e; z-index: 1050; border: 1px solid #444;">
+                 style="position: absolute; left: 0; top: 100%; min-width: 350px; background-color: #1e1e1e; z-index: 1050; border: 1px solid #444;">
                 
                 <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom border-secondary bg-dark rounded-top">
                     <span class="text-white small fw-bold">Notificaciones</span>
-                    <button *ngIf="alertas.length > 0" (click)="limpiarTodas()" class="btn btn-sm text-muted small p-0" style="font-size: 0.7rem;">Borrar</button>
+                    <button *ngIf="alertas.length > 0" (click)="limpiarTodas()" class="btn btn-sm text-secondary hover-text-white small p-0" style="font-size: 0.75rem;">
+                        <i class="bi bi-check-all"></i> Marcar todas
+                    </button>
                 </div>
 
-                <div class="list-group list-group-flush custom-scrollbar" style="max-height: 250px; overflow-y: auto;">
+                <div class="list-group list-group-flush custom-scrollbar" style="max-height: 400px; overflow-y: auto;">
+                    
                     <a *ngFor="let alerta of alertas" 
                        (click)="clickAlerta(alerta)"
-                       class="list-group-item list-group-item-action border-secondary d-flex gap-2 py-2 px-3 bg-transparent text-white"
-                       style="cursor: pointer;">
-                        <div class="text-danger fs-5"><i class="bi bi-exclamation-circle-fill"></i></div>
+                       class="list-group-item list-group-item-action border-secondary d-flex gap-3 py-3 px-3 bg-transparent text-white align-items-start"
+                       style="cursor: pointer; transition: background 0.2s;">
+                        
+                        <div class="text-danger fs-4 mt-1"><i class="bi bi-exclamation-circle-fill"></i></div>
+                        
                         <div class="w-100">
-                            <div class="d-flex justify-content-between">
-                                <strong class="small text-truncate" style="max-width: 140px;">{{ alerta.titulo }}</strong>
-                                <small class="text-muted" style="font-size: 0.6rem;">{{ alerta.fecha | date:'HH:mm' }}</small>
+                            <div class="d-flex justify-content-between align-items-baseline mb-1">
+                                <strong class="text-warning" style="font-size: 0.9rem;">{{ alerta.titulo }}</strong>
+                                <small class="text-white-50 ms-2" style="font-size: 0.7rem; white-space: nowrap;">{{ alerta.fecha | date:'HH:mm' }}</small>
                             </div>
-                            <p class="mb-0 opacity-75 small text-break lh-sm" style="font-size: 0.7rem;">{{ alerta.mensaje }}</p>
+                            
+                            <p class="mb-0 text-light" style="font-size: 0.85rem; line-height: 1.4; opacity: 0.9;">
+                                {{ alerta.mensaje }}
+                            </p>
                         </div>
                     </a>
                     
-                    <div *ngIf="alertas.length === 0" class="p-3 text-center text-muted small">
-                        <i class="bi bi-bell-slash d-block mb-1"></i>
-                        Sin novedades.
+                    <div *ngIf="alertas.length === 0" class="p-4 text-center">
+                        <div class="mb-2">
+                            <i class="bi bi-bell text-secondary" style="font-size: 2rem; opacity: 0.5;"></i>
+                        </div>
+                        <span class="text-white-50 small">No tienes notificaciones nuevas.</span>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -85,7 +95,6 @@
   </div>
 
   <nav class="menu-container custom-scrollbar mt-2">
-    
     <div class="menu-section">
       <div class="section-header" (click)="toggleSection('general')" [class.active]="sections['general']">
         <span class="section-title">GENERAL</span>

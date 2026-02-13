@@ -88,9 +88,16 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   clickAlerta(alerta: Alerta) {
+    // Marcamos como leída en backend
     this.alertaService.marcarLeida(alerta.id).subscribe(() => {
-      this.alertas = this.alertas.filter(a => a.id !== alerta.id);
+      
+      // COMENTAMOS ESTA LÍNEA PARA QUE NO DESAPAREZCA AL INSTANTE:
+      // this.alertas = this.alertas.filter(a => a.id !== alerta.id);
+      
+      // Cerramos el menú
       this.showNotifications = false;
+      
+      // Navegamos (si corresponde)
       if (alerta.urlDestino) {
         this.router.navigateByUrl(alerta.urlDestino);
       }
