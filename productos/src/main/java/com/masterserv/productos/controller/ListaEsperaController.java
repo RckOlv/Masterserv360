@@ -101,4 +101,13 @@ public class ListaEsperaController {
         );
         return ResponseEntity.ok(Map.of("estaEnEspera", estaPendiente));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarDeLista(@PathVariable Long id) {
+        if (!listaEsperaRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        listaEsperaRepository.deleteById(id);
+        return ResponseEntity.ok().build();
+    }
 }

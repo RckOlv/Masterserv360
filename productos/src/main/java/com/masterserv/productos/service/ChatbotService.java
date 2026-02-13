@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @Service
 public class ChatbotService {
@@ -297,30 +298,42 @@ public class ChatbotService {
 
         Producto producto = productoRepository.findById(productoId).orElse(null);
 
+        // OPCIÓN 1: SÍ
         if (input.contains("1") || input.toLowerCase().contains("si")) {
+            
+            // Validación previa (por si acaso)
             boolean yaAnotado = listaEsperaRepository.existsByUsuarioAndProductoAndEstado(usuario, producto, EstadoListaEspera.PENDIENTE);
             
             if (!yaAnotado) {
-                ListaEspera espera = new ListaEspera();
-                espera.setUsuario(usuario);
-                espera.setProducto(producto);
-                espera.setFechaInscripcion(java.time.LocalDate.now());
-                espera.setFechaSolicitud(LocalDateTime.now());
-                espera.setEstado(EstadoListaEspera.PENDIENTE);
-                listaEsperaRepository.save(espera);
+                try {
+                    ListaEspera espera = new ListaEspera();
+                    espera.setUsuario(usuario);
+                    espera.setProducto(producto);
+                    espera.setFechaInscripcion(java.time.LocalDate.now());
+                    espera.setFechaSolicitud(LocalDateTime.now()); // Hora exacta para ordenar
+                    espera.setEstado(EstadoListaEspera.PENDIENTE);
+                    listaEsperaRepository.save(espera);
+                } catch (DataIntegrityViolationException e) {
+                    // 🛡️ AQUÍ ATRAPAMOS EL ERROR DE DUPLICADO
+                    // Si entra aquí, es porque ya estaba guardado. No pasa nada.
+                    resetearSesion(telefono);
+                    return new BotResponse("✅ Ya estabas en la lista. ¡Te avisaremos cuando llegue *" + producto.getNombre() + "*!");
+                }
             }
+            
             resetearSesion(telefono);
             return new BotResponse("✅ ¡Listo! Te anoté. Te avisaremos cuando llegue *" + producto.getNombre() + "*.");
         } 
+        // OPCIÓN 2: NO
         else if (input.contains("2") || input.toLowerCase().contains("no")) {
             resetearSesion(telefono);
-            return new BotResponse("👍 Entendido.");
+            return new BotResponse("👍 Entendido. No te anotaré.");
         } 
+        // OPCIÓN INVÁLIDA
         else {
             return new BotResponse("⚠️ Responde *1* (Sí) o *2* (No).");
         }
     }
-
     // --- 🎁 LÓGICA DE CANJE ---
 
     private BotResponse mostrarPremiosDisponibles(Usuario usuario, String telefono) {
