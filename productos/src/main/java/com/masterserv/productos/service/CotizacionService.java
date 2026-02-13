@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -153,7 +154,7 @@ public class CotizacionService {
         cotizacionRepository.save(cotizacion);
     }
     
-    @Transactional
+@Transactional
     public Pedido confirmarCotizacion(Long id, String adminEmail) {
         Usuario adminUsuario = usuarioRepository.findByEmail(adminEmail)
             .orElseThrow(() -> new EntityNotFoundException("Admin no encontrado: " + adminEmail));
@@ -170,26 +171,24 @@ public class CotizacionService {
         pedido.setEstado(EstadoPedido.PENDIENTE); 
         pedido.setProveedor(cotizacionGanadora.getProveedor());
         pedido.setUsuario(adminUsuario);
-        
-        // 🟢 CORRECCIÓN: Generamos el Token obligatorio
         pedido.setToken(UUID.randomUUID().toString());
         
         Set<DetallePedido> detallesPedido = new HashSet<>();
         BigDecimal totalPedido = BigDecimal.ZERO;
 
-        List<EstadoItemCotizacion> estadosVivosCompetencia = Arrays.asList(
-                EstadoItemCotizacion.PENDIENTE,
-                EstadoItemCotizacion.COTIZADO
-        );
+        List<ItemCotizacion> itemsIterables = new ArrayList<>(cotizacionGanadora.getItems());
+        
+        // Lista para acumular rivales a cancelar (para procesar DESPUÉS del bucle)
+        Set<Cotizacion> cotizacionesAfectadas = new HashSet<>();
+        List<ItemCotizacion> todosItemsPerdedores = new ArrayList<>();
 
-        for (ItemCotizacion itemGanador : cotizacionGanadora.getItems()) {
+        for (ItemCotizacion itemGanador : itemsIterables) {
             
             if (itemGanador.getEstado() == EstadoItemCotizacion.COTIZADO) {
                 
                 DetallePedido detalle = new DetallePedido();
                 detalle.setPedido(pedido);
                 detalle.setProducto(itemGanador.getProducto());
-                // Usamos la cantidad ofertada/corregida
                 detalle.setCantidad(itemGanador.getCantidadSolicitada());
                 detalle.setPrecioUnitario(itemGanador.getPrecioUnitarioOfertado()); 
                 
@@ -201,24 +200,28 @@ public class CotizacionService {
 
                 itemGanador.setEstado(EstadoItemCotizacion.CONFIRMADO);
 
-                // Cancelación de rivales (Lógica correcta)
+                // Cancelación de rivales
+                List<EstadoItemCotizacion> estadosVivos = Arrays.asList(EstadoItemCotizacion.PENDIENTE, EstadoItemCotizacion.COTIZADO);
                 List<ItemCotizacion> itemsPerdedores = itemCotizacionRepository.findItemsRivales(
                         itemGanador.getProducto().getId(),
                         cotizacionGanadora.getId(),
-                        estadosVivosCompetencia
+                        estadosVivos
                 );
 
                 if (!itemsPerdedores.isEmpty()) {
-                    Set<Cotizacion> cotizacionesAfectadas = new HashSet<>();
                     itemsPerdedores.forEach(perdedor -> {
                         perdedor.setEstado(EstadoItemCotizacion.CANCELADO_SISTEMA);
                         cotizacionesAfectadas.add(perdedor.getCotizacion());
                     });
-                    
-                    itemCotizacionRepository.saveAll(itemsPerdedores);
-                    verificarYAutoCancelarCotizaciones(cotizacionesAfectadas);
+                    todosItemsPerdedores.addAll(itemsPerdedores);
                 }
             }
+        }
+        
+        // Guardamos los perdedores fuera del bucle principal
+        if (!todosItemsPerdedores.isEmpty()) {
+            itemCotizacionRepository.saveAll(todosItemsPerdedores);
+            verificarYAutoCancelarCotizaciones(cotizacionesAfectadas);
         }
         
         if (detallesPedido.isEmpty()) {
@@ -228,12 +231,12 @@ public class CotizacionService {
         pedido.setDetalles(detallesPedido);
         pedido.setTotalPedido(totalPedido);
 
-        // Guardamos el pedido (Ahora sí tiene Token)
         pedidoRepository.save(pedido);
 
         cotizacionGanadora.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
         cotizacionRepository.save(cotizacionGanadora);
         
+        // Guardamos los items ganadores actualizados
         itemCotizacionRepository.saveAll(cotizacionGanadora.getItems());
         
         return pedido;

@@ -216,17 +216,20 @@ public class ProcesoAutomaticoService {
      * 🟢 TAREA 3: LISTA DE ESPERA (Reactiva)
      * Se ejecuta cuando entra stock (evento).
      */
-   @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async
+    @EventListener // <--- CAMBIO CLAVE: Quitamos @TransactionalEventListener
     public void handleStockActualizado(StockActualizadoEvent event) {
-        System.out.println("👂 [LISTENER] Evento recibido para ID: " + event.productoId());
-        System.out.println("   --> Stock recibido en evento: " + event.stockNuevo());
+        System.out.println("⚡ [LISTENER] ¡Evento de stock recibido! ID: " + event.productoId() + " Nuevo Stock: " + event.stockNuevo());
         
         if (event.stockNuevo() <= 0) {
             System.out.println("   --> 🛑 Bloqueado: El stock nuevo es 0 o menor.");
             return;
         }
-        procesarListaEspera(event.productoId());
+        try {
+            procesarListaEspera(event.productoId());
+        } catch (Exception e) {
+            logger.error("❌ Error procesando lista de espera para producto {}: {}", event.productoId(), e.getMessage());
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

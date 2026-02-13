@@ -30,48 +30,40 @@ public class VentaEventListener {
         logger.info("-> 📨 [EVENTO] Procesando venta #{} para envío de email...", event.getVentaId());
         
         try {
-            // 1. Recuperar Venta con todos sus detalles
             Venta venta = ventaRepository.findByIdWithDetails(event.getVentaId())
                     .orElseThrow(() -> new RuntimeException("Venta no encontrada ID: " + event.getVentaId()));
 
-            // 2. Generar PDF
             byte[] pdf = pdfService.generarComprobanteVenta(venta);
             if (pdf == null || pdf.length == 0) {
                 logger.error("❌ Error: PDF generado vacío para Venta #{}", venta.getId());
                 return;
             }
 
-            // 3. Preparar Contexto Email (AQUÍ FALTABAN DATOS)
             Context context = new Context();
             context.setVariable("clienteNombre", venta.getCliente().getNombre());
             
-            // Total
+            // --- CORRECCIÓN MENTOR: Pasamos BigDecimal PURO (sin String.format) ---
+            // Así Thymeleaf puede hacer sus cálculos sin explotar
             BigDecimal total = venta.getTotalVenta() != null ? venta.getTotalVenta() : BigDecimal.ZERO;
-            context.setVariable("totalVenta", String.format("$%.2f", total));
+            context.setVariable("totalVenta", total); 
+            // ---------------------------------------------------------------------
             
-            // Datos Básicos
             context.setVariable("idVenta", venta.getId());
             context.setVariable("fechaVenta", venta.getFechaVenta());
 
-            // --- MENTOR: VARIABLES DE DESCUENTO AGREGADAS ---
             BigDecimal descuento = venta.getMontoDescuento() != null ? venta.getMontoDescuento() : BigDecimal.ZERO;
-            context.setVariable("montoDescuento", String.format("$%.2f", descuento));
+            context.setVariable("montoDescuento", descuento); // También pasamos BigDecimal puro aquí
             
-            // Pasamos el objeto booleano para saber si mostrar la fila de descuento en el HTML
             context.setVariable("hayDescuento", descuento.compareTo(BigDecimal.ZERO) > 0);
 
-            // Código de cupón (si existe)
             if (venta.getCupon() != null) {
                 context.setVariable("codigoCupon", venta.getCupon().getCodigo());
             } else {
                 context.setVariable("codigoCupon", "");
             }
-            // ------------------------------------------------
 
-            // 4. Procesar Template HTML
             String html = templateEngine.process("email-comprobante", context);
 
-            // 5. Enviar
             emailService.enviarEmailConAdjunto(
                     venta.getCliente().getEmail(),
                     "Comprobante de compra #" + venta.getId(),
@@ -83,7 +75,6 @@ public class VentaEventListener {
             logger.info("✅ Email con comprobante enviado a {}", venta.getCliente().getEmail());
 
         } catch (Exception e) {
-            // Si falla aquí, verás el error en la consola
             logger.error("🔴 Error crítico enviando email de venta #{}: {}", event.getVentaId(), e.getMessage(), e);
         }
     }
