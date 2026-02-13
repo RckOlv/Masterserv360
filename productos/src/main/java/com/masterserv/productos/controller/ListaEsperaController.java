@@ -1,6 +1,7 @@
 package com.masterserv.productos.controller;
 
 import com.masterserv.productos.dto.AddListaEsperaDTO;
+import com.masterserv.productos.dto.ListaEsperaDTO;
 import com.masterserv.productos.entity.ListaEspera;
 import com.masterserv.productos.entity.Producto;
 import com.masterserv.productos.entity.Usuario;
@@ -13,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -109,5 +111,39 @@ public class ListaEsperaController {
         }
         listaEsperaRepository.deleteById(id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<?> obtenerTodos() {
+        try {
+            var lista = listaEsperaRepository.findAll().stream().map(item -> {
+                ListaEsperaDTO dto = new ListaEsperaDTO();
+                dto.setId(item.getId());
+                dto.setFechaSolicitud(item.getFechaSolicitud() != null ? item.getFechaSolicitud().toString() : item.getFechaInscripcion().toString());
+                dto.setEstado(item.getEstado().name());
+                
+                // Mapeo de Usuario
+                if (item.getUsuario() != null) {
+                    dto.setUsuarioNombre(item.getUsuario().getNombre());
+                    dto.setUsuarioApellido(item.getUsuario().getApellido());
+                    dto.setUsuarioTelefono(item.getUsuario().getTelefono());
+                    dto.setUsuarioEmail(item.getUsuario().getEmail());
+                }
+                
+                // Mapeo de Producto
+                if (item.getProducto() != null) {
+                    dto.setProductoNombre(item.getProducto().getNombre());
+                    dto.setProductoCodigo(item.getProducto().getCodigo());
+                }
+                
+                return dto;
+            }).toList();
+
+            return ResponseEntity.ok(lista);
+        } catch (Exception e) {
+            logger.error("Error al listar lista de espera", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

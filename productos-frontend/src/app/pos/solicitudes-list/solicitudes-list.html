@@ -5,14 +5,14 @@
             <h4 class="masterserv-title text-white">
                 <i class="bi bi-hourglass-split me-2 text-warning"></i> Lista de Espera
             </h4>
-            <small class="text-white-50">Clientes esperando reposición de stock.</small>
+            <small class="text-white-50">Clientes esperando reposición de stock para ser notificados.</small>
         </div>
 
         <div class="card-body bg-dark text-white">
 
             <div *ngIf="isLoading" class="text-center py-5">
                 <div class="spinner-border text-warning" role="status"></div>
-                <p class="mt-2 text-muted">Cargando lista...</p>
+                <p class="mt-2 text-muted">Cargando lista de espera...</p>
             </div>
 
             <div *ngIf="!isLoading && solicitudes.length > 0" class="table-responsive">
@@ -35,23 +35,25 @@
                             </td>
 
                             <td>
-                                <div class="fw-bold text-white">{{ item.usuario.nombre }} {{ item.usuario.apellido }}</div>
+                                <div class="fw-bold text-white">
+                                    {{ item.usuarioNombre }} {{ item.usuarioApellido }}
+                                </div>
                             </td>
 
                             <td>
                                 <div class="text-warning fw-bold">
-                                    <i class="bi bi-box-seam me-1"></i> {{ item.producto.nombre }}
+                                    <i class="bi bi-box-seam me-1"></i> {{ item.productoNombre }}
                                 </div>
-                                <small class="text-white-50">{{ item.producto.codigo }}</small>
+                                <small class="text-white-50">{{ item.productoCodigo }}</small>
                             </td>
 
                             <td>
                                 <div class="d-flex flex-column small">
                                     <span class="text-white-50">
-                                        <i class="bi bi-whatsapp text-success me-1"></i> {{ item.usuario.telefono }}
+                                        <i class="bi bi-whatsapp text-success me-1"></i> {{ item.usuarioTelefono }}
                                     </span>
                                     <span class="text-white-50">
-                                        <i class="bi bi-envelope text-muted me-1"></i> {{ item.usuario.email }}
+                                        <i class="bi bi-envelope text-muted me-1"></i> {{ item.usuarioEmail }}
                                     </span>
                                 </div>
                             </td>
@@ -69,7 +71,9 @@
                             </td>
 
                             <td class="text-end pe-3">
-                                <button class="btn btn-sm btn-outline-danger" (click)="eliminar(item.id)" title="Quitar de la lista">
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        (click)="eliminar(item.id)" 
+                                        title="Quitar de la lista">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
@@ -80,8 +84,8 @@
 
             <div *ngIf="!isLoading && solicitudes.length === 0" class="alert bg-dark border border-secondary text-center mt-3">
                 <i class="bi bi-emoji-smile fs-1 text-success opacity-50 d-block mb-2"></i>
-                <h6 class="text-white">Todo entregado</h6>
-                <small class="text-white-50">No hay clientes esperando productos en este momento.</small>
+                <h6 class="text-white">¡Todo al día!</h6>
+                <p class="text-white-50 mb-0">No hay clientes esperando productos en este momento.</p>
             </div>
 
         </div>
