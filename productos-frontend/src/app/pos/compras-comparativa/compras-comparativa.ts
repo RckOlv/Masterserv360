@@ -76,7 +76,7 @@ export default class ComprasComparativaComponent implements OnInit {
   // ✅ Seleccionar un ganador desde el modal
   seleccionarGanador(item: DetalleComparativa) {
     if (this.detalleProducto) {
-      this.selecciones.set(this.detalleProducto.productoId, item.cotizacionId);
+      this.selecciones.set(this.detalleProducto.productoId, item.itemCotizacionId);
       mostrarToast('Proveedor seleccionado para este producto', 'success');
       this.cerrarModal();
     }

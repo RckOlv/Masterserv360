@@ -8,6 +8,7 @@ export interface ResumenProductoCompra {
 }
 
 export interface DetalleComparativa {
+    itemCotizacionId: number;
     cotizacionId: number;
     proveedorNombre: string;
     precioOferta: number;

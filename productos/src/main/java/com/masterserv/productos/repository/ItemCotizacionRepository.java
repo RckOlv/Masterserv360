@@ -57,7 +57,13 @@ public interface ItemCotizacionRepository extends JpaRepository<ItemCotizacion, 
 
     // 2. Obtener el detalle de quién cotizó ese producto específico
     @Query("SELECT new com.masterserv.productos.dto.DetalleComparativaDTO(" +
-           "c.id, p.razonSocial, i.precioUnitarioOfertado, i.cantidadSolicitada, c.fechaEntregaOfertada, c.esRecomendada) " +
+           "i.id, " + 
+           "c.id, " +
+           "p.razonSocial, " +
+           "i.precioUnitarioOfertado, " +
+           "i.cantidadSolicitada, " +
+           "c.fechaEntregaOfertada, " +
+           "c.esRecomendada) " +
            "FROM ItemCotizacion i " +
            "JOIN i.cotizacion c " +
            "JOIN c.proveedor p " +

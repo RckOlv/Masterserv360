@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record DetalleComparativaDTO(
+    Long itemCotizacionId,
     Long cotizacionId,
     String proveedorNombre,
     BigDecimal precioOferta,
