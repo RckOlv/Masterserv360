@@ -336,7 +336,7 @@ public class PedidoService {
             throw new IllegalArgumentException("No se encontraron ítems de cotización con los IDs provistos.");
         }
 
-        // 3. Agrupar por Cotización (Para crear un pedido por proveedor/cotización)
+        // 3. Agrupar por Cotización
         Map<Cotizacion, List<ItemCotizacion>> itemsPorCotizacion = itemsSeleccionados.stream()
                 .collect(Collectors.groupingBy(ItemCotizacion::getCotizacion));
 
@@ -353,7 +353,7 @@ public class PedidoService {
             pedido.setProveedor(cotizacion.getProveedor());
             pedido.setUsuario(usuarioAdmin);
             pedido.setFechaPedido(LocalDateTime.now());
-            pedido.setEstado(EstadoPedido.PENDIENTE); // Se crea pendiente para revisión o envío auto
+            pedido.setEstado(EstadoPedido.PENDIENTE);
             pedido.setToken(UUID.randomUUID().toString());
 
             // B. Crear Detalles
@@ -366,12 +366,16 @@ public class PedidoService {
                 detalle.setProducto(item.getProducto());
                 detalle.setCantidad(item.getCantidadSolicitada());
                 
-                // Usamos el precio ofertado por el proveedor
-                detalle.setPrecioUnitario(item.getPrecioUnitarioOfertado());
+                // 🛡️ CORRECCIÓN: Validación de Precio Null
+                BigDecimal precio = item.getPrecioUnitarioOfertado() != null 
+                        ? item.getPrecioUnitarioOfertado() 
+                        : BigDecimal.ZERO;
+
+                detalle.setPrecioUnitario(precio);
                 
-                // Calculamos subtotal
-                BigDecimal subtotal = item.getPrecioUnitarioOfertado()
-                        .multiply(new BigDecimal(item.getCantidadSolicitada()));
+                // Calculamos subtotal de forma segura
+                BigDecimal subtotal = precio.multiply(new BigDecimal(item.getCantidadSolicitada()));
+                
                 detallesPedido.add(detalle);
                 total = total.add(subtotal);
             }
@@ -384,17 +388,11 @@ public class PedidoService {
             pedidosIds.add(pedidoGuardado.getId());
             pedidosCreados++;
 
-            // D. Actualizar Cotización (Opcional: Marcar como Aceptada/Cerrada)
-            // Esto evita que se vuelva a usar la misma cotización por error
+            // D. Actualizar Cotización
             if (cotizacion.getEstado() != EstadoCotizacion.CONFIRMADA_ADMIN) {
                 cotizacion.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
                 cotizacionRepository.save(cotizacion);
             }
-            
-            // E. Notificación (Reutilizamos la lógica si quieres que se envíe YA)
-            // O podemos dejarlo para que el usuario le de "Enviar" manualmente desde la lista de pedidos.
-            // Para este ejemplo, solo generamos el pedido sin enviar el email automático 
-            // para que el admin pueda revisarlo antes.
         }
 
         return Map.of(
