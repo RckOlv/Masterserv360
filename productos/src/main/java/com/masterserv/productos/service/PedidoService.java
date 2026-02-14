@@ -14,6 +14,7 @@ import com.masterserv.productos.entity.Producto;
 import com.masterserv.productos.entity.Proveedor;
 import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.enums.EstadoCotizacion;
+import com.masterserv.productos.enums.EstadoItemCotizacion;
 import com.masterserv.productos.enums.EstadoPedido;
 import com.masterserv.productos.enums.TipoMovimiento;
 import com.masterserv.productos.mapper.PedidoMapper;
@@ -43,6 +44,7 @@ import org.thymeleaf.context.Context;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -317,31 +319,25 @@ public class PedidoService {
      */
     @Transactional
     public Map<String, Object> generarPedidosMasivos(List<Long> itemIds, Long usuarioId) {
-        
-        // 1. Obtener Admin
         Usuario usuarioAdmin = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario Admin no encontrado"));
 
-        // 2. Obtener items seleccionados
         List<ItemCotizacion> itemsSeleccionados = itemCotizacionRepository.findAllById(itemIds);
         
         if (itemsSeleccionados.isEmpty()) {
-            throw new IllegalArgumentException("No se encontraron ítems de cotización con los IDs provistos.");
+            throw new IllegalArgumentException("No se encontraron ítems seleccionados.");
         }
 
-        // 3. Agrupar por Cotización
         Map<Cotizacion, List<ItemCotizacion>> itemsPorCotizacion = itemsSeleccionados.stream()
                 .collect(Collectors.groupingBy(ItemCotizacion::getCotizacion));
 
         int pedidosCreados = 0;
         List<Long> pedidosIds = new ArrayList<>();
 
-        // 4. Iterar y Crear Pedidos
         for (Map.Entry<Cotizacion, List<ItemCotizacion>> entry : itemsPorCotizacion.entrySet()) {
             Cotizacion cotizacion = entry.getKey();
             List<ItemCotizacion> items = entry.getValue();
 
-            // A. Crear Cabecera
             Pedido pedido = new Pedido();
             pedido.setProveedor(cotizacion.getProveedor());
             pedido.setUsuario(usuarioAdmin);
@@ -349,7 +345,6 @@ public class PedidoService {
             pedido.setEstado(EstadoPedido.PENDIENTE);
             pedido.setToken(UUID.randomUUID().toString());
 
-            // B. Crear Detalles
             Set<DetallePedido> detallesPedido = new HashSet<>();
             BigDecimal total = BigDecimal.ZERO;
 
@@ -359,45 +354,45 @@ public class PedidoService {
                 detalle.setProducto(item.getProducto());
                 detalle.setCantidad(item.getCantidadSolicitada());
                 
-                // --- 🛡️ CORRECCIÓN DE PRECIO INTELIGENTE ---
-                BigDecimal precio = item.getPrecioUnitarioOfertado();
-                
-                // Si el proveedor no ofertó (es NULL), usamos el Costo Actual
-                if (precio == null) {
-                    if (item.getProducto().getPrecioCosto() != null) {
-                        precio = item.getProducto().getPrecioCosto();
-                    } else {
-                        // Si tampoco tiene costo, usamos 0 para no romper el sistema
-                        precio = BigDecimal.ZERO;
-                    }
-                }
+                BigDecimal precio = item.getPrecioUnitarioOfertado() != null ? item.getPrecioUnitarioOfertado() 
+                                   : (item.getProducto().getPrecioCosto() != null ? item.getProducto().getPrecioCosto() : BigDecimal.ZERO);
 
                 detalle.setPrecioUnitario(precio);
-                
-                // Calculamos subtotal seguro
-                BigDecimal subtotal = precio.multiply(new BigDecimal(item.getCantidadSolicitada()));
-                
                 detallesPedido.add(detalle);
-                total = total.add(subtotal);
+                total = total.add(precio.multiply(new BigDecimal(item.getCantidadSolicitada())));
+
+                // --- 🧹 LÓGICA DE LIMPIEZA Y CIERRE ---
+                // 1. Marcar el item seleccionado como COMPLETADO
+                item.setEstado(EstadoItemCotizacion.COMPLETADO);
+
+                // 2. Cancelar ofertas de otros proveedores para este mismo producto
+                List<ItemCotizacion> rivales = itemCotizacionRepository.findItemsRivales(
+                    item.getProducto().getId(), 
+                    item.getId(), 
+                    Arrays.asList(EstadoItemCotizacion.PENDIENTE)
+                );
+                for (ItemCotizacion rival : rivales) {
+                    rival.setEstado(EstadoItemCotizacion.CANCELADO_SISTEMA);
+                }
+                itemCotizacionRepository.saveAll(rivales);
             }
 
             pedido.setDetalles(detallesPedido);
             pedido.setTotalPedido(total);
-
-            // C. Guardar
             Pedido pedidoGuardado = pedidoRepository.save(pedido);
             pedidosIds.add(pedidoGuardado.getId());
             pedidosCreados++;
 
-            // D. Actualizar Cotización
-            if (cotizacion.getEstado() != EstadoCotizacion.CONFIRMADA_ADMIN) {
-                cotizacion.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
-                cotizacionRepository.save(cotizacion);
-            }
+            // Actualizar estado de la cotización padre
+            cotizacion.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
+            cotizacionRepository.save(cotizacion);
         }
 
+        // Guardar los cambios de estado de los items seleccionados
+        itemCotizacionRepository.saveAll(itemsSeleccionados);
+
         return Map.of(
-            "mensaje", "Se generaron " + pedidosCreados + " pedidos exitosamente.",
+            "mensaje", "Se generaron " + pedidosCreados + " pedidos. Los productos seleccionados han sido procesados.",
             "cantidad", pedidosCreados,
             "pedidosIds", pedidosIds
         );

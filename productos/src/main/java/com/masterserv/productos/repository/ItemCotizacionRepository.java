@@ -19,21 +19,19 @@ import java.util.List;
 public interface ItemCotizacionRepository extends JpaRepository<ItemCotizacion, Long> {
 
     /**
-     * Busca items "rivales" (mismo producto) en otras cotizaciones que todavía están vivas (PENDIENTE o COTIZADO),
-     * excluyendo la cotización que acaba de ganar.
+     * Busca items "rivales" (mismo producto) en otras cotizaciones que todavía están vivas,
+     * excluyendo el ítem que acaba de ganar.
      */
     @Query("SELECT i FROM ItemCotizacion i " +
            "WHERE i.producto.id = :productoId " +
-           "AND i.estado IN (:estadosVivos) " +
-           "AND i.cotizacion.id <> :idCotizacionGanadora")
+           "AND i.id <> :itemGanadorId " +
+           "AND i.estado IN (:estadosVivos)")
     List<ItemCotizacion> findItemsRivales(
             @Param("productoId") Long productoId,
-            @Param("idCotizacionGanadora") Long idCotizacionGanadora,
+            @Param("itemGanadorId") Long itemGanadorId,
             @Param("estadosVivos") List<EstadoItemCotizacion> estadosVivos
     );
 
-    // Busca si existe algún item de este producto, para este proveedor, 
-    // dentro de una cotización que esté en estado "Pendiente", "Recibida" o "Confirmada".
     @Query("SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END FROM ItemCotizacion i " +
            "WHERE i.producto = :producto " +
            "AND i.cotizacion.proveedor = :proveedor " +
@@ -43,7 +41,8 @@ public interface ItemCotizacionRepository extends JpaRepository<ItemCotizacion, 
                                @Param("estados") Collection<EstadoCotizacion> estados);
 
 
-    // 1. Obtener lista de productos que están en cotizaciones RECIBIDAS (listos para comparar)
+    // 1. Obtener lista de productos listos para comparar
+    // FILTRO: Solo productos que tengan al menos un item en estado PENDIENTE
     @Query("SELECT i.producto.id as productoId, " +
            "i.producto.nombre as nombre, " +
            "i.producto.codigo as codigo, " +
@@ -52,10 +51,12 @@ public interface ItemCotizacionRepository extends JpaRepository<ItemCotizacion, 
            "MIN(i.precioUnitarioOfertado) as mejorPrecio " +
            "FROM ItemCotizacion i " +
            "WHERE i.cotizacion.estado = 'RECIBIDA' " +
+           "AND i.estado = com.masterserv.productos.enums.EstadoItemCotizacion.PENDIENTE " +
            "GROUP BY i.producto.id, i.producto.nombre, i.producto.codigo, i.producto.imagenUrl")
     List<ResumenProductoCompraDTO> findProductosEnCotizacionesRecibidas();
 
-    // 2. Obtener el detalle de quién cotizó ese producto específico
+    // 2. Obtener el detalle de quién cotizó ese producto
+    // FILTRO: Solo mostrar las ofertas que aún están PENDIENTES
     @Query("SELECT new com.masterserv.productos.dto.DetalleComparativaDTO(" +
            "i.id, " + 
            "c.id, " +
@@ -67,7 +68,9 @@ public interface ItemCotizacionRepository extends JpaRepository<ItemCotizacion, 
            "FROM ItemCotizacion i " +
            "JOIN i.cotizacion c " +
            "JOIN c.proveedor p " +
-           "WHERE i.producto.id = :productoId AND c.estado = 'RECIBIDA' " +
+           "WHERE i.producto.id = :productoId " +
+           "AND c.estado = 'RECIBIDA' " +
+           "AND i.estado = com.masterserv.productos.enums.EstadoItemCotizacion.PENDIENTE " +
            "ORDER BY i.precioUnitarioOfertado ASC")
     List<DetalleComparativaDTO> findComparativaPorProducto(@Param("productoId") Long productoId);
 }

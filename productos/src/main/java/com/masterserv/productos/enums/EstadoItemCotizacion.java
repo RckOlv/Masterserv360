@@ -35,5 +35,8 @@ public enum EstadoItemCotizacion {
      * El sistema canceló este item automáticamente porque se compró el producto
      * en otra cotización (evita sobre-stock).
      */
-    CANCELADO_SISTEMA
+    CANCELADO_SISTEMA,
+
+    
+    COMPLETADO
 }
