@@ -1,5 +1,6 @@
 package com.masterserv.productos.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.masterserv.productos.enums.EstadoPedido;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -12,7 +13,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
-import java.util.UUID; // ✅ IMPORTANTE: Faltaba este import
+import java.util.UUID;
 
 @Entity
 @Table(name = "pedidos")
@@ -54,6 +55,7 @@ public class Pedido extends AuditableEntity {
 
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @ToString.Exclude
+    @JsonManagedReference
     private Set<DetallePedido> detalles;
 
     @PrePersist

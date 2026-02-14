@@ -33,7 +33,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value; // <--- Importante
+import org.springframework.beans.factory.annotation.Value; 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,16 +67,13 @@ public class PedidoService {
     @Autowired private ItemCotizacionRepository itemCotizacionRepository;
     @Autowired private CotizacionRepository cotizacionRepository;
 
-    
-    
-    @org.springframework.beans.factory.annotation.Value("${app.frontend.url}")
+    @Value("${app.frontend.url}")
     private String frontendUrl;
 
     // --- INYECCIONES PARA NOTIFICACIÓN ---
     @Autowired private PdfService pdfService;
     @Autowired private EmailService emailService;
     @Autowired private TemplateEngine templateEngine;
-    
     // -------------------------------------
 
     /**
@@ -132,7 +129,7 @@ public class PedidoService {
         // 4. Guardar Pedido (Con token y estado pendiente)
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
         
-        // 5. --- LÓGICA DE VIDA REAL: NOTIFICAR AL PROVEEDOR ---
+        // 5. --- NOTIFICAR AL PROVEEDOR ---
         try {
             if (proveedor.getEmail() != null && !proveedor.getEmail().isBlank()) {
                 logger.info("📧 Generando Orden de Compra #{} para proveedor '{}'...", pedidoGuardado.getId(), proveedor.getRazonSocial());
@@ -140,8 +137,7 @@ public class PedidoService {
                 // A. Generar PDF
                 byte[] pdfBytes = pdfService.generarOrdenCompraProveedor(pedidoGuardado);
                 
-                // B. Generar Link y HTML (CORREGIDO)
-                // Usamos la variable inyectada en lugar de hardcodear localhost
+                // B. Generar Link y HTML
                 String linkConfirmacion = frontendUrl + "/proveedor/pedido/" + pedidoGuardado.getToken();
                 
                 Context context = new Context();
@@ -171,9 +167,6 @@ public class PedidoService {
         
         return pedidoMapper.toPedidoDTO(pedidoGuardado);
     }
-    
-    // ... (El resto de tus métodos se mantienen exactamente igual) ...
-    // Asegúrate de copiarlos aquí abajo (marcarPedidoCompletado, cancelar, obtenerDetalles, etc.)
     
     @Transactional
     public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
@@ -320,7 +313,7 @@ public class PedidoService {
     }
 
     /**
-     * 🚀 NUEVO MÉTODO: Genera pedidos automáticamente desde la comparativa.
+     * 🚀 NUEVO MÉTODO CORREGIDO: Genera pedidos usando Precio de Costo si no hay oferta.
      */
     @Transactional
     public Map<String, Object> generarPedidosMasivos(List<Long> itemIds, Long usuarioId) {
@@ -366,14 +359,22 @@ public class PedidoService {
                 detalle.setProducto(item.getProducto());
                 detalle.setCantidad(item.getCantidadSolicitada());
                 
-                // 🛡️ CORRECCIÓN: Validación de Precio Null
-                BigDecimal precio = item.getPrecioUnitarioOfertado() != null 
-                        ? item.getPrecioUnitarioOfertado() 
-                        : BigDecimal.ZERO;
+                // --- 🛡️ CORRECCIÓN DE PRECIO INTELIGENTE ---
+                BigDecimal precio = item.getPrecioUnitarioOfertado();
+                
+                // Si el proveedor no ofertó (es NULL), usamos el Costo Actual
+                if (precio == null) {
+                    if (item.getProducto().getPrecioCosto() != null) {
+                        precio = item.getProducto().getPrecioCosto();
+                    } else {
+                        // Si tampoco tiene costo, usamos 0 para no romper el sistema
+                        precio = BigDecimal.ZERO;
+                    }
+                }
 
                 detalle.setPrecioUnitario(precio);
                 
-                // Calculamos subtotal de forma segura
+                // Calculamos subtotal seguro
                 BigDecimal subtotal = precio.multiply(new BigDecimal(item.getCantidadSolicitada()));
                 
                 detallesPedido.add(detalle);

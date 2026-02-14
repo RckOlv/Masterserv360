@@ -10,6 +10,8 @@ import lombok.AllArgsConstructor;
 
 import java.math.BigDecimal;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 @Entity
 @Table(name = "detalles_pedido")
 // --- ¡CAMBIO CRÍTICO! ---
@@ -36,6 +38,7 @@ public class DetallePedido {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "pedido_id", nullable = false)
     @ToString.Exclude // ¡MUY IMPORTANTE! Evita bucles en logs y hashCode
+    @JsonBackReference // Para evitar problemas de serialización JSON
     private Pedido pedido; // FK a la cabecera del pedido
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
