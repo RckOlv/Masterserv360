@@ -325,7 +325,7 @@ public class PedidoService {
         List<ItemCotizacion> itemsSeleccionados = itemCotizacionRepository.findAllById(itemIds);
         
         if (itemsSeleccionados.isEmpty()) {
-            throw new IllegalArgumentException("No se encontraron ítems seleccionados.");
+            throw new IllegalArgumentException("No se encontraron ítems de cotización.");
         }
 
         Map<Cotizacion, List<ItemCotizacion>> itemsPorCotizacion = itemsSeleccionados.stream()
@@ -361,15 +361,15 @@ public class PedidoService {
                 detallesPedido.add(detalle);
                 total = total.add(precio.multiply(new BigDecimal(item.getCantidadSolicitada())));
 
-                // --- 🧹 LÓGICA DE LIMPIEZA Y CIERRE ---
-                // 1. Marcar el item seleccionado como COMPLETADO
-                item.setEstado(EstadoItemCotizacion.COMPLETADO);
+                // --- 🛡️ LÓGICA DE CIERRE ---
+                // 1. Marcar el item como CONFIRMADO (según tu BD)
+                item.setEstado(EstadoItemCotizacion.CONFIRMADO);
 
-                // 2. Cancelar ofertas de otros proveedores para este mismo producto
+                // 2. Cancelar rivales (los que siguen en COTIZADO para este producto)
                 List<ItemCotizacion> rivales = itemCotizacionRepository.findItemsRivales(
                     item.getProducto().getId(), 
                     item.getId(), 
-                    Arrays.asList(EstadoItemCotizacion.PENDIENTE)
+                    Arrays.asList(EstadoItemCotizacion.COTIZADO, EstadoItemCotizacion.PENDIENTE)
                 );
                 for (ItemCotizacion rival : rivales) {
                     rival.setEstado(EstadoItemCotizacion.CANCELADO_SISTEMA);
@@ -383,16 +383,14 @@ public class PedidoService {
             pedidosIds.add(pedidoGuardado.getId());
             pedidosCreados++;
 
-            // Actualizar estado de la cotización padre
             cotizacion.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
             cotizacionRepository.save(cotizacion);
         }
 
-        // Guardar los cambios de estado de los items seleccionados
         itemCotizacionRepository.saveAll(itemsSeleccionados);
 
         return Map.of(
-            "mensaje", "Se generaron " + pedidosCreados + " pedidos. Los productos seleccionados han sido procesados.",
+            "mensaje", "Se generaron " + pedidosCreados + " pedidos exitosamente.",
             "cantidad", pedidosCreados,
             "pedidosIds", pedidosIds
         );
