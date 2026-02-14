@@ -21,10 +21,10 @@ import com.masterserv.productos.mapper.ProductoMapper;
 import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.specification.ProductoSpecification;
 import com.masterserv.productos.repository.CategoriaRepository;
-import com.masterserv.productos.exceptions.StockInsuficienteException; // Asegúrate de tener este import
+import com.masterserv.productos.exceptions.StockInsuficienteException;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy; // Importante para evitar ciclos
+import org.springframework.context.annotation.Lazy; 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -52,7 +52,6 @@ public class ProductoService {
     @Autowired private SolicitudProductoRepository solicitudProductoRepository;
     @Autowired private ListaEsperaRepository listaEsperaRepository;
 
-    // ✅ INYECCIÓN CLAVE (Con @Lazy para evitar dependencia circular si Proceso usa ProductoService)
     @Autowired 
     @Lazy
     private ProcesoAutomaticoService procesoAutomaticoService;
@@ -182,7 +181,11 @@ public class ProductoService {
         }
     }
 
-   @Transactional
+    /**
+     * ACTUALIZACIÓN DE FICHA DE PRODUCTO
+     * Nota: Aquí NO se modifica el stock. El stock solo se modifica en 'ajustarStock' o 'reponerStock'.
+     */
+    @Transactional
     public ProductoDTO update(Long id, ProductoDTO productoDTO) {
         if (productoRepository.existsByNombreIgnoreCaseAndIdNot(productoDTO.nombre(), id)) {
             throw new IllegalArgumentException("¡Error! El nombre '" + productoDTO.nombre() + "' ya lo está usando otro producto.");
@@ -191,8 +194,7 @@ public class ProductoService {
         Producto productoExistente = productoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
 
-        int stockAnterior = productoExistente.getStockActual();
-
+        // Mapeamos los cambios del DTO a la entidad (Nombre, Precios, Descripción, etc.)
         productoMapper.updateProductoFromDto(productoDTO, productoExistente);
 
         if (productoDTO.categoriaId() != null && 
@@ -206,20 +208,12 @@ public class ProductoService {
         if (productoDTO.estado() != null) {
             productoExistente.setEstado(productoDTO.estado());
         }
+        
+        // Importante: Aseguramos que el stock NO cambie aquí, por si el Mapper intentó tocarlo.
+        // (Aunque si el DTO tiene stock null, el mapper suele ignorarlo, pero por seguridad).
+        // productoExistente.setStockActual(productoExistente.getStockActual()); // Redundante pero seguro.
 
         Producto productoActualizado = productoRepository.save(productoExistente);
-
-        int stockNuevo = productoActualizado.getStockActual();
-        
-        // ✅ NOTIFICACIÓN DIRECTA (Si revive el stock)
-        if (stockAnterior <= 0 && stockNuevo > 0) {
-             System.out.println("📢 STOCK RECUPERADO (Update): Llamando a notificación...");
-             try {
-                 procesoAutomaticoService.procesarListaEspera(productoActualizado.getId());
-             } catch (Exception e) {
-                 System.err.println("⚠️ Error notificando espera: " + e.getMessage());
-             }
-        }
 
         return productoMapper.toProductoDTO(productoActualizado);
     }
@@ -290,11 +284,13 @@ public class ProductoService {
         return productoRepository.save(producto);
     }
     
+    // MÉTODO USADO POR PEDIDOS
     @Transactional(propagation = Propagation.REQUIRED)
     public Producto reponerStock(Long productoId, int cantidadAReponer) {
         return reponerStock(productoId, cantidadAReponer, null);
     }
 
+    // MÉTODO USADO POR PEDIDOS (Con cambio de precio opcional)
     @Transactional(propagation = Propagation.REQUIRED)
     public Producto reponerStock(Long productoId, int cantidadAReponer, BigDecimal nuevoCosto) {
          if (cantidadAReponer <= 0) throw new IllegalArgumentException("Cantidad debe ser positiva.");
@@ -311,7 +307,7 @@ public class ProductoService {
         }
         Producto productoGuardado = productoRepository.save(producto);
 
-        // ✅ NOTIFICACIÓN DIRECTA
+        // Notificación de Lista de Espera
         if (stockAnterior <= 0 && stockNuevo > 0) {
              try { procesoAutomaticoService.procesarListaEspera(productoId); } catch (Exception e) {}
         }
@@ -319,6 +315,10 @@ public class ProductoService {
          return productoGuardado;
     }
 
+    /**
+     * MÉTODO DE AJUSTE MANUAL (Botón "Ajustar Stock")
+     * Este SÍ registra el movimiento como AJUSTE_MANUAL.
+     */
     @Transactional
     public void ajustarStock(MovimientoStockDTO dto, String emailUsuario) {
         Producto producto = productoRepository.findById(dto.getProductoId())
@@ -341,22 +341,19 @@ public class ProductoService {
         producto.setStockActual(nuevoStock);
         productoRepository.save(producto);
 
+        // REGISTRO DE MOVIMIENTO
         MovimientoStock movimiento = new MovimientoStock();
         movimiento.setFecha(LocalDateTime.now());
         movimiento.setCantidad(cantidadAjuste);
-        movimiento.setTipoMovimiento(TipoMovimiento.AJUSTE_MANUAL);
+        movimiento.setTipoMovimiento(TipoMovimiento.AJUSTE_MANUAL); // <--- Etiqueta Correcta
         movimiento.setMotivo(dto.getMotivo());
         movimiento.setProducto(producto);
         movimiento.setUsuario(usuario);
         movimientoStockRepository.save(movimiento);
 
-        // ✅ NOTIFICACIÓN DIRECTA (¡AQUÍ ESTABA EL PROBLEMA!)
-        // Antes usabas eventPublisher, ahora llamamos directo al servicio.
         if (stockAnterior <= 0 && nuevoStock > 0) {
             System.out.println("📢 STOCK RECUPERADO (Ajuste Manual): Llamando a notificación DIRECTA...");
             try {
-                // Esta llamada se ejecutará (posiblemente en hilo aparte si el método destino es @Async)
-                // pero ya no depende de la transacción ni del EventBus.
                 procesoAutomaticoService.procesarListaEspera(producto.getId());
             } catch (Exception e) {
                 System.err.println("⚠️ Falló la llamada directa a notificaciones: " + e.getMessage());

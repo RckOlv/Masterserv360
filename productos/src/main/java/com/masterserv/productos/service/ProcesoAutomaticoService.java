@@ -14,8 +14,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -42,9 +40,9 @@ public class ProcesoAutomaticoService {
     private final MovimientoPuntosRepository movimientoRepository;
     private final CuentaPuntosRepository cuentaRepository;
 
-/**
+    /**
      * 🟢 TAREA 1: Generar pedidos automáticos (AGRUPADO POR PROVEEDOR).
-     * Ejecución: Cada 10 minutos.
+     * Ejecución: Cada 1 minuto.
      */
     @Scheduled(fixedDelay = 60000) 
     public void generarPrePedidosAgrupados() {
@@ -56,15 +54,19 @@ public class ProcesoAutomaticoService {
             logger.info("📨 Iniciando envío de {} solicitudes agrupadas...", cotizacionesParaNotificar.size());
             
             for (Cotizacion cotizacion : cotizacionesParaNotificar) {
-                // Enviamos el correo
-                notificarProveedor(cotizacion);
-                
-                // 🛑 PAUSA TÁCTICA PARA MAILTRAP (6 segundos)
                 try {
-                    Thread.sleep(6000); 
+                    // 1. Enviamos el correo
+                    notificarProveedor(cotizacion);
+                    
+                    // 2. 🛑 PAUSA OBLIGATORIA PARA MAILTRAP (15 segundos)
+                    logger.info("⏳ Esperando 15s para evitar bloqueo de Mailtrap...");
+                    Thread.sleep(15000); 
+
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     logger.warn("⚠️ Interrupción en la pausa de envío de correos.");
+                } catch (Exception e) {
+                    logger.error("Error en el ciclo de envíos: {}", e.getMessage());
                 }
             }
             
@@ -217,12 +219,11 @@ public class ProcesoAutomaticoService {
      * Se ejecuta cuando entra stock (evento).
      */
     @Async
-    @EventListener // <--- CAMBIO CLAVE: Quitamos @TransactionalEventListener
+    @EventListener 
     public void handleStockActualizado(StockActualizadoEvent event) {
-        System.out.println("⚡ [LISTENER] ¡Evento de stock recibido! ID: " + event.productoId() + " Nuevo Stock: " + event.stockNuevo());
+        // System.out.println("⚡ [LISTENER] ¡Evento de stock recibido! ID: " + event.productoId() + " Nuevo Stock: " + event.stockNuevo());
         
         if (event.stockNuevo() <= 0) {
-            System.out.println("   --> 🛑 Bloqueado: El stock nuevo es 0 o menor.");
             return;
         }
         try {
@@ -246,7 +247,6 @@ public class ProcesoAutomaticoService {
             try {
                 Usuario usuario = espera.getUsuario();
                 
-                // --- 📧 EMAIL MEJORADO CON THYMELEAF ---
                 Context context = new Context();
                 context.setVariable("clienteNombre", usuario.getNombre());
                 context.setVariable("productoNombre", producto.getNombre());
@@ -255,10 +255,8 @@ public class ProcesoAutomaticoService {
 
                 emailService.enviarEmailHtml(usuario.getEmail(), 
                     "🟢 ¡Ya llegó! " + producto.getNombre(), 
-                    htmlContent); // <--- Enviamos HTML procesado
-                // ----------------------------------------
+                    htmlContent);
 
-                // WhatsApp
                 if (whatsappService != null && usuario.getTelefono() != null) {
                     whatsappService.enviarMensaje(usuario.getTelefono(), 
                         "👋 Hola " + usuario.getNombre() + ", buenas noticias: Llegó *" + producto.getNombre() + "* al local. 🏃‍♂️💨. Ven a buscarlo!");
@@ -283,7 +281,6 @@ public class ProcesoAutomaticoService {
         
         LocalDateTime ahora = LocalDateTime.now();
 
-        // 1. Buscar movimientos GANADO cuya fecha de caducidad ya pasó
         List<MovimientoPuntos> candidatosVencidos = movimientoRepository
             .findByFechaCaducidadPuntosBeforeAndTipoMovimiento(ahora, TipoMovimientoPuntos.GANADO);
 
@@ -291,7 +288,6 @@ public class ProcesoAutomaticoService {
 
         for (MovimientoPuntos movOriginal : candidatosVencidos) {
             
-            // 2. Verificar si ya expiraron anteriormente o fueron revertidos
             boolean yaExpirado = movimientoRepository.existsByVentaAndTipoMovimiento(movOriginal.getVenta(), TipoMovimientoPuntos.EXPIRADO);
             boolean yaRevertido = movimientoRepository.existsByVentaAndTipoMovimiento(movOriginal.getVenta(), TipoMovimientoPuntos.REVERSION);
 
@@ -300,7 +296,6 @@ public class ProcesoAutomaticoService {
                 int puntosAVencer = movOriginal.getPuntos();
                 
                 if (cuenta.getSaldoPuntos() > 0) {
-                    // Ajuste: No dejar saldo negativo
                     int puntosRealesAQuitar = Math.min(cuenta.getSaldoPuntos(), puntosAVencer);
                     
                     if (puntosRealesAQuitar > 0) {
