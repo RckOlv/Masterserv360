@@ -132,40 +132,7 @@ public class PedidoService {
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
         
         // 5. --- NOTIFICAR AL PROVEEDOR ---
-        try {
-            if (proveedor.getEmail() != null && !proveedor.getEmail().isBlank()) {
-                logger.info("📧 Generando Orden de Compra #{} para proveedor '{}'...", pedidoGuardado.getId(), proveedor.getRazonSocial());
-                
-                // A. Generar PDF
-                byte[] pdfBytes = pdfService.generarOrdenCompraProveedor(pedidoGuardado);
-                
-                // B. Generar Link y HTML
-                String linkConfirmacion = frontendUrl + "/proveedor/pedido/" + pedidoGuardado.getToken();
-                
-                Context context = new Context();
-                context.setVariable("proveedorNombre", proveedor.getRazonSocial());
-                context.setVariable("nroPedido", pedidoGuardado.getId());
-                context.setVariable("linkConfirmacion", linkConfirmacion);
-                
-                String cuerpoHtml = templateEngine.process("email-orden-compra", context);
-                String asunto = "Nueva Orden de Compra #" + pedidoGuardado.getId() + " - Masterserv";
-
-                // C. Enviar Email
-                emailService.enviarEmailConAdjunto(
-                    proveedor.getEmail(),
-                    asunto,
-                    cuerpoHtml,
-                    pdfBytes,
-                    "Orden_Compra_" + pedidoGuardado.getId() + ".pdf"
-                );
-                
-                logger.info("✅ Orden de Compra enviada exitosamente a: {}", proveedor.getEmail());
-            } else {
-                logger.warn("⚠️ Proveedor '{}' no tiene email registrado. No se envió la notificación.", proveedor.getRazonSocial());
-            }
-        } catch (Exception e) {
-            logger.error("🔴 Error al notificar proveedor: {}", e.getMessage());
-        }
+        enviarNotificacionProveedor(pedidoGuardado, proveedor);
         
         return pedidoMapper.toPedidoDTO(pedidoGuardado);
     }
@@ -315,7 +282,8 @@ public class PedidoService {
     }
 
     /**
-     * 🚀 NUEVO MÉTODO CORREGIDO: Genera pedidos usando Precio de Costo si no hay oferta.
+     * 🚀 GENERACIÓN MASIVA AGRUPADA POR PROVEEDOR
+     * Une ítems de diferentes cotizaciones (del mismo proveedor) en una sola orden.
      */
     @Transactional
     public Map<String, Object> generarPedidosMasivos(List<Long> itemIds, Long usuarioId) {
@@ -328,18 +296,25 @@ public class PedidoService {
             throw new IllegalArgumentException("No se encontraron ítems de cotización.");
         }
 
-        Map<Cotizacion, List<ItemCotizacion>> itemsPorCotizacion = itemsSeleccionados.stream()
-                .collect(Collectors.groupingBy(ItemCotizacion::getCotizacion));
+        // 🔥 CAMBIO CLAVE: Agrupar por PROVEEDOR (no por Cotización)
+        // Esto permite fusionar items de cotizaciones distintas en una sola Orden
+        Map<Proveedor, List<ItemCotizacion>> itemsPorProveedor = itemsSeleccionados.stream()
+                .collect(Collectors.groupingBy(item -> item.getCotizacion().getProveedor()));
 
         int pedidosCreados = 0;
         List<Long> pedidosIds = new ArrayList<>();
+        
+        // Usamos un Set para rastrear qué cotizaciones se tocaron y actualizarlas al final
+        Set<Cotizacion> cotizacionesAfectadas = new HashSet<>();
 
-        for (Map.Entry<Cotizacion, List<ItemCotizacion>> entry : itemsPorCotizacion.entrySet()) {
-            Cotizacion cotizacion = entry.getKey();
+        // Iterar por PROVEEDOR
+        for (Map.Entry<Proveedor, List<ItemCotizacion>> entry : itemsPorProveedor.entrySet()) {
+            Proveedor proveedor = entry.getKey();
             List<ItemCotizacion> items = entry.getValue();
 
+            // 1. Crear UN SOLO pedido para este Proveedor
             Pedido pedido = new Pedido();
-            pedido.setProveedor(cotizacion.getProveedor());
+            pedido.setProveedor(proveedor);
             pedido.setUsuario(usuarioAdmin);
             pedido.setFechaPedido(LocalDateTime.now());
             pedido.setEstado(EstadoPedido.PENDIENTE);
@@ -349,11 +324,15 @@ public class PedidoService {
             BigDecimal total = BigDecimal.ZERO;
 
             for (ItemCotizacion item : items) {
+                // Registrar cotización afectada
+                cotizacionesAfectadas.add(item.getCotizacion());
+
                 DetallePedido detalle = new DetallePedido();
                 detalle.setPedido(pedido);
                 detalle.setProducto(item.getProducto());
                 detalle.setCantidad(item.getCantidadSolicitada());
                 
+                // Precio inteligente
                 BigDecimal precio = item.getPrecioUnitarioOfertado() != null ? item.getPrecioUnitarioOfertado() 
                                    : (item.getProducto().getPrecioCosto() != null ? item.getProducto().getPrecioCosto() : BigDecimal.ZERO);
 
@@ -361,11 +340,10 @@ public class PedidoService {
                 detallesPedido.add(detalle);
                 total = total.add(precio.multiply(new BigDecimal(item.getCantidadSolicitada())));
 
-                // --- 🛡️ LÓGICA DE CIERRE ---
-                // 1. Marcar el item como CONFIRMADO (según tu BD)
+                // --- Limpieza de Items ---
                 item.setEstado(EstadoItemCotizacion.CONFIRMADO);
-
-                // 2. Cancelar rivales (los que siguen en COTIZADO para este producto)
+                
+                // Cancelar rivales
                 List<ItemCotizacion> rivales = itemCotizacionRepository.findItemsRivales(
                     item.getProducto().getId(), 
                     item.getId(), 
@@ -379,20 +357,61 @@ public class PedidoService {
 
             pedido.setDetalles(detallesPedido);
             pedido.setTotalPedido(total);
+            
             Pedido pedidoGuardado = pedidoRepository.save(pedido);
             pedidosIds.add(pedidoGuardado.getId());
             pedidosCreados++;
+            
+            // Enviamos el email de orden unificada
+            enviarNotificacionProveedor(pedidoGuardado, proveedor);
+        }
 
-            cotizacion.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
-            cotizacionRepository.save(cotizacion);
+        // 2. Actualizar estados de TODAS las cotizaciones involucradas
+        // Si ya no quedan items pendientes en la cotización, la marcamos como confirmada/cerrada.
+        for (Cotizacion cot : cotizacionesAfectadas) {
+            cot.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
+            cotizacionRepository.save(cot);
         }
 
         itemCotizacionRepository.saveAll(itemsSeleccionados);
 
         return Map.of(
-            "mensaje", "Se generaron " + pedidosCreados + " pedidos exitosamente.",
+            "mensaje", "Se generaron " + pedidosCreados + " órdenes de compra unificadas.",
             "cantidad", pedidosCreados,
             "pedidosIds", pedidosIds
         );
+    }
+    
+    // Método auxiliar para centralizar el envío de correo
+    private void enviarNotificacionProveedor(Pedido pedido, Proveedor proveedor) {
+        try {
+            if (proveedor.getEmail() != null && !proveedor.getEmail().isBlank()) {
+                logger.info("📧 Enviando Orden de Compra #{} a '{}'...", pedido.getId(), proveedor.getRazonSocial());
+                
+                byte[] pdfBytes = pdfService.generarOrdenCompraProveedor(pedido);
+                String linkConfirmacion = frontendUrl + "/proveedor/pedido/" + pedido.getToken();
+                
+                Context context = new Context();
+                context.setVariable("proveedorNombre", proveedor.getRazonSocial());
+                context.setVariable("nroPedido", pedido.getId());
+                context.setVariable("linkConfirmacion", linkConfirmacion);
+                
+                String cuerpoHtml = templateEngine.process("email-orden-compra", context);
+                
+                emailService.enviarEmailConAdjunto(
+                    proveedor.getEmail(),
+                    "Nueva Orden de Compra #" + pedido.getId() + " - Masterserv",
+                    cuerpoHtml,
+                    pdfBytes,
+                    "Orden_Compra_" + pedido.getId() + ".pdf"
+                );
+                
+                logger.info("✅ Email enviado exitosamente.");
+            } else {
+                logger.warn("⚠️ Proveedor sin email, no se envió notificación.");
+            }
+        } catch (Exception e) {
+            logger.error("🔴 Error al notificar proveedor: {}", e.getMessage());
+        }
     }
 }

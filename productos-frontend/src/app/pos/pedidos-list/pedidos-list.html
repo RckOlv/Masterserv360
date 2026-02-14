@@ -82,6 +82,7 @@
                 <th class="ps-3">ID Pedido</th>
                 <th>Proveedor</th>
                 <th>Fecha</th>
+                <th>Resumen Items</th>
                 <th class="text-end">Total</th>
                 <th class="text-center">Estado</th>
                 <th *appHasPermission="'PEDIDOS_MANAGE'" class="text-center pe-3">Acciones</th>
@@ -92,6 +93,16 @@
                 <td class="ps-3">#{{ p.id }}</td>
                 <td class="masterserv-name">{{ p.proveedorRazonSocial || 'N/A' }}</td>
                 <td>{{ p.fechaPedido | date:'dd/MM/yyyy HH:mm' }}</td>
+                
+                <td class="text-muted small" style="max-width: 250px;">
+                    <span *ngFor="let d of p.detalles | slice:0:2; let isLast = last">
+                        {{ d.productoNombre }} <span class="text-secondary">(x{{ d.cantidad }})</span>{{ !isLast ? ', ' : '' }}
+                    </span>
+                    <span *ngIf="p.detalles.length > 2" class="badge bg-secondary ms-1" style="font-size: 0.7rem;">
+                        +{{ p.detalles.length - 2 }} más
+                    </span>
+                </td>
+
                 <td class="masterserv-price text-end">{{ p.totalPedido | currency:'ARS':'symbol':'1.2-2' }}</td>
                 <td class="text-center">
                   <span class="badge masterserv-badge" 
