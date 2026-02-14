@@ -94,7 +94,7 @@
                 <td class="masterserv-name">{{ p.proveedorRazonSocial || 'N/A' }}</td>
                 <td>{{ p.fechaPedido | date:'dd/MM/yyyy HH:mm' }}</td>
                 
-                <td class="text-muted small" style="max-width: 250px;">
+                <td class="text-muted small" style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                     <span *ngFor="let d of p.detalles | slice:0:2; let isLast = last">
                         {{ d.productoNombre }} <span class="text-secondary">(x{{ d.cantidad }})</span>{{ !isLast ? ', ' : '' }}
                     </span>
