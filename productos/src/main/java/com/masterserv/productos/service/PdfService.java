@@ -13,7 +13,7 @@ import com.masterserv.productos.entity.DetalleVenta;
 import com.masterserv.productos.entity.EmpresaConfig;
 import com.masterserv.productos.entity.Pedido;
 import com.masterserv.productos.entity.Venta;
-
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,74 +64,87 @@ public class PdfService {
         return "$ " + df.format(valor);
     }
 
+    private String obtenerUsuarioActual() {
+    try {
+        return SecurityContextHolder.getContext().getAuthentication().getName();
+    } catch (Exception e) {
+        return "Sistema"; // Por si no hay sesión activa
+    }
+}
+
     // ========================================================================
     // MÉTODO AUXILIAR PARA CABECERA DINÁMICA (REUTILIZABLE)
     // ========================================================================
     private void construirCabeceraEmpresa(Document document, String subtituloReporte) throws DocumentException {
-        // 1. Obtener configuración de la DB
-        EmpresaConfig config = empresaConfigService.obtenerConfiguracion();
+    EmpresaConfig config = empresaConfigService.obtenerConfiguracion();
 
-        // 2. LOGO (Soporte Híbrido: URL o Base64)
-        if (config.getLogoUrl() != null && !config.getLogoUrl().isEmpty()) {
-            try {
-                Image logo = null;
-                String logoData = config.getLogoUrl();
+    // 1. Creamos una tabla de 2 columnas para la cabecera
+    PdfPTable headerTable = new PdfPTable(2);
+    headerTable.setWidthPercentage(100);
+    headerTable.setSpacingAfter(10);
+    headerTable.setWidths(new float[]{6f, 4f}); // 60% izquierda, 40% derecha
 
-                if (logoData.startsWith("http")) {
-                    // CASO A: Es una URL (ej: una imagen de internet)
-                    logo = Image.getInstance(logoData);
-                } else if (logoData.contains("base64,")) {
-                    // CASO B: Es Base64 (Guardado en BD)
-                    // Limpiamos el encabezado "data:image/png;base64,"
-                    String base64String = logoData.split(",")[1];
-                    // Decodificamos a bytes
-                    byte[] imageBytes = Base64.getDecoder().decode(base64String);
-                    logo = Image.getInstance(imageBytes);
-                }
+    // --- CELDA IZQUIERDA: DATOS DE LA EMPRESA ---
+    PdfPCell cellLeft = new PdfPCell();
+    cellLeft.setBorder(Rectangle.NO_BORDER);
+    cellLeft.setHorizontalAlignment(Element.ALIGN_LEFT);
 
-                if (logo != null) {
-                    logo.scaleToFit(120, 60); 
-                    logo.setAlignment(Element.ALIGN_CENTER);
-                    logo.setSpacingAfter(10);
-                    document.add(logo);
-                }
-            } catch (Exception e) {
-                // Logueamos error pero no rompemos el PDF
-                System.err.println("No se pudo cargar el logo en el PDF: " + e.getMessage());
+    // Logo
+    if (config.getLogoUrl() != null && !config.getLogoUrl().isEmpty()) {
+        try {
+            Image logo = null;
+            String logoData = config.getLogoUrl();
+            if (logoData.startsWith("http")) {
+                logo = Image.getInstance(logoData);
+            } else if (logoData.contains("base64,")) {
+                String base64String = logoData.split(",")[1];
+                byte[] imageBytes = Base64.getDecoder().decode(base64String);
+                logo = Image.getInstance(imageBytes);
             }
+            if (logo != null) {
+                logo.scaleToFit(90, 45);
+                cellLeft.addElement(logo);
+            }
+        } catch (Exception e) {
+            logger.warn("No se pudo cargar el logo: {}", e.getMessage());
         }
-
-        // 3. Título (Nombre Fantasía)
-        String tituloTexto = (config.getNombreFantasia() != null) ? config.getNombreFantasia() : "EMPRESA SIN NOMBRE";
-        Paragraph titulo = new Paragraph(tituloTexto.toUpperCase(), FONT_TITULO);
-        titulo.setAlignment(Element.ALIGN_CENTER);
-        document.add(titulo);
-
-        // 4. Subtítulo del Reporte (Ej: "Orden de Compra")
-        Paragraph subtitulo = new Paragraph(subtituloReporte, FONT_SUBTITULO);
-        subtitulo.setAlignment(Element.ALIGN_CENTER);
-        document.add(subtitulo);
-
-        // 5. Datos de la Empresa Dinámicos
-        StringBuilder datosSb = new StringBuilder();
-        if (config.getRazonSocial() != null) datosSb.append("Razón Social: ").append(config.getRazonSocial()).append("\n");
-        if (config.getCuit() != null) datosSb.append("CUIT: ").append(config.getCuit()).append("\n");
-        if (config.getDireccion() != null) datosSb.append("Dirección: ").append(config.getDireccion()).append("\n");
-        
-        String contacto = "";
-        if (config.getTelefono() != null) contacto += "Tel: " + config.getTelefono() + "  ";
-        if (config.getEmailContacto() != null) contacto += "Email: " + config.getEmailContacto();
-        if (!contacto.isEmpty()) datosSb.append(contacto).append("\n");
-        
-        if (config.getSitioWeb() != null) datosSb.append("Web: ").append(config.getSitioWeb());
-
-        Paragraph datosEmpresa = new Paragraph(datosSb.toString(), FONT_DATA_EMPRESA);
-        datosEmpresa.setAlignment(Element.ALIGN_CENTER);
-        datosEmpresa.setSpacingAfter(10);
-        document.add(datosEmpresa);
-
-        document.add(new LineSeparator());
     }
+
+    // Nombre y Datos
+    cellLeft.addElement(new Paragraph(config.getNombreFantasia().toUpperCase(), FONT_TITULO));
+    cellLeft.addElement(new Paragraph(config.getRazonSocial(), FONT_DATA_EMPRESA));
+    cellLeft.addElement(new Paragraph("CUIT: " + config.getCuit(), FONT_DATA_EMPRESA));
+    cellLeft.addElement(new Paragraph(config.getDireccion(), FONT_DATA_EMPRESA));
+    headerTable.addCell(cellLeft);
+
+    // --- CELDA DERECHA: FECHA Y EMISOR ---
+    PdfPCell cellRight = new PdfPCell();
+    cellRight.setBorder(Rectangle.NO_BORDER);
+    cellRight.setHorizontalAlignment(Element.ALIGN_RIGHT);
+    cellRight.setVerticalAlignment(Element.ALIGN_BOTTOM); // Alinea al fondo de la celda
+
+    // Fecha actual
+    String fechaActual = java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+    
+    Paragraph pFecha = new Paragraph("Fecha: " + fechaActual, FONT_NORMAL);
+    pFecha.setAlignment(Element.ALIGN_RIGHT);
+    cellRight.addElement(pFecha);
+
+    Paragraph pEmisor = new Paragraph("Emitido por: " + obtenerUsuarioActual(), FONT_NORMAL);
+    pEmisor.setAlignment(Element.ALIGN_RIGHT);
+    cellRight.addElement(pEmisor);
+    
+    // Espacio extra y luego el tipo de documento resaltado
+    Paragraph pDoc = new Paragraph("\n" + subtituloReporte.toUpperCase(), FONT_SUBTITULO);
+    pDoc.setAlignment(Element.ALIGN_RIGHT);
+    cellRight.addElement(pDoc);
+
+    headerTable.addCell(cellRight);
+
+    // Agregar la tabla al documento
+    document.add(headerTable);
+    document.add(new LineSeparator());
+}
 
     // ========================================================================
     // 1. COMPROBANTE INTERNO (CON PRECIOS) - PARA EL ADMIN
