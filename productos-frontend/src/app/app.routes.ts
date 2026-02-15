@@ -6,6 +6,7 @@ import { LoginGuard } from './guards/login.guard';
 import { AdminLayoutComponent } from './layouts/admin-layout/admin-layout';
 import { PublicLayoutComponent } from './layouts/public-layout/public-layout';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout'; 
+import { ConfiguracionComponent } from './pos/configuracion/configuracion';
 
 export const routes: Routes = [
 
@@ -125,7 +126,8 @@ export const routes: Routes = [
       { path: 'auditoria', loadComponent: () => import('./pos/auditoria/auditoria') },
       { path: 'mi-perfil', loadComponent: () => import('./pos/perfil-usuario/perfil-usuario') },
       { path: 'comparativa-precios', loadComponent: () => import('./pos/compras-comparativa/compras-comparativa').then(m => m.default)},
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'configuracion', component: ConfiguracionComponent, canActivate: [AuthGuard] },
     ]
   },
 

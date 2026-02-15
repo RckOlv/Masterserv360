@@ -1,0 +1,120 @@
+<div class="container-fluid fade-in">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-white fw-bold mb-0">
+                <i class="bi bi-gear-wide-connected text-danger me-2"></i>Configuración de Empresa
+            </h2>
+            <p class="text-white-50 mb-0">Personaliza los datos que aparecen en tus reportes y PDFs.</p>
+        </div>
+        <button class="btn btn-success px-4" (click)="guardar()" [disabled]="isLoading">
+            <i class="bi" [ngClass]="isLoading ? 'bi-hourglass-split' : 'bi-save'"></i>
+            {{ isLoading ? 'Guardando...' : 'Guardar Cambios' }}
+        </button>
+    </div>
+
+    <div class="row g-4">
+        
+        <div class="col-lg-8">
+            <div class="card masterserv-card h-100">
+                <div class="card-header masterserv-card-header">
+                    <h5 class="mb-0 text-white"><i class="bi bi-building me-2"></i>Información Institucional</h5>
+                </div>
+                <div class="card-body masterserv-card-body">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-white-50">Nombre de Fantasía (Marca)</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" 
+                                   [(ngModel)]="config.nombreFantasia" placeholder="Ej: Masterserv 360">
+                            <div class="form-text text-white-50 small">Aparecerá en el encabezado grande de los PDFs.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-white-50">Razón Social</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" 
+                                   [(ngModel)]="config.razonSocial" placeholder="Ej: Masterserv S.A.">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label text-white-50">CUIT / ID Fiscal</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" 
+                                   [(ngModel)]="config.cuit" placeholder="30-12345678-9">
+                        </div>
+
+                        <div class="col-md-8">
+                            <label class="form-label text-white-50">Dirección Comercial</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" 
+                                   [(ngModel)]="config.direccion" placeholder="Av. Principal 123, Ciudad">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label text-white-50">Teléfono</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" 
+                                   [(ngModel)]="config.telefono" placeholder="+54 9 11...">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label text-white-50">Email de Contacto</label>
+                            <input type="email" class="form-control bg-dark text-white border-secondary" 
+                                   [(ngModel)]="config.emailContacto" placeholder="contacto@empresa.com">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label text-white-50">Sitio Web</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" 
+                                   [(ngModel)]="config.sitioWeb" placeholder="www.tuempresa.com">
+                        </div>
+
+                        <div class="col-12 mt-4">
+                            <label class="form-label text-white-50">Texto Legal (Pie de Página)</label>
+                            <textarea class="form-control bg-dark text-white border-secondary" rows="3"
+                                      [(ngModel)]="config.piePaginaPresupuesto" 
+                                      placeholder="Ej: Presupuesto válido por 7 días. Sujeto a stock."></textarea>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card masterserv-card h-100">
+                <div class="card-header masterserv-card-header">
+                    <h5 class="mb-0 text-white"><i class="bi bi-palette me-2"></i>Identidad Visual</h5>
+                </div>
+                <div class="card-body masterserv-card-body d-flex flex-column">
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-white-50">URL del Logo</label>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" 
+                               [(ngModel)]="config.logoUrl" placeholder="https://...">
+                        <div class="form-text text-white-50 small">Pega aquí el link directo a tu imagen (PNG/JPG).</div>
+                    </div>
+
+                    <div class="text-center p-4 border border-secondary rounded mb-4" 
+                         style="background-color: #f8f9fa; min-height: 150px; display: flex; align-items: center; justify-content: center;">
+                        <img *ngIf="config.logoUrl" [src]="config.logoUrl" alt="Logo Preview" style="max-width: 100%; max-height: 100px;">
+                        <span *ngIf="!config.logoUrl" class="text-muted fst-italic">Sin logo seleccionado</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-white-50">Color Principal</label>
+                        <div class="d-flex gap-2">
+                            <input type="color" class="form-control form-control-color bg-dark border-secondary" 
+                                   [(ngModel)]="config.colorPrincipal" title="Elige un color">
+                            <input type="text" class="form-control bg-dark text-white border-secondary" 
+                                   [(ngModel)]="config.colorPrincipal">
+                        </div>
+                    </div>
+
+                    <div class="alert masterserv-alert-info mt-auto">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Estos cambios impactarán inmediatamente en todos los PDFs generados por el sistema.
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
