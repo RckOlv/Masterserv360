@@ -86,10 +86,20 @@
                 <div class="card-body masterserv-card-body d-flex flex-column">
                     
                     <div class="mb-3">
-                        <label class="form-label text-white-50">URL del Logo</label>
-                        <input type="text" class="form-control bg-dark text-white border-secondary" 
-                               [(ngModel)]="config.logoUrl" placeholder="https://...">
-                        <div class="form-text text-white-50 small">Pega aquí el link directo a tu imagen (PNG/JPG).</div>
+                        <label class="form-label text-white-50">Logo de la Empresa</label>
+                        
+                        <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" style="display: none;">
+
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control bg-dark text-white border-secondary" 
+                                   [value]="config.logoUrl ? (config.logoUrl.startsWith('data') ? 'Imagen cargada (Base64)' : config.logoUrl) : ''" 
+                                   placeholder="Selecciona un archivo..." readonly>
+                            
+                            <button class="btn btn-outline-secondary" type="button" (click)="fileInput.click()">
+                                <i class="bi bi-cloud-upload me-2"></i> Elegir
+                            </button>
+                        </div>
+                        <div class="form-text text-white-50 small">El logo se guardará en la base de datos.</div>
                     </div>
 
                     <div class="text-center p-4 border border-secondary rounded mb-4" 
@@ -97,7 +107,6 @@
                         <img *ngIf="config.logoUrl" [src]="config.logoUrl" alt="Logo Preview" style="max-width: 100%; max-height: 100px;">
                         <span *ngIf="!config.logoUrl" class="text-muted fst-italic">Sin logo seleccionado</span>
                     </div>
-
                     <div class="mb-3">
                         <label class="form-label text-white-50">Color Principal</label>
                         <div class="d-flex gap-2">

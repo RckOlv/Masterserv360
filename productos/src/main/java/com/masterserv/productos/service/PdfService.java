@@ -71,18 +71,35 @@ public class PdfService {
         // 1. Obtener configuración de la DB
         EmpresaConfig config = empresaConfigService.obtenerConfiguracion();
 
-        // 2. Logo (Opcional - Si existe URL y es accesible)
-        /* if (config.getLogoUrl() != null && !config.getLogoUrl().isEmpty()) {
+        // 2. LOGO (Soporte Híbrido: URL o Base64)
+        if (config.getLogoUrl() != null && !config.getLogoUrl().isEmpty()) {
             try {
-                Image logo = Image.getInstance(config.getLogoUrl());
-                logo.scaleToFit(100, 50);
-                logo.setAlignment(Element.ALIGN_CENTER);
-                document.add(logo);
+                Image logo = null;
+                String logoData = config.getLogoUrl();
+
+                if (logoData.startsWith("http")) {
+                    // CASO A: Es una URL (ej: una imagen de internet)
+                    logo = Image.getInstance(logoData);
+                } else if (logoData.contains("base64,")) {
+                    // CASO B: Es Base64 (Guardado en BD)
+                    // Limpiamos el encabezado "data:image/png;base64,"
+                    String base64String = logoData.split(",")[1];
+                    // Decodificamos a bytes
+                    byte[] imageBytes = Base64.getDecoder().decode(base64String);
+                    logo = Image.getInstance(imageBytes);
+                }
+
+                if (logo != null) {
+                    logo.scaleToFit(120, 60); 
+                    logo.setAlignment(Element.ALIGN_CENTER);
+                    logo.setSpacingAfter(10);
+                    document.add(logo);
+                }
             } catch (Exception e) {
-                logger.warn("No se pudo cargar el logo en el PDF: {}", e.getMessage());
+                // Logueamos error pero no rompemos el PDF
+                System.err.println("No se pudo cargar el logo en el PDF: " + e.getMessage());
             }
         }
-        */
 
         // 3. Título (Nombre Fantasía)
         String tituloTexto = (config.getNombreFantasia() != null) ? config.getNombreFantasia() : "EMPRESA SIN NOMBRE";

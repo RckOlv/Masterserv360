@@ -1,15 +1,15 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common'; // 👈 Importante para *ngIf, *ngFor, ngClass
-import { FormsModule } from '@angular/forms';   // 👈 Importante para [(ngModel)]
+import { CommonModule } from '@angular/common'; 
+import { FormsModule } from '@angular/forms'; 
 import { ConfiguracionService, EmpresaConfig } from '../../service/configuracion.service';
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-configuracion',
-  standalone: true, // 👈 Esto le dice a Angular que es Standalone
+  standalone: true, 
   imports: [
     CommonModule, 
-    FormsModule     // 👈 Aquí habilitamos el uso de formularios en este componente
+    FormsModule     
   ],
   templateUrl: './configuracion.html',
   styleUrls: ['./configuracion.css']
@@ -25,7 +25,7 @@ export class ConfiguracionComponent implements OnInit {
     emailContacto: '',
     sitioWeb: '',
     logoUrl: '',
-    colorPrincipal: '#E41E26', // Rojo por defecto
+    colorPrincipal: '#E41E26', 
     piePaginaPresupuesto: ''
   };
 
@@ -41,7 +41,6 @@ export class ConfiguracionComponent implements OnInit {
     this.isLoading = true;
     this.configService.getConfiguracion().subscribe({
       next: (data) => {
-        // Si viene null (primera vez), mantenemos los defaults, si no, asignamos data
         if (data) {
              this.config = data;
         }
@@ -53,6 +52,29 @@ export class ConfiguracionComponent implements OnInit {
         Swal.fire('Error', 'No se pudo cargar la configuración', 'error');
       }
     });
+  }
+
+  // 👇 MÉTODO NUEVO: Convierte la imagen a Texto Base64
+  onFileSelected(event: any) {
+    const file: File = event.target.files[0];
+    
+    if (file) {
+      // 1. Validar tamaño (Máximo 800KB para no saturar la BD)
+      if (file.size > 800000) {
+        Swal.fire('Imagen muy pesada', 'Por favor usa una imagen menor a 800KB', 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      
+      // 2. Cuando termine de leer, guardar el string en la variable
+      reader.onload = (e: any) => {
+        this.config.logoUrl = e.target.result; 
+      };
+
+      // 3. Leer archivo
+      reader.readAsDataURL(file);
+    }
   }
 
   guardar() {

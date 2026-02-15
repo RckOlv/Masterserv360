@@ -24,8 +24,8 @@ public class EmpresaConfig {
     private String sitioWeb;
 
     // Visual
-    @Column(length = 1000)
-    private String logoUrl; // URL de la imagen del logo
+    @Column(columnDefinition = "TEXT") 
+    private String logoUrl;
     
     private String colorPrincipal; // Ej: #E41E26 (Para el PDF o Frontend)
     
