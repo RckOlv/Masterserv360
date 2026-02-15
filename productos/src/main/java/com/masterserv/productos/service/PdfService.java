@@ -10,9 +10,12 @@ import com.masterserv.productos.dto.DashboardStatsDTO;
 import com.masterserv.productos.dto.TopProductoDTO;
 import com.masterserv.productos.entity.DetallePedido;
 import com.masterserv.productos.entity.DetalleVenta;
+import com.masterserv.productos.entity.EmpresaConfig;
 import com.masterserv.productos.entity.Pedido;
 import com.masterserv.productos.entity.Venta;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +32,8 @@ import java.util.List;
 @Service
 public class PdfService {
 
+    private static final Logger logger = LoggerFactory.getLogger(PdfService.class);
+
     // Fuentes
     private static final Font FONT_TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.BLACK);
     private static final Font FONT_SUBTITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.DARK_GRAY);
@@ -41,20 +46,74 @@ public class PdfService {
     @Autowired 
     private DashboardService dashboardService;
 
+    // 🔥 INYECCIÓN NUEVA: Para obtener datos dinámicos
+    @Autowired
+    private EmpresaConfigService empresaConfigService;
+
     // ========================================================================
     // MÉTODO AUXILIAR PARA FORMATEO DE MONEDA (ARGENTINA)
     // ========================================================================
     private String formatearMoneda(BigDecimal valor) {
         if (valor == null) valor = BigDecimal.ZERO;
         
-        // Configuración manual de símbolos para asegurar formato $ 1.000,00
-        // independientemente del idioma del servidor (Docker/Windows/Linux)
         DecimalFormatSymbols simbolos = new DecimalFormatSymbols();
-        simbolos.setGroupingSeparator('.'); // Miles con punto
-        simbolos.setDecimalSeparator(',');  // Decimales con coma
+        simbolos.setGroupingSeparator('.'); 
+        simbolos.setDecimalSeparator(','); 
         
         DecimalFormat df = new DecimalFormat("#,##0.00", simbolos);
         return "$ " + df.format(valor);
+    }
+
+    // ========================================================================
+    // MÉTODO AUXILIAR PARA CABECERA DINÁMICA (REUTILIZABLE)
+    // ========================================================================
+    private void construirCabeceraEmpresa(Document document, String subtituloReporte) throws DocumentException {
+        // 1. Obtener configuración de la DB
+        EmpresaConfig config = empresaConfigService.obtenerConfiguracion();
+
+        // 2. Logo (Opcional - Si existe URL y es accesible)
+        /* if (config.getLogoUrl() != null && !config.getLogoUrl().isEmpty()) {
+            try {
+                Image logo = Image.getInstance(config.getLogoUrl());
+                logo.scaleToFit(100, 50);
+                logo.setAlignment(Element.ALIGN_CENTER);
+                document.add(logo);
+            } catch (Exception e) {
+                logger.warn("No se pudo cargar el logo en el PDF: {}", e.getMessage());
+            }
+        }
+        */
+
+        // 3. Título (Nombre Fantasía)
+        String tituloTexto = (config.getNombreFantasia() != null) ? config.getNombreFantasia() : "EMPRESA SIN NOMBRE";
+        Paragraph titulo = new Paragraph(tituloTexto.toUpperCase(), FONT_TITULO);
+        titulo.setAlignment(Element.ALIGN_CENTER);
+        document.add(titulo);
+
+        // 4. Subtítulo del Reporte (Ej: "Orden de Compra")
+        Paragraph subtitulo = new Paragraph(subtituloReporte, FONT_SUBTITULO);
+        subtitulo.setAlignment(Element.ALIGN_CENTER);
+        document.add(subtitulo);
+
+        // 5. Datos de la Empresa Dinámicos
+        StringBuilder datosSb = new StringBuilder();
+        if (config.getRazonSocial() != null) datosSb.append("Razón Social: ").append(config.getRazonSocial()).append("\n");
+        if (config.getCuit() != null) datosSb.append("CUIT: ").append(config.getCuit()).append("\n");
+        if (config.getDireccion() != null) datosSb.append("Dirección: ").append(config.getDireccion()).append("\n");
+        
+        String contacto = "";
+        if (config.getTelefono() != null) contacto += "Tel: " + config.getTelefono() + "  ";
+        if (config.getEmailContacto() != null) contacto += "Email: " + config.getEmailContacto();
+        if (!contacto.isEmpty()) datosSb.append(contacto).append("\n");
+        
+        if (config.getSitioWeb() != null) datosSb.append("Web: ").append(config.getSitioWeb());
+
+        Paragraph datosEmpresa = new Paragraph(datosSb.toString(), FONT_DATA_EMPRESA);
+        datosEmpresa.setAlignment(Element.ALIGN_CENTER);
+        datosEmpresa.setSpacingAfter(10);
+        document.add(datosEmpresa);
+
+        document.add(new LineSeparator());
     }
 
     // ========================================================================
@@ -68,26 +127,8 @@ public class PdfService {
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            // CABECERA
-            Paragraph titulo = new Paragraph("MASTERSERV360", FONT_TITULO);
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            document.add(titulo);
-
-            Paragraph subtitulo = new Paragraph("Orden de Compra (Interno)", FONT_SUBTITULO);
-            subtitulo.setAlignment(Element.ALIGN_CENTER);
-            document.add(subtitulo);
-
-            Paragraph datosEmpresa = new Paragraph(
-                "Razón Social: Masterserv S.A.\n" + 
-                "Dirección: Av. San Martín 1234, El Soberbio, Misiones\n" +
-                "Email: contacto@masterserv360.com", 
-                FONT_DATA_EMPRESA
-            );
-            datosEmpresa.setAlignment(Element.ALIGN_CENTER);
-            datosEmpresa.setSpacingAfter(10);
-            document.add(datosEmpresa);
-
-            document.add(new LineSeparator());
+            // 🔥 CABECERA DINÁMICA
+            construirCabeceraEmpresa(document, "Orden de Compra (Interno)");
 
             // DATOS PEDIDO Y PROVEEDOR
             Paragraph infoPedido = new Paragraph();
@@ -129,7 +170,6 @@ public class PdfService {
                 table.addCell(cellCant);
                 
                 BigDecimal precio = (detalle.getPrecioUnitario() != null) ? detalle.getPrecioUnitario() : BigDecimal.ZERO;
-                // ✅ USO DEL FORMATEADOR
                 PdfPCell cellPrecio = new PdfPCell(new Paragraph(formatearMoneda(precio), FONT_NORMAL));
                 cellPrecio.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 table.addCell(cellPrecio);
@@ -137,7 +177,6 @@ public class PdfService {
                 BigDecimal subtotalItem = precio.multiply(new BigDecimal(detalle.getCantidad()));
                 totalCalculado = totalCalculado.add(subtotalItem);
                 
-                // ✅ USO DEL FORMATEADOR
                 PdfPCell cellSub = new PdfPCell(new Paragraph(formatearMoneda(subtotalItem), FONT_NORMAL));
                 cellSub.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 table.addCell(cellSub);
@@ -153,7 +192,6 @@ public class PdfService {
             Font fontTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
             BigDecimal totalFinal = (pedido.getTotalPedido() != null) ? pedido.getTotalPedido() : totalCalculado;
             
-            // ✅ USO DEL FORMATEADOR
             totales.add(new Chunk("TOTAL: " + formatearMoneda(totalFinal), fontTotal));
             
             document.add(totales);
@@ -171,7 +209,6 @@ public class PdfService {
     // 2. ORDEN DE COMPRA EXTERNA (SIN PRECIOS) - PARA EL PROVEEDOR
     // ========================================================================
     public byte[] generarOrdenCompraProveedor(Pedido pedido) {
-        // ... (Este método NO MUESTRA PRECIOS, así que queda igual, solo copio la estructura)
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4);
 
@@ -179,25 +216,8 @@ public class PdfService {
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            Paragraph titulo = new Paragraph("MASTERSERV360", FONT_TITULO);
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            document.add(titulo);
-
-            Paragraph subtitulo = new Paragraph("Orden de Compra / Solicitud de Mercadería", FONT_SUBTITULO);
-            subtitulo.setAlignment(Element.ALIGN_CENTER);
-            document.add(subtitulo);
-
-            Paragraph datosEmpresa = new Paragraph(
-                "Razón Social: Masterserv S.A.\n" + 
-                "Dirección: Av. San Martín 1234, El Soberbio, Misiones\n" +
-                "Email: compras@masterserv360.com", 
-                FONT_DATA_EMPRESA
-            );
-            datosEmpresa.setAlignment(Element.ALIGN_CENTER);
-            datosEmpresa.setSpacingAfter(10);
-            document.add(datosEmpresa);
-
-            document.add(new LineSeparator());
+            // 🔥 CABECERA DINÁMICA
+            construirCabeceraEmpresa(document, "Orden de Compra / Solicitud de Mercadería");
 
             Paragraph infoPedido = new Paragraph();
             infoPedido.setSpacingBefore(10);
@@ -237,7 +257,13 @@ public class PdfService {
 
             document.add(table);
 
-            Paragraph pie = new Paragraph("\nNota: Por favor confirmar recepción, disponibilidad y fecha estimada de entrega.", FONT_DATA_EMPRESA);
+            // Obtener configuración para pie de página legal si fuera necesario
+            EmpresaConfig config = empresaConfigService.obtenerConfiguracion();
+            String textoPie = (config.getPiePaginaPresupuesto() != null && !config.getPiePaginaPresupuesto().isEmpty()) 
+                            ? config.getPiePaginaPresupuesto() 
+                            : "Por favor confirmar recepción, disponibilidad y fecha estimada de entrega.";
+
+            Paragraph pie = new Paragraph("\nNota: " + textoPie, FONT_DATA_EMPRESA);
             pie.setAlignment(Element.ALIGN_CENTER);
             document.add(pie);
 
@@ -261,26 +287,8 @@ public class PdfService {
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            Paragraph titulo = new Paragraph("MASTERSERV360", FONT_TITULO);
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            document.add(titulo);
-
-            Paragraph subtitulo = new Paragraph("Comprobante de Venta (No Fiscal)", FONT_SUBTITULO);
-            subtitulo.setAlignment(Element.ALIGN_CENTER);
-            document.add(subtitulo);
-
-            Paragraph datosEmpresa = new Paragraph(
-                "Razón Social: Masterserv S.A.\n" + 
-                "CUIT: 30-12345678-9\n" + 
-                "Dirección: Av. San Martín 1234, El Soberbio, Misiones\n" +
-                "Email: contacto@masterserv360.com", 
-                FONT_DATA_EMPRESA
-            );
-            datosEmpresa.setAlignment(Element.ALIGN_CENTER);
-            datosEmpresa.setSpacingAfter(10);
-            document.add(datosEmpresa);
-
-            document.add(new LineSeparator());
+            // 🔥 CABECERA DINÁMICA
+            construirCabeceraEmpresa(document, "Comprobante de Venta (No Fiscal)");
 
             Paragraph infoVenta = new Paragraph();
             infoVenta.setSpacingBefore(10);
@@ -319,7 +327,6 @@ public class PdfService {
                 cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
                 table.addCell(cellCant);
                 
-                // ✅ USO DEL FORMATEADOR
                 PdfPCell cellPrecio = new PdfPCell(new Paragraph(formatearMoneda(detalle.getPrecioUnitario()), FONT_NORMAL));
                 cellPrecio.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 table.addCell(cellPrecio);
@@ -327,7 +334,6 @@ public class PdfService {
                 BigDecimal subtotalItem = detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad()));
                 subtotalSinDescuento = subtotalSinDescuento.add(subtotalItem);
                 
-                // ✅ USO DEL FORMATEADOR
                 PdfPCell cellSub = new PdfPCell(new Paragraph(formatearMoneda(subtotalItem), FONT_NORMAL));
                 cellSub.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 table.addCell(cellSub);
@@ -342,15 +348,12 @@ public class PdfService {
             BigDecimal descuento = subtotalSinDescuento.subtract(venta.getTotalVenta());
             
             if (descuento.compareTo(BigDecimal.ZERO) > 0) {
-                // ✅ USO DEL FORMATEADOR
                 totales.add(new Chunk("Subtotal: " + formatearMoneda(subtotalSinDescuento) + "\n", FONT_NORMAL));
                 Font fontRojo = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.RED);
-                // ✅ USO DEL FORMATEADOR
                 totales.add(new Chunk("Descuento: -" + formatearMoneda(descuento) + "\n", fontRojo));
             }
 
             Font fontTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK);
-            // ✅ USO DEL FORMATEADOR
             totales.add(new Chunk("TOTAL: " + formatearMoneda(venta.getTotalVenta()), fontTotal));
             
             document.add(totales);
@@ -375,12 +378,10 @@ public class PdfService {
             PdfWriter.getInstance(document, baos);
             document.open();
 
-            Paragraph titulo = new Paragraph("Reporte de Gestión - Masterserv360", FONT_TITULO);
-            titulo.setAlignment(Element.ALIGN_CENTER);
-            document.add(titulo);
-            
+            // 🔥 CABECERA DINÁMICA
+            construirCabeceraEmpresa(document, "Reporte de Gestión");
+
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-            
             String inicioStr = (filtro.getFechaInicio() != null) ? filtro.getFechaInicio().format(fmt) : "Inicio";
             String finStr = (filtro.getFechaFin() != null) ? filtro.getFechaFin().format(fmt) : "Hoy";
             
@@ -435,7 +436,7 @@ public class PdfService {
             tableMetrics.addCell(crearCeldaHeader("Cant. Transacciones"));
             tableMetrics.addCell(crearCeldaHeader("Ticket Promedio"));
             
-            // 1. Total Ventas ($) - ✅ USO DEL FORMATEADOR
+            // 1. Total Ventas ($)
             PdfPCell cellVentas = new PdfPCell(new Paragraph(formatearMoneda(stats.getTotalVentasMes()), FONT_NORMAL));
             cellVentas.setHorizontalAlignment(Element.ALIGN_CENTER);
             cellVentas.setPadding(8);
@@ -447,7 +448,7 @@ public class PdfService {
             cellCant.setPadding(8);
             tableMetrics.addCell(cellCant);
 
-            // 3. Ticket Promedio ($) - ✅ USO DEL FORMATEADOR
+            // 3. Ticket Promedio ($)
             BigDecimal ticketPromedio = BigDecimal.ZERO;
             if (stats.getCantidadVentasPeriodo() > 0) {
                 ticketPromedio = stats.getTotalVentasMes()
@@ -461,7 +462,7 @@ public class PdfService {
             
             document.add(tableMetrics);
 
-            // --- TOP PRODUCTOS (Sin cambios, es útil) ---
+            // --- TOP PRODUCTOS ---
             Paragraph subtituloTop = new Paragraph("Top Productos Vendidos", FONT_SUBTITULO);
             subtituloTop.setSpacingAfter(10);
             document.add(subtituloTop);
