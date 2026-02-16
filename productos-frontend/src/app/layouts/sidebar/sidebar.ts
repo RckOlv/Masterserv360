@@ -1,13 +1,15 @@
 import { Component, inject, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { HttpClient } from '@angular/common/http'; // ✅ IMPORTAR HTTP
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../service/auth.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 import { Observable, of, Subscription, interval } from 'rxjs'; 
 import { switchMap } from 'rxjs/operators';
 import { AlertaService, Alerta } from '../../service/alerta.service';
-import { environment } from '../../../environments/environment'; // ✅ Asegurate de tener esto
+import { environment } from '../../../environments/environment';
+// ✅ IMPORTAR EL SERVICIO DE CONFIGURACIÓN CORRECTO
+import { ConfiguracionService } from '../../service/configuracion.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -21,14 +23,16 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private alertaService = inject(AlertaService);
   private router = inject(Router);
-  private http = inject(HttpClient); // ✅ INYECCIÓN DE HTTP
+  private http = inject(HttpClient);
+  // ✅ INYECTAMOS EL SERVICIO COMPARTIDO
+  private configService = inject(ConfiguracionService);
 
   // --- VARIABLES DEL USUARIO ---
   public userName$: Observable<string> = of('Usuario');
   public userRoleLabel$: Observable<string> = of('Invitado');
 
   // --- VARIABLES DE CONFIGURACIÓN (LOGO) ---
-  // ✅ Iniciamos con el logo por defecto por si falla la API
+  // ✅ Iniciamos con el logo por defecto
   public logoUrl: string = '/images/Masterserv_Header2.png'; 
 
   // --- ESTADOS DE LOS MENÚS ---
@@ -39,6 +43,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   public alertas: Alerta[] = [];
   public showNotifications = false;
   private pollingSub?: Subscription;
+  private logoSub?: Subscription; // Para desuscribirnos del logo
 
   // --- SECCIONES DEL ACORDEÓN ---
   public sections: { [key: string]: boolean } = {
@@ -66,8 +71,17 @@ export class SidebarComponent implements OnInit, OnDestroy {
       this.userRoleLabel$ = of(rol);
     }
 
-    // 2. ✅ CARGAR LOGO DE LA EMPRESA
-    this.obtenerConfiguracionEmpresa();
+    // 2. ✅ SUSCRIPCIÓN AL LOGO EN TIEMPO REAL
+    // Nos conectamos a la "Radio" del servicio. 
+    // Si cambia el logo en otra pantalla, esto se actualiza solo.
+    this.logoSub = this.configService.logo$.subscribe(url => {
+      if (url && url.trim() !== '') {
+        this.logoUrl = url;
+      } else {
+        // Si viene vacío, volvemos al default por seguridad
+        this.logoUrl = '/images/Masterserv_Header2.png';
+      }
+    });
 
     // 3. INICIAR POLLING DE ALERTAS (Cada 15 seg)
     this.cargarAlertas();
@@ -82,22 +96,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.pollingSub?.unsubscribe();
-  }
-
-  // --- ✅ MÉTODO PARA OBTENER EL LOGO ---
-  obtenerConfiguracionEmpresa() {
-    // Llamamos al endpoint público que creamos en Java
-    this.http.get<any>(`${environment.apiUrl}/configuracion/publica`).subscribe({
-      next: (config) => {
-        // Si viene un logoUrl y no está vacío, lo usamos
-        if (config && config.logoUrl && config.logoUrl.trim() !== '') {
-          this.logoUrl = config.logoUrl;
-        }
-      },
-      error: (err) => {
-        console.warn('⚠️ No se pudo cargar la config de empresa, usando logo default.', err);
-      }
-    });
+    this.logoSub?.unsubscribe(); // Limpiamos la suscripción del logo
   }
 
   // --- MÉTODOS ALERTAS ---

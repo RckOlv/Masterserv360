@@ -14,6 +14,7 @@ import com.masterserv.productos.exceptions.CuponNoValidoException;
 import com.masterserv.productos.mapper.VentaMapper;
 import com.masterserv.productos.repository.UsuarioRepository;
 import com.masterserv.productos.repository.VentaRepository;
+import com.masterserv.productos.repository.AuditoriaRepository; // ✅ Import corregido
 import com.masterserv.productos.specification.VentaSpecification;
 
 import com.masterserv.productos.event.VentaRealizadaEvent;
@@ -63,8 +64,8 @@ public class VentaService {
     @Autowired private CuponService cuponService;
     @Autowired private CarritoService carritoService;
     @Autowired private ApplicationEventPublisher eventPublisher;
+    @Autowired private AuditoriaRepository auditoriaRepository; // ✅ Inyección de Auditoría
     
-    // --- INYECCIÓN PARA DISPARAR EL PROCESO AUTOMÁTICO ---
     @Autowired private ProcesoAutomaticoService procesoAutomaticoService;
 
     @Transactional
@@ -100,7 +101,6 @@ public class VentaService {
         Set<DetalleVenta> detallesVenta = new HashSet<>(); 
 
         for (DetalleVentaDTO d : ventaDTO.getDetalles()) {
-            // Solo descontamos stock. NO enviamos mail aquí.
             Producto p = productoService.descontarStock(d.getProductoId(), d.getCantidad());
 
             DetalleVenta det = new DetalleVenta();
@@ -129,7 +129,7 @@ public class VentaService {
         // 6) Guardar venta
         Venta ventaGuardada = ventaRepository.save(venta);
 
-        // 7) Registrar Movimientos de Stock
+        // 7) Registrar Movimientos de Stock (Esto ya dispara auditoría de producto)
         for (DetalleVenta det : ventaGuardada.getDetalles()) {
             registrarMovimientoStockSalida(ventaGuardada, det, vendedor);
         }
@@ -140,45 +140,86 @@ public class VentaService {
         // 9) Vaciar carrito
         carritoService.vaciarCarrito(vendedorEmail);
 
-        // 10) PUBLICAR EVENTO (Para enviar PDF al cliente)
+        // 10) PUBLICAR EVENTO
         eventPublisher.publishEvent(new VentaRealizadaEvent(this, ventaGuardada.getId()));
         
-        // 11) --- DISPARADOR INTELIGENTE (B2B) ---
-        // Llamamos al proceso automático en un hilo separado.
-        // Él se encargará de agrupar los faltantes y enviar UN solo correo por proveedor.
+        // 11) --- AUDITORÍA DE TRANSACCIÓN DE VENTA ---
+        registrarAuditoriaVenta(ventaGuardada, vendedor);
+
+        // 12) --- DISPARADOR INTELIGENTE REPOSICIÓN ---
         new Thread(() -> {
             try {
-                // Esperamos 2 segundos para asegurar que la transacción de la venta se haya commiteado en la BD
                 Thread.sleep(2000); 
                 procesoAutomaticoService.generarPrePedidosAgrupados();
             } catch (Exception e) {
                 logger.error("Error trigger automático reposición: " + e.getMessage());
             }
         }).start();
-        // ----------------------------------------
         
         return ventaMapper.toVentaDTO(ventaGuardada);
     }
-    
+
+    /**
+     * ✅ Registra la transacción de la venta en la tabla de Auditoría General.
+     */
+    private void registrarAuditoriaVenta(Venta venta, Usuario vendedor) {
+        try {
+            Auditoria audit = new Auditoria();
+            audit.setFecha(LocalDateTime.now());
+            audit.setUsuario(vendedor.getEmail());
+            audit.setEntidad("Venta");
+            audit.setEntidadId(venta.getId().toString());
+            audit.setAccion("NUEVA_VENTA");
+            
+            String detalle = String.format("Venta #%d realizada. Cliente: %s | Total: $%.2f | Ítems: %d",
+                    venta.getId(),
+                    venta.getCliente().getNombre() + " " + venta.getCliente().getApellido(),
+                    venta.getTotalVenta(),
+                    venta.getDetalles().size());
+            
+            audit.setDetalle(detalle);
+            audit.setValorNuevo("{ \"total\": " + venta.getTotalVenta() + ", \"estado\": \"COMPLETADA\" }");
+            
+            auditoriaRepository.save(audit);
+        } catch (Exception e) {
+            logger.error("🔴 Error al auditar la venta: " + e.getMessage());
+        }
+    }
+
+    private void registrarAuditoriaCancelacion(Venta venta, Usuario usuario) {
+        try {
+            Auditoria audit = new Auditoria();
+            audit.setFecha(LocalDateTime.now());
+            audit.setUsuario(usuario.getEmail());
+            audit.setEntidad("Venta");
+            audit.setEntidadId(venta.getId().toString());
+            audit.setAccion("CANCELACION_VENTA");
+            
+            audit.setDetalle("Venta #" + venta.getId() + " cancelada. Stock repuesto.");
+            audit.setValorAnterior("{ \"estado\": \"COMPLETADA\" }");
+            audit.setValorNuevo("{ \"estado\": \"CANCELADA\" }");
+            
+            auditoriaRepository.save(audit);
+        } catch (Exception e) {
+            logger.error("🔴 Error al auditar cancelación: " + e.getMessage());
+        }
+    }
+
+    // --- MÉTODOS EXISTENTES CORREGIDOS ---
+
     private BigDecimal calcularDescuento(Cupon cupon, BigDecimal subtotal, Set<DetalleVenta> detalles) {
         if (cupon == null) return BigDecimal.ZERO;
-
         if (cupon.getTipoDescuento() == TipoDescuento.FIJO) {
             return cupon.getValor().min(subtotal);
         }
-
         if (cupon.getTipoDescuento() == TipoDescuento.PORCENTAJE) {
             BigDecimal porcentaje = cupon.getValor().divide(new BigDecimal(100), 4, RoundingMode.HALF_UP);
-            
             if (cupon.getCategoria() != null) {
                 Long categoriaIdDescuento = cupon.getCategoria().getId();
                 BigDecimal subtotalAplicable = BigDecimal.ZERO;
-                
                 for (DetalleVenta det : detalles) {
                     if (det.getProducto().getCategoria().getId().equals(categoriaIdDescuento)) {
-                        subtotalAplicable = subtotalAplicable.add(
-                            det.getPrecioUnitario().multiply(new BigDecimal(det.getCantidad()))
-                        );
+                        subtotalAplicable = subtotalAplicable.add(det.getPrecioUnitario().multiply(new BigDecimal(det.getCantidad())));
                     }
                 }
                 return subtotalAplicable.multiply(porcentaje).setScale(2, RoundingMode.HALF_UP);
@@ -195,13 +236,11 @@ public class VentaService {
         mov.setUsuarioId(vendedor.getId());
         mov.setTipoMovimiento(TipoMovimiento.SALIDA_VENTA);
         mov.setCantidad(det.getCantidad());
-        mov.setMotivo("Salida por Venta #" + venta.getId());
         mov.setVentaId(venta.getId());
-        mov.setMotivo("Venta"); 
+        mov.setMotivo("Salida por Venta #" + venta.getId()); 
         movimientoStockService.registrarMovimiento(mov);
     }
 
-    // --- CANCELAR VENTA ---
     @Transactional
     public void cancelarVenta(Long id, String emailCancela) {
         Venta venta = ventaRepository.findByIdWithDetails(id)
@@ -223,15 +262,15 @@ public class VentaService {
 
         if (venta.getCupon() != null) {
             Cupon c = venta.getCupon();
-            if (c.getFechaVencimiento().isAfter(LocalDate.now())) {
-                c.setEstado(EstadoCupon.VIGENTE);
-            } else {
-                c.setEstado(EstadoCupon.VENCIDO);
-            }
+            c.setEstado(c.getFechaVencimiento().isAfter(LocalDate.now()) ? EstadoCupon.VIGENTE : EstadoCupon.VENCIDO);
             c.setVenta(null);
             venta.setCupon(null);
         }
-        ventaRepository.save(venta);
+
+        Venta ventaCancelada = ventaRepository.save(venta);
+        
+        // ✅ REGISTRO DE AUDITORÍA DE CANCELACIÓN
+        registrarAuditoriaCancelacion(ventaCancelada, user);
     }
 
     private void registrarMovimientoStockReposicion(Venta venta, DetalleVenta det, Usuario user) {
@@ -287,13 +326,10 @@ public class VentaService {
                 .orElseThrow(() -> new RuntimeException("Venta no encontrada: " + id));
     }
 
-    // ------------------------------------------------------------
-    // GENERACIÓN DE PDF COMPROBANTE
-    // ------------------------------------------------------------
+    // --- PDF GENERATION ---
     @Transactional(readOnly = true)
     public byte[] generarComprobantePdf(Long ventaId) {
         Venta venta = findVentaByIdWithDetails(ventaId);
-
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4);
             PdfWriter.getInstance(document, out);
@@ -306,13 +342,7 @@ public class VentaService {
             document.add(titulo);
 
             Font fontSubtitulo = new Font(Font.HELVETICA, 10, Font.NORMAL, Color.GRAY);
-            Paragraph datosEmpresa = new Paragraph(
-                "Razón Social: Masterserv S.A.\n" + 
-                "CUIT: 30-12345678-9\n" + 
-                "Dirección: Av. San Martín 1234, El Soberbio, Misiones\n" +
-                "Tel: (3755) 12-3456", 
-                fontSubtitulo
-            );
+            Paragraph datosEmpresa = new Paragraph("Razón Social: Masterserv S.A.\nCUIT: 30-12345678-9\nDirección: Av. San Martín 1234, El Soberbio, Misiones\nTel: (3755) 12-3456", fontSubtitulo);
             datosEmpresa.setAlignment(Element.ALIGN_CENTER);
             datosEmpresa.setSpacingAfter(20);
             document.add(datosEmpresa);
@@ -322,84 +352,57 @@ public class VentaService {
             document.add(separator);
 
             // 2. INFO VENTA
-            Font fontCuerpo = new Font(Font.HELVETICA, 11, Font.NORMAL);
             Paragraph infoVenta = new Paragraph();
             infoVenta.setSpacingBefore(15);
             infoVenta.setSpacingAfter(15);
-            
             infoVenta.add(new Chunk("Nº Venta: " + venta.getId() + "\n", new Font(Font.HELVETICA, 14, Font.BOLD)));
-            
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
             infoVenta.add("Fecha: " + venta.getFechaVenta().format(formatter) + "\n");
             infoVenta.add("Cliente: " + venta.getCliente().getNombre() + " " + venta.getCliente().getApellido() + "\n");
-            
-            if(venta.getCliente().getDocumento() != null) {
-                infoVenta.add("DNI/CUIT: " + venta.getCliente().getDocumento() + "\n");
-            }
-            
+            if(venta.getCliente().getDocumento() != null) infoVenta.add("DNI/CUIT: " + venta.getCliente().getDocumento() + "\n");
             infoVenta.add("Atendido por: " + (venta.getVendedor() != null ? venta.getVendedor().getNombre() : "Sistema") + "\n");
             document.add(infoVenta);
 
-            // 3. TABLA
+            // 3. TABLA PRODUCTOS
             PdfPTable table = new PdfPTable(4); 
             table.setWidthPercentage(100);
             table.setWidths(new float[]{45f, 10f, 20f, 25f});
-            table.setSpacingBefore(10f);
-
-            Font fontHeader = new Font(Font.HELVETICA, 10, Font.BOLD, Color.WHITE);
             String[] headers = {"Producto", "Cant.", "Precio Unit.", "Subtotal"};
-            
             for (String header : headers) {
-                PdfPCell cell = new PdfPCell(new Phrase(header, fontHeader));
+                PdfPCell cell = new PdfPCell(new Phrase(header, new Font(Font.HELVETICA, 10, Font.BOLD, Color.WHITE)));
                 cell.setBackgroundColor(Color.DARK_GRAY);
                 cell.setHorizontalAlignment(Element.ALIGN_CENTER);
-                cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
                 cell.setPadding(6);
                 table.addCell(cell);
             }
 
-            Font fontCell = new Font(Font.HELVETICA, 10);
             BigDecimal subtotalSinDescuento = BigDecimal.ZERO;
-
             for (DetalleVenta det : venta.getDetalles()) {
-                PdfPCell cellProd = new PdfPCell(new Phrase(det.getProducto().getNombre(), fontCell));
-                cellProd.setPadding(5);
-                table.addCell(cellProd);
-                
-                PdfPCell cellCant = new PdfPCell(new Phrase(String.valueOf(det.getCantidad()), fontCell));
-                cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
-                cellCant.setPadding(5);
-                table.addCell(cellCant);
-                
-                PdfPCell cellPrecio = new PdfPCell(new Phrase("$" + det.getPrecioUnitario(), fontCell));
-                cellPrecio.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                cellPrecio.setPadding(5);
-                table.addCell(cellPrecio);
-                
+                table.addCell(new PdfPCell(new Phrase(det.getProducto().getNombre(), new Font(Font.HELVETICA, 10))));
+                PdfPCell cCant = new PdfPCell(new Phrase(String.valueOf(det.getCantidad()), new Font(Font.HELVETICA, 10)));
+                cCant.setHorizontalAlignment(Element.ALIGN_CENTER);
+                table.addCell(cCant);
+                PdfPCell cPrec = new PdfPCell(new Phrase("$" + det.getPrecioUnitario(), new Font(Font.HELVETICA, 10)));
+                cPrec.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                table.addCell(cPrec);
                 BigDecimal subItem = det.getPrecioUnitario().multiply(BigDecimal.valueOf(det.getCantidad()));
                 subtotalSinDescuento = subtotalSinDescuento.add(subItem);
-                
-                PdfPCell cellSub = new PdfPCell(new Phrase("$" + subItem, fontCell));
-                cellSub.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                cellSub.setPadding(5);
-                table.addCell(cellSub);
+                PdfPCell cSub = new PdfPCell(new Phrase("$" + subItem, new Font(Font.HELVETICA, 10)));
+                cSub.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                table.addCell(cSub);
             }
-
             document.add(table);
 
             // 4. TOTALES
             Paragraph totales = new Paragraph();
             totales.setAlignment(Element.ALIGN_RIGHT);
             totales.setSpacingBefore(15);
-
             BigDecimal descuento = subtotalSinDescuento.subtract(venta.getTotalVenta());
-            
             if (descuento.compareTo(BigDecimal.ZERO) > 0) {
                 totales.add(new Chunk("Subtotal: $" + subtotalSinDescuento + "\n", new Font(Font.HELVETICA, 10)));
-                String cuponTexto = (venta.getCupon() != null) ? " (" + venta.getCupon().getCodigo() + ")" : "";
-                totales.add(new Chunk("Descuento aplicado" + cuponTexto + ": -$" + descuento + "\n", new Font(Font.HELVETICA, 10, Font.BOLD, Color.RED)));
+                String cuponT = (venta.getCupon() != null) ? " (" + venta.getCupon().getCodigo() + ")" : "";
+                totales.add(new Chunk("Descuento aplicado" + cuponT + ": -$" + descuento + "\n", new Font(Font.HELVETICA, 10, Font.BOLD, Color.RED)));
             }
-
             totales.add(new Chunk("TOTAL: $" + venta.getTotalVenta(), new Font(Font.HELVETICA, 18, Font.BOLD)));
             document.add(totales);
 
