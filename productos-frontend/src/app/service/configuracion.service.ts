@@ -33,4 +33,8 @@ export class ConfiguracionService {
   updateConfiguracion(config: EmpresaConfig): Observable<EmpresaConfig> {
     return this.http.put<EmpresaConfig>(this.apiUrl, config);
   }
+
+  obtenerConfig(): Observable<any> {
+  return this.http.get(`${this.apiUrl}/configuracion/publica`);
+}
 }

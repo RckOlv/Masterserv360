@@ -1,12 +1,13 @@
 import { Component, inject, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { HttpClient } from '@angular/common/http'; // ✅ IMPORTAR HTTP
 import { AuthService } from '../../service/auth.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 import { Observable, of, Subscription, interval } from 'rxjs'; 
 import { switchMap } from 'rxjs/operators';
-// ✅ IMPORTAR SERVICIO
 import { AlertaService, Alerta } from '../../service/alerta.service';
+import { environment } from '../../../environments/environment'; // ✅ Asegurate de tener esto
 
 @Component({
   selector: 'app-sidebar',
@@ -18,18 +19,23 @@ import { AlertaService, Alerta } from '../../service/alerta.service';
 export class SidebarComponent implements OnInit, OnDestroy {
 
   private authService = inject(AuthService);
-  private alertaService = inject(AlertaService); // ✅ INYECCIÓN
+  private alertaService = inject(AlertaService);
   private router = inject(Router);
+  private http = inject(HttpClient); // ✅ INYECCIÓN DE HTTP
 
   // --- VARIABLES DEL USUARIO ---
   public userName$: Observable<string> = of('Usuario');
   public userRoleLabel$: Observable<string> = of('Invitado');
 
+  // --- VARIABLES DE CONFIGURACIÓN (LOGO) ---
+  // ✅ Iniciamos con el logo por defecto por si falla la API
+  public logoUrl: string = '/images/Masterserv_Header2.png'; 
+
   // --- ESTADOS DE LOS MENÚS ---
   public isUserMenuOpen = false;
   public isMobileMenuOpen = false;
 
-  // --- VARIABLES DE ALERTAS (NUEVO) ---
+  // --- VARIABLES DE ALERTAS ---
   public alertas: Alerta[] = [];
   public showNotifications = false;
   private pollingSub?: Subscription;
@@ -60,7 +66,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
       this.userRoleLabel$ = of(rol);
     }
 
-    // 2. INICIAR POLLING DE ALERTAS (Cada 15 seg)
+    // 2. ✅ CARGAR LOGO DE LA EMPRESA
+    this.obtenerConfiguracionEmpresa();
+
+    // 3. INICIAR POLLING DE ALERTAS (Cada 15 seg)
     this.cargarAlertas();
     this.pollingSub = interval(15000)
       .pipe(switchMap(() => this.alertaService.getNoLeidas()))
@@ -69,10 +78,26 @@ export class SidebarComponent implements OnInit, OnDestroy {
         error: (e) => console.error('Error polling alertas:', e)
       });
   }
+  
 
   ngOnDestroy(): void {
-    // Evitar fugas de memoria
     this.pollingSub?.unsubscribe();
+  }
+
+  // --- ✅ MÉTODO PARA OBTENER EL LOGO ---
+  obtenerConfiguracionEmpresa() {
+    // Llamamos al endpoint público que creamos en Java
+    this.http.get<any>(`${environment.apiUrl}/configuracion/publica`).subscribe({
+      next: (config) => {
+        // Si viene un logoUrl y no está vacío, lo usamos
+        if (config && config.logoUrl && config.logoUrl.trim() !== '') {
+          this.logoUrl = config.logoUrl;
+        }
+      },
+      error: (err) => {
+        console.warn('⚠️ No se pudo cargar la config de empresa, usando logo default.', err);
+      }
+    });
   }
 
   // --- MÉTODOS ALERTAS ---
@@ -83,21 +108,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   toggleNotifications() {
     this.showNotifications = !this.showNotifications;
-    // Si abrimos notificaciones, cerramos menú usuario para no encimar
     if (this.showNotifications) this.isUserMenuOpen = false;
   }
 
   clickAlerta(alerta: Alerta) {
-    // Marcamos como leída en backend
     this.alertaService.marcarLeida(alerta.id).subscribe(() => {
-      
-      // COMENTAMOS ESTA LÍNEA PARA QUE NO DESAPAREZCA AL INSTANTE:
-      // this.alertas = this.alertas.filter(a => a.id !== alerta.id);
-      
-      // Cerramos el menú
       this.showNotifications = false;
-      
-      // Navegamos (si corresponde)
       if (alerta.urlDestino) {
         this.router.navigateByUrl(alerta.urlDestino);
       }
@@ -115,14 +131,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   toggleUserMenu() {
     this.isUserMenuOpen = !this.isUserMenuOpen;
-    // Si abrimos menú usuario, cerramos notificaciones
     if (this.isUserMenuOpen) this.showNotifications = false;
   }
 
   toggleSection(section: string) {
-     Object.keys(this.sections).forEach(key => {
-       if (key !== section) this.sections[key] = false;
-     });
+      Object.keys(this.sections).forEach(key => {
+        if (key !== section) this.sections[key] = false;
+      });
     this.sections[section] = !this.sections[section];
   }
 
@@ -145,12 +160,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
   onClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
     
-    // Cerrar menú móvil al hacer click en enlace
     if (window.innerWidth <= 992 && target.closest('a')) {
        this.closeMobileMenu();
     }
 
-    // Cerrar dropdowns si clickeo afuera
     if (!target.closest('.user-info') && !target.closest('.notification-wrapper')) {
         this.isUserMenuOpen = false;
         this.showNotifications = false;
