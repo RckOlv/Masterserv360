@@ -334,7 +334,7 @@ public class PedidoService {
                 
                 // Precio inteligente
                 BigDecimal precio = item.getPrecioUnitarioOfertado() != null ? item.getPrecioUnitarioOfertado() 
-                                   : (item.getProducto().getPrecioCosto() != null ? item.getProducto().getPrecioCosto() : BigDecimal.ZERO);
+                                                                           : (item.getProducto().getPrecioCosto() != null ? item.getProducto().getPrecioCosto() : BigDecimal.ZERO);
 
                 detalle.setPrecioUnitario(precio);
                 detallesPedido.add(detalle);
@@ -364,6 +364,16 @@ public class PedidoService {
             
             // Enviamos el email de orden unificada
             enviarNotificacionProveedor(pedidoGuardado, proveedor);
+            
+            // --- 🛡️ DELAY ANTI-BLOQUEO MAILTRAP 🛡️ ---
+            try {
+                logger.info("⏳ Esperando 15s para evitar Rate Limit del servidor de correo...");
+                Thread.sleep(15000); // 15 Segundos de pausa
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.error("⚠️ Error en la espera del hilo de correo", e);
+            }
+            // ------------------------------------------
         }
 
         // 2. Actualizar estados de TODAS las cotizaciones involucradas

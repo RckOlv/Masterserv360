@@ -2,55 +2,71 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Orden de Compra</title>
+    <title>Orden de Compra Adjudicada</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; }
-        .header { background-color: #0056b3; color: white; padding: 15px; text-align: center; border-radius: 8px 8px 0 0; }
-        .content { padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 0; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .header { background-color: #0056b3; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { padding: 30px; }
         .btn {
             display: inline-block;
-            padding: 12px 24px;
-            background-color: #28a745; /* Verde para confirmar */
-            color: white;
+            padding: 14px 28px;
+            background-color: #28a745; /* Verde éxito */
+            color: white !important;
             text-decoration: none;
-            border-radius: 5px;
+            border-radius: 6px;
             font-weight: bold;
+            font-size: 16px;
             margin: 20px 0;
+            box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
         }
-        .footer { font-size: 0.8em; text-align: center; color: #777; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px; }
+        .btn:hover { background-color: #218838; }
+        .alert-box {
+            background-color: #e8f4fd; /* Azul muy suave */
+            padding: 15px;
+            border-left: 5px solid #0056b3;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .footer { font-size: 12px; text-align: center; color: #999; padding: 20px; border-top: 1px solid #eee; background-color: #fcfcfc; border-radius: 0 0 8px 8px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h2 style="margin:0;">Nueva Orden de Compra</h2>
+            <h2 style="margin:0; font-weight: 600;">Orden de Compra Adjudicada</h2>
+            <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.9em;">Referencia: #<span th:text="${nroPedido}"></span></p>
         </div>
         
         <div class="content">
-            <p>Estimados <strong><span th:text="${proveedorNombre}">Proveedor</span></strong>,</p>
+            <p style="font-size: 1.1em;">Estimados <strong><span th:text="${proveedorNombre}">Proveedor</span></strong>,</p>
             
-            <p>Adjunto a este correo encontrarán la <strong>Orden de Compra #<span th:text="${nroPedido}"></span></strong> emitida por Masterserv S.A.</p>
+            <p>Nos complace informarle que <strong>su propuesta ha sido seleccionada</strong> para el abastecimiento de los productos detallados.</p>
             
-            <p>Por favor, descargue el PDF adjunto para ver el detalle de los productos solicitados.</p>
+            <p>Adjunto encontrará el PDF oficial de la <strong>Orden de Compra #<span th:text="${nroPedido}"></span></strong> emitida por Masterserv S.A.</p>
             
-            <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #0056b3; margin: 15px 0;">
-                <strong>Acción Requerida:</strong><br>
-                Necesitamos que confirme la recepción, indique los precios vigentes y la fecha estimada de entrega.
+            <div class="alert-box">
+                <strong style="color: #0056b3;">PASO FINAL - CONFIRMACIÓN:</strong><br>
+                <span style="font-size: 0.95em;">
+                Para procesar el pago y la logística, necesitamos que ingrese al siguiente enlace para <strong>validar que los precios y la fecha de entrega</strong> sigan vigentes.
+                <br><br>
+                <em>Si todo está correcto según lo acordado, solo presione "Confirmar" en el formulario.</em>
+                </span>
             </div>
 
             <div style="text-align: center;">
-                <a th:href="${linkConfirmacion}" class="btn">Gestionar Orden de Compra</a>
+                <a th:href="${linkConfirmacion}" class="btn">Validar y Procesar Orden</a>
             </div>
             
-            <p style="font-size: 0.9em; color: #666;">
-                Si el botón no funciona, use este enlace:<br>
-                <a th:href="${linkConfirmacion}" th:text="${linkConfirmacion}"></a>
+            <p style="font-size: 0.85em; color: #888; text-align: center; margin-top: 30px;">
+                Si el botón no funciona, copie y pegue este enlace en su navegador:<br>
+                <a th:href="${linkConfirmacion}" style="color: #0056b3; word-break: break-all;" th:text="${linkConfirmacion}"></a>
             </p>
         </div>
 
         <div class="footer">
-            <p>Este es un mensaje automático de Masterserv360.<br>Por favor no responda a este correo.</p>
+            <p style="margin: 0;">Este es un mensaje automático de <strong>Masterserv360</strong>.</p>
+            <p style="margin: 5px 0 0 0;">Por favor no responda directamente a este correo.</p>
         </div>
     </div>
 </body>
