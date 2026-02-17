@@ -27,7 +27,7 @@
 
   <div *ngIf="loading" class="text-center py-5">
     <div class="spinner-border text-primary" role="status"></div>
-    <p class="mt-2 text-muted">Procesando datos...</p>
+    <p class="mt-2 text-white-50">Procesando datos...</p>
   </div>
 
   <div *ngIf="activeTab === 'valorizacion' && !loading" class="animate__animated animate__fadeIn">
@@ -36,7 +36,7 @@
       <div class="card-body text-center py-4">
         <h5 class="card-title opacity-75">VALOR TOTAL DEL INVENTARIO</h5>
         <h1 class="display-4 fw-bold">{{ totalInventario | currency:'ARS':'symbol-narrow':'1.0-0' }}</h1>
-        <small>Dinero invertido en mercadería activa</small>
+        <small class="text-white-50">Dinero invertido en mercadería activa</small>
       </div>
     </div>
 
@@ -56,7 +56,8 @@
               <td class="fw-bold text-white">{{ item.categoria }}</td>
               <td class="text-center text-white-50">{{ item.cantidadUnidades }}</td>
               <td class="text-end fw-bold text-success">{{ item.valorTotal | currency:'ARS':'symbol-narrow':'1.0-0' }}</td>
-              <td class="text-end text-muted">
+              
+              <td class="text-end text-white-50">
                 {{ (item.valorTotal / totalInventario) | percent:'1.1-1' }}
               </td>
             </tr>
@@ -109,7 +110,7 @@
               <td class="text-center text-white">{{ item.stockActual }}</td>
               <td class="text-end text-white-50">{{ item.costoUnitario | currency:'ARS':'symbol-narrow':'1.0-0' }}</td>
               <td class="text-end fw-bold text-danger">{{ item.capitalParado | currency:'ARS':'symbol-narrow':'1.0-0' }}</td>
-              <td class="text-center text-muted small">
+              <td class="text-center text-white-50 small">
                 {{ item.ultimaVenta ? (item.ultimaVenta | date:'dd/MM/yyyy') : 'NUNCA' }}
               </td>
               <td class="text-center">
@@ -117,9 +118,9 @@
               </td>
             </tr>
             <tr *ngIf="inmovilizado.length === 0">
-              <td colspan="7" class="text-center py-5 text-muted">
-                <i class="bi bi-check-circle fs-1 text-success opacity-50"></i><br>
-                <span class="mt-2 d-block">¡Excelente! No hay stock inmovilizado hace {{diasInmovilizado}} días.</span>
+              <td colspan="7" class="text-center py-5 text-white">
+                <i class="bi bi-check-circle fs-1 text-success opacity-75"></i><br>
+                <span class="mt-2 d-block opacity-75">¡Excelente! No hay stock inmovilizado hace {{diasInmovilizado}} días.</span>
               </td>
             </tr>
           </tbody>
@@ -156,7 +157,7 @@
               <td class="text-end fw-bold text-success">{{ item.costoPagado | currency:'ARS':'symbol-narrow':'1.2-2' }}</td>
             </tr>
             <tr *ngIf="historialCostos.length === 0">
-                <td colspan="5" class="text-center py-5 text-muted">
+                <td colspan="5" class="text-center py-5 text-white-50">
                     No hay registros de compras recientes.
                 </td>
             </tr>
