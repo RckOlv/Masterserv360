@@ -49,4 +49,8 @@ export class ReporteService {
   getHistorialCostos(productoId: number): Observable<VariacionCostoDTO[]> {
     return this.http.get<VariacionCostoDTO[]>(`${this.apiUrl}/historial-costos/${productoId}`);
   }
+
+  getUltimosCostosGenerales(): Observable<VariacionCostoDTO[]> {
+  return this.http.get<VariacionCostoDTO[]>(`${this.apiUrl}/historial-costos/general`);
+}
 }

@@ -99,7 +99,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     // 1. VALORIZACIÓN DE INVENTARIO (Por Categoría)
 @Query("SELECT c.nombre AS categoria, " +
        "SUM(p.stockActual) AS cantidadUnidades, " +
-       "SUM(p.stockActual * p.precioCosto) AS valorTotal " +
+       "SUM(CAST(p.stockActual AS bigdecimal) * p.precioCosto) AS valorTotal " + 
        "FROM Producto p " +
        "JOIN p.categoria c " +
        "WHERE p.stockActual > 0 AND p.estado = 'ACTIVO' " +

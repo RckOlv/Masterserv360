@@ -26,4 +26,17 @@ public interface DetallePedidoRepository extends JpaRepository<DetallePedido, Lo
            "WHERE p.id = :productoId AND ped.estado = :estado " +
            "ORDER BY ped.fechaCreacion DESC")
     List<VariacionCostoDTO> obtenerHistorialCostos(@Param("productoId") Long productoId, @Param("estado") EstadoPedido estado);
+
+    @Query("SELECT p.nombre AS producto, " +
+       "prov.razonSocial AS proveedor, " +
+       "ped.fechaCreacion AS fechaCompra, " + 
+       "dp.precioUnitario AS costoPagado, " + 
+       "CAST(ped.id AS string) AS nroOrden " +
+       "FROM DetallePedido dp " +
+       "JOIN dp.producto p " +
+       "JOIN dp.pedido ped " +
+       "JOIN ped.proveedor prov " +
+       "WHERE ped.estado = :estado " + 
+       "ORDER BY ped.fechaCreacion DESC")
+List<VariacionCostoDTO> obtenerUltimosCostos(@Param("estado") EstadoPedido estado, org.springframework.data.domain.Pageable pageable);
 }

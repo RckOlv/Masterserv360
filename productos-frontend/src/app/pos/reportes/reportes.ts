@@ -9,22 +9,34 @@ import { ReporteService, ValorizacionDTO, StockInmovilizadoDTO, VariacionCostoDT
   imports: [CommonModule, FormsModule],
   templateUrl: './reportes.html',
   styles: [`
+    /* Estilos para modo oscuro */
     .nav-tabs .nav-link.active {
       background-color: #0d6efd;
       color: white;
       border-color: #0d6efd;
     }
     .nav-tabs .nav-link {
-      color: #495057;
+      color: #adb5bd; /* Gris claro para inactivos */
       cursor: pointer;
+    }
+    .nav-tabs .nav-link:hover {
+      color: #fff;
+      border-color: #495057;
     }
     .total-card {
       background: linear-gradient(45deg, #198754, #20c997);
       color: white;
     }
-    .alert-card {
-      background: linear-gradient(45deg, #dc3545, #fd7e14);
-      color: white;
+    /* Input oscuro custom */
+    .form-control-dark {
+      background-color: #212529;
+      border-color: #495057;
+      color: #fff;
+    }
+    .form-control-dark:focus {
+      background-color: #212529;
+      border-color: #0d6efd;
+      color: #fff;
     }
   `]
 })
@@ -41,7 +53,6 @@ export class ReportesComponent implements OnInit {
 
   // Filtros y Totales
   diasInmovilizado: number = 90;
-  productoIdBusqueda: number | null = null;
   
   totalInventario: number = 0;
   totalCapitalParado: number = 0;
@@ -53,8 +64,11 @@ export class ReportesComponent implements OnInit {
 
   cambiarTab(tab: 'valorizacion' | 'inmovilizado' | 'costos') {
     this.activeTab = tab;
+    // Carga perezosa (solo si no hay datos)
     if (tab === 'valorizacion' && this.valorizacion.length === 0) this.cargarValorizacion();
     if (tab === 'inmovilizado' && this.inmovilizado.length === 0) this.cargarInmovilizado();
+    // 🔥 Carga automática de costos generales al entrar
+    if (tab === 'costos' && this.historialCostos.length === 0) this.cargarCostosGenerales();
   }
 
   // --- LOGICA VALORIZACIÓN ---
@@ -63,7 +77,6 @@ export class ReportesComponent implements OnInit {
     this.reporteService.getValorizacion().subscribe({
       next: (data) => {
         this.valorizacion = data;
-        // Calculamos el gran total sumando todas las categorías
         this.totalInventario = data.reduce((acc, curr) => acc + curr.valorTotal, 0);
         this.loading = false;
       },
@@ -84,11 +97,10 @@ export class ReportesComponent implements OnInit {
     });
   }
 
-  // --- LOGICA HISTORIAL COSTOS ---
-  buscarHistorial() {
-    if (!this.productoIdBusqueda) return;
+  // --- LOGICA HISTORIAL COSTOS (NUEVA: CARGA GENERAL) ---
+  cargarCostosGenerales() {
     this.loading = true;
-    this.reporteService.getHistorialCostos(this.productoIdBusqueda).subscribe({
+    this.reporteService.getUltimosCostosGenerales().subscribe({
       next: (data) => {
         this.historialCostos = data;
         this.loading = false;
@@ -97,7 +109,6 @@ export class ReportesComponent implements OnInit {
     });
   }
   
-  // Función para imprimir reporte
   imprimir() {
     window.print();
   }

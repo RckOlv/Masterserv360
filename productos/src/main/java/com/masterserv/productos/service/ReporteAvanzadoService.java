@@ -7,6 +7,7 @@ import com.masterserv.productos.enums.EstadoPedido;
 import com.masterserv.productos.repository.DetallePedidoRepository;
 import com.masterserv.productos.repository.ProductoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,4 +40,10 @@ public class ReporteAvanzadoService {
         // ✅ Pasamos el Enum aquí
         return detallePedidoRepository.obtenerHistorialCostos(productoId, EstadoPedido.COMPLETADO);
     }
+
+	@Transactional(readOnly = true)
+	public List<VariacionCostoDTO> getUltimosCostosGenerales() {
+    // Traemos los últimos 50 movimientos de compra
+    return detallePedidoRepository.obtenerUltimosCostos(EstadoPedido.COMPLETADO, PageRequest.of(0, 50));
+}
 }
