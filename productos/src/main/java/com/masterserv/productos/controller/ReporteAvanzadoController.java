@@ -35,7 +35,7 @@ public class ReporteAvanzadoController {
         return ResponseEntity.ok(reporteService.getHistorialCostos(productoId));
     }
 
-	@GetMapping("/historial-costos/general")
+	@GetMapping("/historial-costos-general")
 	public ResponseEntity<List<VariacionCostoDTO>> getUltimosCostos() {
     	return ResponseEntity.ok(reporteService.getUltimosCostosGenerales());
 	}

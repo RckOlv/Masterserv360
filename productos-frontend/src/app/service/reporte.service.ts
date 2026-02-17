@@ -51,6 +51,6 @@ export class ReporteService {
   }
 
   getUltimosCostosGenerales(): Observable<VariacionCostoDTO[]> {
-  return this.http.get<VariacionCostoDTO[]>(`${this.apiUrl}/historial-costos/general`);
+  return this.http.get<VariacionCostoDTO[]>(`${this.apiUrl}/historial-costos-general`);
 }
 }
