@@ -3,6 +3,7 @@ package com.masterserv.productos.service;
 import com.masterserv.productos.dto.reporte.StockInmovilizadoDTO;
 import com.masterserv.productos.dto.reporte.ValorizacionInventarioDTO;
 import com.masterserv.productos.dto.reporte.VariacionCostoDTO;
+import com.masterserv.productos.enums.EstadoPedido;
 import com.masterserv.productos.repository.DetallePedidoRepository;
 import com.masterserv.productos.repository.ProductoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,7 @@ public class ReporteAvanzadoService {
     // 3. Historial de Costos (Inflación)
     @Transactional(readOnly = true)
     public List<VariacionCostoDTO> getHistorialCostos(Long productoId) {
-        return detallePedidoRepository.obtenerHistorialCostos(productoId);
+        // ✅ Pasamos el Enum aquí
+        return detallePedidoRepository.obtenerHistorialCostos(productoId, EstadoPedido.COMPLETADO);
     }
 }
