@@ -18,7 +18,7 @@ public interface DetallePedidoRepository extends JpaRepository<DetallePedido, Lo
            "prov.razonSocial AS proveedor, " +
            "ped.fechaCreacion AS fechaCompra, " + 
            "dp.precioUnitario AS costoPagado, " + 
-           "ped.nroPedido AS nroOrden " +
+           "CAST(ped.id AS string) AS nroOrden " + 
            "FROM DetallePedido dp " +
            "JOIN dp.producto p " +
            "JOIN dp.pedido ped " +
