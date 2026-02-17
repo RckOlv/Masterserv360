@@ -1,0 +1,188 @@
+<div class="container-fluid p-4">
+  
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold text-primary"><i class="bi bi-bar-chart-line-fill"></i> Reportes Avanzados</h2>
+    <button class="btn btn-outline-secondary" (click)="imprimir()">
+      <i class="bi bi-printer"></i> Imprimir / PDF
+    </button>
+  </div>
+
+  <ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="activeTab === 'valorizacion'" (click)="cambiarTab('valorizacion')">
+        <i class="bi bi-cash-coin"></i> Valorización Inventario
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="activeTab === 'inmovilizado'" (click)="cambiarTab('inmovilizado')">
+        <i class="bi bi-snow2"></i> Stock Inmovilizado
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" [class.active]="activeTab === 'costos'" (click)="cambiarTab('costos')">
+        <i class="bi bi-graph-up-arrow"></i> Variación Costos
+      </a>
+    </li>
+  </ul>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-2 text-muted">Analizando datos...</p>
+  </div>
+
+  <div *ngIf="activeTab === 'valorizacion' && !loading" class="animate__animated animate__fadeIn">
+    
+    <div class="card total-card mb-4 shadow-sm border-0">
+      <div class="card-body text-center py-4">
+        <h5 class="card-title opacity-75">VALOR TOTAL DEL INVENTARIO</h5>
+        <h1 class="display-4 fw-bold">{{ totalInventario | currency:'ARS':'symbol-narrow':'1.0-0' }}</h1>
+        <small>Dinero invertido en mercadería activa</small>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body p-0">
+        <table class="table table-hover table-striped mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>Categoría</th>
+              <th class="text-center">Unidades Físicas</th>
+              <th class="text-end">Valor Total ($)</th>
+              <th class="text-end">% del Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of valorizacion">
+              <td class="fw-bold">{{ item.categoria }}</td>
+              <td class="text-center">{{ item.cantidadUnidades }}</td>
+              <td class="text-end fw-bold text-success">{{ item.valorTotal | currency:'ARS':'symbol-narrow':'1.0-0' }}</td>
+              <td class="text-end text-muted">
+                {{ (item.valorTotal / totalInventario) | percent:'1.1-1' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="activeTab === 'inmovilizado' && !loading" class="animate__animated animate__fadeIn">
+    
+    <div class="row mb-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label fw-bold">Días sin movimiento:</label>
+        <div class="input-group">
+          <input type="number" class="form-control" [(ngModel)]="diasInmovilizado" min="30">
+          <button class="btn btn-primary" (click)="cargarInmovilizado()">
+            <i class="bi bi-search"></i> Filtrar
+          </button>
+        </div>
+      </div>
+      <div class="col-md-8 text-end">
+        <div class="alert alert-danger d-inline-block py-2 px-4 m-0 shadow-sm">
+          <strong>Capital Parado: </strong> {{ totalCapitalParado | currency:'ARS':'symbol-narrow':'1.0-0' }}
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-danger">
+      <div class="card-header bg-danger text-white">
+        <i class="bi bi-exclamation-triangle-fill"></i> Productos críticos para liquidar
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="bg-light">
+            <tr>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th class="text-center">Stock</th>
+              <th class="text-end">Costo Unit.</th>
+              <th class="text-end">Capital Parado</th>
+              <th class="text-center">Última Venta</th>
+              <th class="text-center">Días Quieto</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of inmovilizado">
+              <td class="fw-bold">{{ item.nombre }}</td>
+              <td><span class="badge bg-secondary">{{ item.categoria }}</span></td>
+              <td class="text-center">{{ item.stockActual }}</td>
+              <td class="text-end">{{ item.costoUnitario | currency:'ARS':'symbol-narrow':'1.0-0' }}</td>
+              <td class="text-end fw-bold text-danger">{{ item.capitalParado | currency:'ARS':'symbol-narrow':'1.0-0' }}</td>
+              <td class="text-center text-muted small">
+                {{ item.ultimaVenta ? (item.ultimaVenta | date:'dd/MM/yyyy') : 'NUNCA' }}
+              </td>
+              <td class="text-center">
+                <span class="badge bg-warning text-dark">{{ item.diasSinVenta }} días</span>
+              </td>
+            </tr>
+            <tr *ngIf="inmovilizado.length === 0">
+              <td colspan="7" class="text-center py-4 text-muted">
+                <i class="bi bi-check-circle fs-3 text-success"></i><br>
+                ¡Excelente! No hay stock inmovilizado hace {{diasInmovilizado}} días.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="activeTab === 'costos' && !loading" class="animate__animated animate__fadeIn">
+    
+    <div class="card mb-3 p-4 bg-light border-0">
+      <label class="form-label fw-bold">Buscar historial por ID de Producto:</label>
+      <div class="input-group" style="max-width: 400px;">
+        <span class="input-group-text">ID #</span>
+        <input type="number" class="form-control" [(ngModel)]="productoIdBusqueda" placeholder="Ej: 105">
+        <button class="btn btn-dark" (click)="buscarHistorial()">
+          <i class="bi bi-search"></i> Buscar Historial
+        </button>
+      </div>
+      <small class="text-muted mt-1">Ingresa el ID del producto para ver cómo ha variado su costo de compra.</small>
+    </div>
+
+    <div *ngIf="historialCostos.length > 0" class="card shadow-sm">
+      <div class="card-header bg-dark text-white">
+        Historial de Compras: <strong>{{ historialCostos[0].producto }}</strong>
+      </div>
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Fecha Compra</th>
+            <th>Proveedor</th>
+            <th>Nro. Orden</th>
+            <th class="text-end">Costo Pagado</th>
+            <th class="text-center">Variación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of historialCostos; let i = index">
+            <td>{{ item.fechaCompra | date:'dd/MM/yyyy' }}</td>
+            <td>{{ item.proveedor }}</td>
+            <td><code>{{ item.nroOrden }}</code></td>
+            <td class="text-end fw-bold">{{ item.costoPagado | currency:'ARS':'symbol-narrow':'1.2-2' }}</td>
+            
+            <td class="text-center">
+              <ng-container *ngIf="i < historialCostos.length - 1">
+                <i class="bi bi-arrow-up-right text-danger" 
+                   *ngIf="item.costoPagado > historialCostos[i+1].costoPagado"></i>
+                <i class="bi bi-arrow-down-right text-success" 
+                   *ngIf="item.costoPagado < historialCostos[i+1].costoPagado"></i>
+                <i class="bi bi-dash text-muted" 
+                   *ngIf="item.costoPagado == historialCostos[i+1].costoPagado"></i>
+              </ng-container>
+              <span *ngIf="i === historialCostos.length - 1" class="badge bg-secondary">Inicio</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div *ngIf="historialCostos.length === 0 && productoIdBusqueda" class="alert alert-warning mt-3">
+      No hay historial de compras registrado para este producto (o el ID es incorrecto).
+    </div>
+
+  </div>
+
+</div>

@@ -1,5 +1,7 @@
 package com.masterserv.productos.repository;
 
+import com.masterserv.productos.dto.reporte.StockInmovilizadoDTO;
+import com.masterserv.productos.dto.reporte.ValorizacionInventarioDTO;
 import com.masterserv.productos.entity.Producto;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
@@ -11,6 +13,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -91,4 +94,39 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>, JpaSp
     boolean existsByNombreIgnoreCase(String nombre);
     boolean existsByNombreIgnoreCaseAndIdNot(String nombre, Long id);
     // ----------------------------------------
+
+
+    // 1. VALORIZACIÓN DE INVENTARIO (Por Categoría)
+@Query("SELECT c.nombre AS categoria, " +
+       "SUM(p.stockActual) AS cantidadUnidades, " +
+       "SUM(p.stockActual * p.precioCosto) AS valorTotal " +
+       "FROM Producto p " +
+       "JOIN p.categoria c " +
+       "WHERE p.stockActual > 0 AND p.estado = 'ACTIVO' " +
+       "GROUP BY c.nombre " +
+       "ORDER BY valorTotal DESC")
+List<ValorizacionInventarioDTO> obtenerValorizacionPorCategoria();
+
+// 2. STOCK INMOVILIZADO (Productos con stock > 0 y sin ventas recientes)
+// Esta es compleja: Busca productos con stock, busca su última fecha de salida,
+// y filtra si la fecha es anterior al límite o si NUNCA se vendió.
+@Query(value = """
+    SELECT 
+        p.id AS productoId,
+        p.nombre AS nombre,
+        c.nombre AS categoria,
+        p.stock_actual AS stockActual,
+        p.precio_costo AS costoUnitario,
+        (p.stock_actual * p.precio_costo) AS capitalParado,
+        MAX(m.fecha) AS ultimaVenta,
+        DATEDIFF(NOW(), MAX(m.fecha)) AS diasSinVenta
+    FROM producto p
+    JOIN categoria c ON p.categoria_id = c.id
+    LEFT JOIN movimiento_stock m ON p.id = m.producto_id AND m.tipo_movimiento = 'SALIDA_VENTA'
+    WHERE p.stock_actual > 0 AND p.estado = 'ACTIVO'
+    GROUP BY p.id, p.nombre, c.nombre, p.stock_actual, p.precio_costo
+    HAVING (MAX(m.fecha) < :fechaLimite OR MAX(m.fecha) IS NULL)
+    ORDER BY capitalParado DESC
+""", nativeQuery = true)
+List<StockInmovilizadoDTO> obtenerStockInmovilizado(@Param("fechaLimite") LocalDateTime fechaLimite);
 }

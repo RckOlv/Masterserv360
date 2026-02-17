@@ -7,6 +7,7 @@ import { AdminLayoutComponent } from './layouts/admin-layout/admin-layout';
 import { PublicLayoutComponent } from './layouts/public-layout/public-layout';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout'; 
 import { ConfiguracionComponent } from './pos/configuracion/configuracion';
+import { ReportesComponent } from './pos/reportes/reportes';
 
 export const routes: Routes = [
 
@@ -128,6 +129,7 @@ export const routes: Routes = [
       { path: 'comparativa-precios', loadComponent: () => import('./pos/compras-comparativa/compras-comparativa').then(m => m.default)},
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'configuracion', component: ConfiguracionComponent, canActivate: [AuthGuard] },
+      { path: 'reportes-avanzados', component: ReportesComponent, canActivate: [AuthGuard] },
     ]
   },
 
