@@ -58,6 +58,7 @@ public class SecurityConfig {
                 
                 // Rutas Públicas adicionales
                 .requestMatchers("/public/**").permitAll() 
+                .requestMatchers("/auth/**","/configuracion/publica").permitAll()
 
                 // Todo lo demás requiere autenticación (JWT)
                 .anyRequest().authenticated() 

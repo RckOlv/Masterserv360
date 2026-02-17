@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/reportes-avanzados")
+@RequestMapping("/reportes-avanzados")
 public class ReporteAvanzadoController {
 
     @Autowired private ReporteAvanzadoService reporteService;
