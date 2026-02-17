@@ -45,12 +45,14 @@ export class ReporteService {
     return this.http.get<StockInmovilizadoDTO[]>(`${this.apiUrl}/inmovilizado?dias=${dias}`);
   }
 
-  // 3. Historial de Costos
-  getHistorialCostos(productoId: number): Observable<VariacionCostoDTO[]> {
-    return this.http.get<VariacionCostoDTO[]>(`${this.apiUrl}/historial-costos/${productoId}`);
+  // 3. Historial de Costos (Feed General)
+  getUltimosCostosGenerales(): Observable<VariacionCostoDTO[]> {
+    return this.http.get<VariacionCostoDTO[]>(`${this.apiUrl}/historial-costos-general`);
   }
 
-  getUltimosCostosGenerales(): Observable<VariacionCostoDTO[]> {
-  return this.http.get<VariacionCostoDTO[]>(`${this.apiUrl}/historial-costos-general`);
-}
+  // 4. Historial de Costos (Búsqueda por Nombre) - ✅ NUEVO
+  buscarHistorialPorNombre(nombre: string): Observable<VariacionCostoDTO[]> {
+    // Usamos encodeURIComponent por si el nombre tiene espacios o tildes
+    return this.http.get<VariacionCostoDTO[]>(`${this.apiUrl}/historial-costos/buscar?nombre=${encodeURIComponent(nombre)}`);
+  }
 }

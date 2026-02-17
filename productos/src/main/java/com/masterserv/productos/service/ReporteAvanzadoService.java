@@ -43,7 +43,13 @@ public class ReporteAvanzadoService {
 
 	@Transactional(readOnly = true)
 	public List<VariacionCostoDTO> getUltimosCostosGenerales() {
-    // Traemos los últimos 50 movimientos de compra
-    return detallePedidoRepository.obtenerUltimosCostos(EstadoPedido.COMPLETADO, PageRequest.of(0, 50));
-}
+    	// Traemos los últimos 50 movimientos de compra
+    	return detallePedidoRepository.obtenerUltimosCostos(EstadoPedido.COMPLETADO, PageRequest.of(0, 50));
+	}
+
+	@Transactional(readOnly = true)
+	public List<VariacionCostoDTO> buscarCostosPorNombre(String nombre) {
+    	// Busca coincidencias parciales (ej: "Bat" encuentra "Batería")
+    	return detallePedidoRepository.buscarHistorialPorNombre(nombre, EstadoPedido.COMPLETADO);
+	}
 }

@@ -29,11 +29,11 @@ public class ReporteAvanzadoController {
         return ResponseEntity.ok(reporteService.getStockInmovilizado(dias));
     }
 
-    // GET /api/reportes-avanzados/historial-costos/15
-    @GetMapping("/historial-costos/{productoId}")
-    public ResponseEntity<List<VariacionCostoDTO>> getHistorialCostos(@PathVariable Long productoId) {
-        return ResponseEntity.ok(reporteService.getHistorialCostos(productoId));
-    }
+    
+    @GetMapping("/historial-costos/buscar")
+    public ResponseEntity<List<VariacionCostoDTO>> buscarHistorial(@RequestParam String nombre) {
+        return ResponseEntity.ok(reporteService.buscarCostosPorNombre(nombre));
+}
 
 	@GetMapping("/historial-costos-general")
 	public ResponseEntity<List<VariacionCostoDTO>> getUltimosCostos() {
