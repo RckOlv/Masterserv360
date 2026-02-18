@@ -111,22 +111,22 @@ List<ValorizacionInventarioDTO> obtenerValorizacionPorCategoria();
 // Esta es compleja: Busca productos con stock, busca su última fecha de salida,
 // y filtra si la fecha es anterior al límite o si NUNCA se vendió.
 @Query(value = """
-    SELECT 
-        p.id AS productoId,
-        p.nombre AS nombre,
-        c.nombre AS categoria,
-        p.stock_actual AS stockActual,
-        p.precio_costo AS costoUnitario,
-        (p.stock_actual * p.precio_costo) AS capitalParado,
-        MAX(m.fecha) AS ultimaVenta,
-        DATEDIFF(NOW(), MAX(m.fecha)) AS diasSinVenta
-    FROM producto p
-    JOIN categoria c ON p.categoria_id = c.id
-    LEFT JOIN movimiento_stock m ON p.id = m.producto_id AND m.tipo_movimiento = 'SALIDA_VENTA'
-    WHERE p.stock_actual > 0 AND p.estado = 'ACTIVO'
-    GROUP BY p.id, p.nombre, c.nombre, p.stock_actual, p.precio_costo
-    HAVING (MAX(m.fecha) < :fechaLimite OR MAX(m.fecha) IS NULL)
-    ORDER BY capitalParado DESC
-""", nativeQuery = true)
-List<StockInmovilizadoDTO> obtenerStockInmovilizado(@Param("fechaLimite") LocalDateTime fechaLimite);
+        SELECT 
+            p.id AS productoId, 
+            p.nombre AS nombre, 
+            c.nombre AS categoria, 
+            p.stock_actual AS stockActual, 
+            COALESCE(p.precio_costo, 0) AS costoUnitario, 
+            (p.stock_actual * COALESCE(p.precio_costo, 0)) AS capitalParado, 
+            MAX(v.fecha_venta) AS ultimaVenta,
+        FROM producto p 
+        LEFT JOIN detalle_venta dv ON p.id = dv.producto_id 
+        LEFT JOIN venta v ON dv.venta_id = v.id 
+        JOIN categoria c ON p.categoria_id = c.id
+        WHERE p.stock_actual > 0 
+        AND p.estado = 'ACTIVO'
+        GROUP BY p.id, p.nombre, c.nombre, p.stock_actual, p.precio_costo
+        ORDER BY capitalParado DESC
+        """, nativeQuery = true)
+    List<StockInmovilizadoDTO> obtenerStockInmovilizado(@Param("fechaLimite") LocalDateTime fechaLimite);
 }

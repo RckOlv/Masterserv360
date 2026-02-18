@@ -8,7 +8,7 @@ public interface StockInmovilizadoDTO {
     String getCategoria();
     Integer getStockActual();
     BigDecimal getCostoUnitario();
-    BigDecimal getCapitalParado(); // Stock * Costo
+    BigDecimal getCapitalParado();
     LocalDateTime getUltimaVenta();
     Integer getDiasSinVenta();
 }

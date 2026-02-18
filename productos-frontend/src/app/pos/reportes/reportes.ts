@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Chart, registerables } from 'chart.js';
 import { ReporteService, ValorizacionDTO, StockInmovilizadoDTO, VariacionCostoDTO } from '../../service/reporte.service';
 
 // 📄 Librerías para PDF Profesional
@@ -33,6 +34,10 @@ export class ReportesComponent implements OnInit {
 
   activeTab: 'valorizacion' | 'inmovilizado' | 'costos' = 'valorizacion';
   loading = false;
+
+  constructor() {
+    Chart.register(...registerables);
+  }
 
   // Datos
   valorizacion: ValorizacionDTO[] = [];
