@@ -55,4 +55,9 @@ export class ReporteService {
     // Usamos encodeURIComponent por si el nombre tiene espacios o tildes
     return this.http.get<VariacionCostoDTO[]>(`${this.apiUrl}/historial-costos/buscar?nombre=${encodeURIComponent(nombre)}`);
   }
+
+  getProductosParaFiltro(): Observable<any[]> {
+    // Le pegamos al endpoint normal de productos para traer la lista
+    return this.http.get<any[]>(`${environment.apiUrl}/productos`);
+  }
 }

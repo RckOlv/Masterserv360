@@ -15,7 +15,7 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
 @Component({
   selector: 'app-reportes',
   standalone: true,
-  imports: [CommonModule, FormsModule, BaseChartDirective], // ✅ Importante: BaseChartDirective
+  imports: [CommonModule, FormsModule, BaseChartDirective],
   templateUrl: './reportes.html',
   styles: [`
     .nav-tabs .nav-link.active { background-color: #0d6efd; color: white; border-color: #0d6efd; }
@@ -27,6 +27,12 @@ import { ChartConfiguration, ChartOptions } from 'chart.js';
     .text-bright { color: #ffffff !important; opacity: 1 !important; }
     .text-dim { color: rgba(255,255,255,0.7) !important; }
     .chart-container { position: relative; height: 300px; width: 100%; }
+    
+    /* Personalización del Datalist en navegadores basados en Webkit */
+    input::-webkit-calendar-picker-indicator {
+      filter: invert(1); /* Pone la flechita blanca en tema oscuro */
+      cursor: pointer;
+    }
   `]
 })
 export class ReportesComponent implements OnInit {
@@ -43,6 +49,7 @@ export class ReportesComponent implements OnInit {
   valorizacion: ValorizacionDTO[] = [];
   inmovilizado: StockInmovilizadoDTO[] = [];
   historialCostos: VariacionCostoDTO[] = [];
+  listaProductos: any[] = []; // Para llenar el datalist
 
   // Totales
   totalInventario: number = 0;
@@ -93,6 +100,11 @@ export class ReportesComponent implements OnInit {
   
   ngOnInit() {
     this.cargarValorizacion();
+    // Cargar los nombres de productos para el buscador autocompletable
+    this.reporteService.getProductosParaFiltro().subscribe({
+        next: (data) => this.listaProductos = data,
+        error: (err) => console.error("No se pudieron cargar los productos", err)
+    });
   }
 
   cambiarTab(tab: any) {
@@ -131,6 +143,7 @@ export class ReportesComponent implements OnInit {
   cargarCostos() {
     this.loading = true;
     
+    // Si hay búsqueda por nombre, llama a ese endpoint, si no, al general
     const request = (this.busquedaProducto && this.busquedaProducto.trim() !== '')
       ? this.reporteService.buscarHistorialPorNombre(this.busquedaProducto)
       : this.reporteService.getUltimosCostosGenerales();
@@ -138,7 +151,7 @@ export class ReportesComponent implements OnInit {
     request.subscribe({
       next: (data) => { 
         this.historialCostos = data;
-        this.actualizarGrafico(); // 🔄 Actualizamos el gráfico con los nuevos datos
+        this.actualizarGrafico(); 
         this.loading = false; 
       },
       error: () => this.loading = false
@@ -149,7 +162,6 @@ export class ReportesComponent implements OnInit {
   actualizarGrafico() {
     if (this.historialCostos.length === 0) return;
 
-    // Invertimos para que sea cronológico (Viejo -> Nuevo) en el gráfico
     const datosOrdenados = [...this.historialCostos].reverse();
 
     const etiquetas = datosOrdenados.map(item => {
@@ -164,7 +176,7 @@ export class ReportesComponent implements OnInit {
       datasets: [
         {
           data: precios,
-          label: this.busquedaProducto ? `Evolución: ${this.busquedaProducto}` : 'Tendencia General',
+          label: `Evolución de Costo: ${this.busquedaProducto}`,
           fill: true,
           tension: 0.4,
           borderColor: '#0d6efd',
@@ -224,7 +236,7 @@ export class ReportesComponent implements OnInit {
 
     if (this.activeTab === 'costos') {
       const titulo = this.busquedaProducto 
-        ? `Historial de Costos - Búsqueda: "${this.busquedaProducto}"` 
+        ? `Historial de Costos - Producto: "${this.busquedaProducto}"` 
         : 'Últimas Compras Generales (Feed de Precios)';
         
       doc.text(titulo, 14, 20);
@@ -232,13 +244,26 @@ export class ReportesComponent implements OnInit {
 
       let startY = 35;
 
-      // 🖼️ SI HAY GRÁFICO, LO PEGAMOS AL PDF
-      if (this.chartRef && this.historialCostos.length > 1) {
+      // 🖼️ SI HAY GRÁFICO (Búsqueda activa), LO PEGAMOS AL PDF
+      if (this.chartRef && this.busquedaProducto && this.historialCostos.length > 1) {
         try {
             const canvas = this.chartRef.nativeElement as HTMLCanvasElement;
-            const imagenGrafico = canvas.toDataURL('image/png', 1.0);
-            doc.addImage(imagenGrafico, 'PNG', 15, 35, 180, 80); // x, y, ancho, alto
-            startY = 120; // Bajamos la tabla para que no tape el gráfico
+            
+            // 🎨 Crear canvas temporal para ponerle fondo oscuro
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const ctx = tempCanvas.getContext('2d');
+            
+            if (ctx) {
+                ctx.fillStyle = '#212529'; // Fondo oscuro de Bootstrap
+                ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                ctx.drawImage(canvas, 0, 0);
+            }
+            
+            const imagenGrafico = tempCanvas.toDataURL('image/png', 1.0);
+            doc.addImage(imagenGrafico, 'PNG', 15, 35, 180, 80);
+            startY = 120; // Empujamos la tabla para abajo
         } catch (e) {
             console.error("No se pudo exportar el gráfico al PDF", e);
         }

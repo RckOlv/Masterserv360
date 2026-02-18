@@ -135,35 +135,36 @@
     
     <div class="card bg-dark border-secondary mb-3">
         <div class="card-body">
-            <label class="text-white-50 mb-1">Buscar producto por Nombre:</label>
+            <label class="text-white-50 mb-1">Buscar producto para ver evolución:</label>
             <div class="d-flex gap-2">
-                <input type="text" 
-                       class="form-control bg-dark text-white border-secondary" 
-                       [(ngModel)]="busquedaProducto"
-                       (keyup.enter)="cargarCostos()" 
-                       placeholder="Ej: Aceite, Batería, Filtro...">
                 
-                <button class="btn btn-primary text-nowrap" (click)="cargarCostos()">
-                    <i class="bi bi-search"></i> Buscar
+                <input class="form-control bg-dark text-white border-secondary" 
+                       list="listaOpciones"
+                       [(ngModel)]="busquedaProducto"
+                       (change)="cargarCostos()" 
+                       placeholder="Escriba o seleccione un producto...">
+                <datalist id="listaOpciones">
+                    <option *ngFor="let prod of listaProductos" [value]="prod.nombre"></option>
+                </datalist>
+                
+                <button class="btn btn-outline-secondary text-nowrap" (click)="busquedaProducto=''; cargarCostos()">
+                    <i class="bi bi-x-circle"></i> Ver General
                 </button>
             </div>
             <small class="text-white-50 mt-2 d-block">
-                <i class="bi bi-info-circle"></i> Escribe y presiona Enter. Deja vacío para ver los últimos movimientos generales.
+                <i class="bi bi-info-circle"></i> Seleccione un producto para ver su gráfico de inflación. Borre la búsqueda para ver el historial general.
             </small>
         </div>
     </div>
 
-    <div class="card bg-dark border-secondary mb-3 shadow-sm" *ngIf="historialCostos.length > 1">
+    <div class="card bg-dark border-secondary mb-3 shadow-sm" *ngIf="busquedaProducto && historialCostos.length > 1">
         <div class="card-header bg-transparent border-secondary text-white">
-            <i class="bi bi-graph-up"></i> Evolución de Precio (Tendencia)
+            <i class="bi bi-graph-up"></i> Evolución de Precio: <strong>{{ busquedaProducto }}</strong>
         </div>
         <div class="card-body">
             <div class="chart-container" style="height: 300px;">
-                <canvas baseChart
-                        #myChart
-                        [data]="lineChartData"
-                        [options]="lineChartOptions"
-                        [type]="'line'">
+                <canvas baseChart #myChart
+                        [data]="lineChartData" [options]="lineChartOptions" [type]="'line'">
                 </canvas>
             </div>
         </div>
