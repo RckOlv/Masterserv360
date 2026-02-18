@@ -119,14 +119,16 @@ List<ValorizacionInventarioDTO> obtenerValorizacionPorCategoria();
             COALESCE(p.precio_costo, 0) AS costoUnitario, 
             (p.stock_actual * COALESCE(p.precio_costo, 0)) AS capitalParado, 
             MAX(v.fecha_venta) AS ultimaVenta,
+            CAST(EXTRACT(DAY FROM (NOW() - COALESCE(MAX(v.fecha_venta), '2000-01-01'))) AS INTEGER) AS diasSinVenta
         FROM producto p 
         LEFT JOIN detalle_venta dv ON p.id = dv.producto_id 
         LEFT JOIN venta v ON dv.venta_id = v.id 
         JOIN categoria c ON p.categoria_id = c.id
-        WHERE p.stock_actual > 0 
-        AND p.estado = 'ACTIVO'
+        WHERE p.stock_actual > 0 AND p.estado = 'ACTIVO'
         GROUP BY p.id, p.nombre, c.nombre, p.stock_actual, p.precio_costo
+        HAVING MAX(v.fecha_venta) IS NULL OR MAX(v.fecha_venta) < :fechaLimite
         ORDER BY capitalParado DESC
         """, nativeQuery = true)
-    List<StockInmovilizadoDTO> obtenerStockInmovilizado(@Param("fechaLimite") LocalDateTime fechaLimite);
+    List<StockInmovilizadoDTO> obtenerStockInmovilizado(@Param("fechaLimite") java.time.LocalDateTime fechaLimite);
+
 }
