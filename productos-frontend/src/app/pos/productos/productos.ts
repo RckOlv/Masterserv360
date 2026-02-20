@@ -80,7 +80,7 @@ export default class ProductosComponent implements OnInit {
     this.isLoadingCategorias = true;
     this.categoriaService.listarCategorias('ACTIVO').subscribe({
       next: (categorias) => {
-        this.categorias =;
+        this.categorias = categorias;
         this.isLoadingCategorias = false;
       },
       error: (err) => {
