@@ -1,6 +1,7 @@
 package com.masterserv.productos.service;
 
 import com.masterserv.productos.dto.reporte.StockInmovilizadoDTO;
+import com.masterserv.productos.dto.reporte.StockInmovilizadoResponse;
 import com.masterserv.productos.dto.reporte.ValorizacionInventarioDTO;
 import com.masterserv.productos.dto.reporte.VariacionCostoDTO;
 import com.masterserv.productos.enums.EstadoPedido;
@@ -12,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ReporteAvanzadoService {
@@ -52,4 +55,24 @@ public class ReporteAvanzadoService {
     	// Busca coincidencias parciales (ej: "Bat" encuentra "Batería")
     	return detallePedidoRepository.buscarHistorialPorNombre(nombre, EstadoPedido.COMPLETADO);
 	}
+
+    @Transactional(readOnly = true)
+    public List<StockInmovilizadoResponse> obtenerStockInmovilizado(int diasMinimos) {
+        LocalDateTime fechaLimite = LocalDateTime.now().minusDays(diasMinimos);
+        
+        // 1. Obtenemos los datos puros de la BD (sin los días calculados)
+        List<StockInmovilizadoDTO> resultadosBd = productoRepository.obtenerStockInmovilizado(fechaLimite);
+
+        // 2. Calculamos los días exactos usando Java
+        return resultadosBd.stream().map(dto -> {
+            Integer diasSinVenta = 9999; // Por defecto (si nunca se vendió)
+            
+            if (dto.getUltimaVenta() != null) {
+                // Restamos HOY menos la Fecha de Última Venta
+                diasSinVenta = (int) ChronoUnit.DAYS.between(dto.getUltimaVenta(), LocalDateTime.now());
+            }
+            
+            return new StockInmovilizadoResponse(dto, diasSinVenta);
+        }).collect(Collectors.toList());
+    }
 }

@@ -10,5 +10,4 @@ public interface StockInmovilizadoDTO {
     BigDecimal getCostoUnitario();
     BigDecimal getCapitalParado();
     LocalDateTime getUltimaVenta();
-    Integer getDiasSinVenta();
 }

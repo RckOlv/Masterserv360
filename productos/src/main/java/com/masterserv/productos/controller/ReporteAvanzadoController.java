@@ -1,6 +1,7 @@
 package com.masterserv.productos.controller;
 
 import com.masterserv.productos.dto.reporte.StockInmovilizadoDTO;
+import com.masterserv.productos.dto.reporte.StockInmovilizadoResponse;
 import com.masterserv.productos.dto.reporte.ValorizacionInventarioDTO;
 import com.masterserv.productos.dto.reporte.VariacionCostoDTO;
 import com.masterserv.productos.service.ReporteAvanzadoService;
@@ -24,9 +25,9 @@ public class ReporteAvanzadoController {
 
     // GET /api/reportes-avanzados/inmovilizado?dias=90
     @GetMapping("/inmovilizado")
-    public ResponseEntity<List<StockInmovilizadoDTO>> getStockInmovilizado(
-            @RequestParam(defaultValue = "90") int dias) { // Default 90 días
-        return ResponseEntity.ok(reporteService.getStockInmovilizado(dias));
+    public ResponseEntity<List<StockInmovilizadoResponse>> getStockInmovilizado(
+            @RequestParam(defaultValue = "90") int dias) {
+        return ResponseEntity.ok(reporteService.obtenerStockInmovilizado(dias));
     }
 
     
