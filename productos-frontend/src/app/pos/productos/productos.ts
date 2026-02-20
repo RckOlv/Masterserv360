@@ -13,7 +13,11 @@ import { mostrarToast } from '../../utils/toast';
 import { Page } from '../../models/page.model'; 
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
-// Necesario para el modal de ajuste de stock
+// 📄 Librerías para PDF y Excel
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+
 declare var bootstrap: any;
 
 @Component({
@@ -25,7 +29,7 @@ declare var bootstrap: any;
     ReactiveFormsModule,
     FormsModule, 
     HasPermissionDirective,
-    RouterLink // Importante para la navegación
+    RouterLink
   ],
   templateUrl: './productos.html',
   styleUrls: ['./productos.css']
@@ -36,7 +40,6 @@ export default class ProductosComponent implements OnInit {
   private categoriaService = inject(CategoriaService);
   private fb = inject(FormBuilder);
 
-  // --- Paginación y Datos ---
   public productosPage: Page<ProductoDTO> | null = null;
   public categorias: CategoriaDTO[] = [];
   public filtroForm: FormGroup;
@@ -44,19 +47,16 @@ export default class ProductosComponent implements OnInit {
   public currentPage = 0;
   public pageSize = 10;
   
-  // --- Estado UI ---
   public errorMessage: string | null = null;
   public isLoading = false;
   public isLoadingCategorias = false;
 
-  // --- AJUSTE DE STOCK (MODAL) ---
   public ajusteForm: FormGroup;
   public productoAjustar: ProductoDTO | null = null;
   public isSavingAjuste = false;
   private modalAjusteInstance: any;
 
   constructor() {
-    // Formulario de Filtros
     this.filtroForm = this.fb.group({
       nombre: [''],
       codigo: [''],
@@ -65,7 +65,6 @@ export default class ProductosComponent implements OnInit {
       estadoStock: ['TODOS'] 
     });
 
-    // Formulario para Ajuste Manual de Stock
     this.ajusteForm = this.fb.group({
         cantidad: [0, [Validators.required]], 
         motivo: ['', [Validators.required, Validators.minLength(5)]]
@@ -81,7 +80,7 @@ export default class ProductosComponent implements OnInit {
     this.isLoadingCategorias = true;
     this.categoriaService.listarCategorias('ACTIVO').subscribe({
       next: (categorias) => {
-        this.categorias = categorias;
+        this.categorias =;
         this.isLoadingCategorias = false;
       },
       error: (err) => {
@@ -97,7 +96,6 @@ export default class ProductosComponent implements OnInit {
     this.errorMessage = null;
 
     const formValues = this.filtroForm.value;
-    
     const filtro: ProductoFiltroDTO = {
         nombre: formValues.nombre,
         codigo: formValues.codigo,
@@ -121,8 +119,6 @@ export default class ProductosComponent implements OnInit {
     });
   }
 
-  // --- FILTROS Y PAGINACIÓN ---
-
   aplicarFiltros(): void {
     this.currentPage = 0; 
     this.cargarProductos();
@@ -130,27 +126,17 @@ export default class ProductosComponent implements OnInit {
 
   limpiarFiltros(): void {
     this.filtroForm.reset({
-      nombre: '',
-      codigo: '',
-      categoriaId: null,
-      estado: null,
-      estadoStock: 'TODOS'
+      nombre: '', codigo: '', categoriaId: null, estado: null, estadoStock: 'TODOS'
     });
     this.aplicarFiltros();
   }
 
   paginaAnterior(): void {
-    if (this.productosPage && !this.productosPage.first) {
-      this.currentPage--;
-      this.cargarProductos();
-    }
+    if (this.productosPage && !this.productosPage.first) { this.currentPage--; this.cargarProductos(); }
   }
 
   paginaSiguiente(): void {
-    if (this.productosPage && !this.productosPage.last) {
-      this.currentPage++;
-      this.cargarProductos();
-    }
+    if (this.productosPage && !this.productosPage.last) { this.currentPage++; this.cargarProductos(); }
   }
 
   irAPagina(pageNumber: number): void {
@@ -172,14 +158,9 @@ export default class ProductosComponent implements OnInit {
       return range;
   }
 
-  // ===========================
-  //   MÉTODOS AJUSTE STOCK (MODAL)
-  // ===========================
-
   abrirModalAjuste(producto: ProductoDTO) {
     this.productoAjustar = producto;
     this.ajusteForm.reset({ cantidad: 0, motivo: '' });
-    
     const modalEl = document.getElementById('modalAjusteStock');
     if (modalEl) {
       this.modalAjusteInstance = new bootstrap.Modal(modalEl);
@@ -188,75 +169,150 @@ export default class ProductosComponent implements OnInit {
   }
 
   confirmarAjuste() {
-    if (this.ajusteForm.invalid || !this.productoAjustar?.id) {
-        this.ajusteForm.markAllAsTouched();
-        return;
-    }
+    if (this.ajusteForm.invalid || !this.productoAjustar?.id) { this.ajusteForm.markAllAsTouched(); return; }
 
     const cantidad = this.ajusteForm.get('cantidad')?.value;
     const motivo = this.ajusteForm.get('motivo')?.value;
 
-    if (cantidad === 0) {
-        mostrarToast('La cantidad debe ser distinta de 0.', 'warning');
-        return;
-    }
+    if (cantidad === 0) { mostrarToast('La cantidad debe ser distinta de 0.', 'warning'); return; }
 
     this.isSavingAjuste = true;
 
-    // YA NO NECESITAMOS ENVIAR usuarioId NI tipoMovimiento
-    // El backend se encarga de eso por seguridad.
-    this.productoService.ajustarStock({
-        productoId: this.productoAjustar.id!, 
-        cantidad: cantidad,
-        motivo: motivo
-    }).subscribe({
+    this.productoService.ajustarStock({ productoId: this.productoAjustar.id!, cantidad, motivo }).subscribe({
         next: () => {
             mostrarToast('Stock ajustado correctamente.', 'success');
             if (this.modalAjusteInstance) this.modalAjusteInstance.hide();
             this.isSavingAjuste = false;
             this.cargarProductos(); 
         },
-        error: (err) => {
-            console.error(err);
-            mostrarToast('Error al ajustar stock.', 'danger');
-            this.isSavingAjuste = false;
-        }
+        error: (err) => { console.error(err); mostrarToast('Error al ajustar stock.', 'danger'); this.isSavingAjuste = false; }
     });
   }
 
-  // ===========================
-  //   OTROS MÉTODOS
-  // ===========================
-
   eliminarProducto(id: number | undefined): void {
     if (!id) return;
-
     if (confirm(`¿Estás seguro de que deseas eliminar este producto?`)) {
       this.isLoading = true;
       this.errorMessage = null;
 
       this.productoService.eliminarProducto(id).subscribe({
-        next: () => {
-          mostrarToast('Producto eliminado exitosamente.', 'success');
-          this.cargarProductos();
-        },
-        error: (err: HttpErrorResponse) => {
-          console.error('Error al eliminar producto:', err);
-          this.handleError(err, 'eliminar');
-          this.isLoading = false;
-        }
+        next: () => { mostrarToast('Producto eliminado exitosamente.', 'success'); this.cargarProductos(); },
+        error: (err: HttpErrorResponse) => { console.error('Error al eliminar producto:', err); this.handleError(err, 'eliminar'); this.isLoading = false; }
       });
     }
   }
 
   private handleError(err: HttpErrorResponse, context: string) {
-    if (err.status === 403) {
-      this.errorMessage = 'Acción no permitida: No tiene permisos.';
-    } else if (err.status === 500) {
-      this.errorMessage = 'Error interno en el servidor.';
-    } else {
-      this.errorMessage = err.error?.message || `Error al ${context} el producto.`;
-    }
+    if (err.status === 403) this.errorMessage = 'Acción no permitida: No tiene permisos.';
+    else if (err.status === 500) this.errorMessage = 'Error interno en el servidor.';
+    else this.errorMessage = err.error?.message || `Error al ${context} el producto.`;
     mostrarToast(this.errorMessage!, 'danger');
+  }
+
+  // ==========================================
+  // 📥 MÉTODOS DE EXPORTACIÓN (Catálogo)
+  // ==========================================
+
+  private obtenerTodosParaExportar(callback: (productos: ProductoDTO[]) => void) {
+    this.isLoading = true;
+    const formValues = this.filtroForm.value;
+    const filtro: ProductoFiltroDTO = {
+        nombre: formValues.nombre, codigo: formValues.codigo, categoriaId: formValues.categoriaId,
+        estado: formValues.estado, estadoStock: formValues.estadoStock, conStock: null, precioMax: null
+    };
+
+    // Pedimos 10,000 productos para asegurarnos de traer todo el catálogo
+    this.productoService.filtrarProductos(filtro, 0, 10000).subscribe({
+      next: (page) => {
+        this.isLoading = false;
+        callback(page.content);
+      },
+      error: (err) => {
+        this.isLoading = false;
+        mostrarToast('Error al obtener datos para exportar.', 'danger');
+      }
+    });
+  }
+
+  exportarCatalogoPDF() {
+    this.obtenerTodosParaExportar((productos) => {
+        const doc = new jsPDF();
+        
+        // ✅ 1. Obtenemos Fecha, Hora y Usuario
+        const fechaHora = new Date().toLocaleString('es-AR'); 
+        const usuario = localStorage.getItem('username') || localStorage.getItem('email') || 'Administrador';
+
+        // ✅ 2. ENCABEZADO PRINCIPAL
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Catálogo de Productos', 14, 20);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generado por: ${usuario}`, 14, 28);
+        doc.text(`Fecha y Hora: ${fechaHora}`, 14, 34);
+        doc.text(`Total de artículos: ${productos.length}`, 14, 40);
+
+        // ✅ 3. TABLA DE DATOS
+        autoTable(doc, {
+            startY: 45, 
+            head: [['Código', 'Nombre', 'Categoría', 'Stock', 'Precio ($)']],
+            body: productos.map(p => [
+                p.codigo || 'N/A',
+                p.nombre,
+                p.categoriaNombre || 'Sin Categoría',
+                p.stockActual.toString(),
+                `$ ${p.precioVenta.toLocaleString('es-AR')}`
+            ]),
+            theme: 'striped',
+            headStyles: { fillColor: [33, 37, 41] }, 
+        });
+
+        // ✅ 4. MAGIA DE PAGINACIÓN Y PIE DE PÁGINA (Con el fix de ts)
+        const pageCount = (doc as any).internal.getNumberOfPages();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(9);
+            doc.setTextColor(150); // Color gris claro
+            
+            // Línea separadora al final de la página
+            doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
+            
+            // Texto a la izquierda
+            doc.text(`Sistema POS Masterserv - Auditoría`, 14, pageHeight - 10);
+            
+            // Texto a la derecha (Página X de Y)
+            doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
+        }
+
+        // ✅ 5. GUARDAR
+        const nombreArchivo = `Catalogo_${fechaHora.replace(/[\/:, ]/g, '-')}.pdf`;
+        doc.save(nombreArchivo);
+    });
+  }
+
+  exportarCatalogoExcel() {
+    this.obtenerTodosParaExportar((productos) => {
+        const fecha = new Date().toLocaleDateString().replace(/\//g, '-');
+        
+        const data = productos.map(p => ({
+            'Código': p.codigo || 'N/A',
+            'Nombre del Producto': p.nombre,
+            'Categoría': p.categoriaNombre || 'Sin Categoría',
+            'Stock Actual': p.stockActual,
+            'Precio de Venta ($)': p.precioVenta,
+            'Costo ($)': p.precioCosto || 0,
+            'Estado': p.estado
+        }));
+
+        const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
+        const wb: XLSX.WorkBook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Catálogo');
+
+        XLSX.writeFile(wb, `Catalogo_Productos_${fecha}.xlsx`);
+    });
   }
 }

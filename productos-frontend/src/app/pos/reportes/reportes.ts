@@ -213,12 +213,16 @@ export class ReportesComponent implements OnInit {
   
   exportarPDF() {
     const doc = new jsPDF();
-    const fecha = new Date().toLocaleDateString();
-    const auditoria = `Generado por: ${this.usuarioActual} | Fecha: ${fecha}`;
+    
+    // ✅ 1. Fecha, hora y usuario
+    const fechaHora = new Date().toLocaleString('es-AR');
+    const auditoria = `Generado por: ${this.usuarioActual} | Fecha y Hora: ${fechaHora}`;
 
+    // --- LÓGICA DE CADA PESTAÑA ---
     if (this.activeTab === 'valorizacion') {
+      doc.setFontSize(14); doc.setFont('helvetica', 'bold');
       doc.text('Reporte de Valorización de Inventario', 14, 20);
-      doc.setFontSize(10);
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
       doc.text(auditoria, 14, 28);
       doc.text(`Valor Total: $${this.totalInventario.toLocaleString('es-AR')}`, 14, 34);
       
@@ -227,12 +231,12 @@ export class ReportesComponent implements OnInit {
         head: [['Categoría', 'Unidades', 'Valor Total ($)', '% Total']],
         body: this.valorizacion.map(item => [ item.categoria, item.cantidadUnidades, `$ ${item.valorTotal.toLocaleString('es-AR')}`, ((item.valorTotal / this.totalInventario) * 100).toFixed(1) + ' %' ]),
       });
-      doc.save('valorizacion_inventario.pdf');
     }
 
-    if (this.activeTab === 'inmovilizado') {
+    else if (this.activeTab === 'inmovilizado') {
+      doc.setFontSize(14); doc.setFont('helvetica', 'bold');
       doc.text('Reporte de Stock Inmovilizado', 14, 20);
-      doc.setFontSize(10);
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
       doc.text(auditoria, 14, 28);
       doc.text(`Criterio: Sin movimientos hace más de ${this.diasInmovilizado} días`, 14, 34);
 
@@ -241,17 +245,19 @@ export class ReportesComponent implements OnInit {
         head: [['Producto', 'Categoría', 'Stock', 'Costo Unit.', 'Capital Parado', 'Días Quieto']],
         body: this.inmovilizado.map(item => [ item.nombre, item.categoria, item.stockActual, `$ ${item.costoUnitario.toLocaleString()}`, `$ ${item.capitalParado.toLocaleString()}`, item.diasSinVenta ]),
       });
-      doc.save('stock_inmovilizado.pdf');
     }
 
-    if (this.activeTab === 'costos') {
-      const titulo = this.busquedaProducto ? `Historial de Costos - Búsqueda: "${this.busquedaProducto}"` : 'Últimas Compras Generales';
+    else if (this.activeTab === 'costos') {
+      doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+      const titulo = this.busquedaProducto ? `Historial de Costos: "${this.busquedaProducto}"` : 'Últimas Compras Generales';
       doc.text(titulo, 14, 20);
-      doc.setFontSize(10);
+      
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
       doc.text(auditoria, 14, 28);
 
       let startY = 35;
 
+      // Pegar gráfico si existe
       if (this.chartRef && this.busquedaProducto && this.historialCostos.length > 1) {
         try {
             const canvas = this.chartRef.nativeElement as HTMLCanvasElement;
@@ -259,7 +265,6 @@ export class ReportesComponent implements OnInit {
             tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
             const ctx = tempCanvas.getContext('2d');
             if (ctx) { ctx.fillStyle = '#212529'; ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height); ctx.drawImage(canvas, 0, 0); }
-            
             doc.addImage(tempCanvas.toDataURL('image/png', 1.0), 'PNG', 15, 35, 180, 80);
             startY = 120;
         } catch (e) { console.error("Error al exportar el gráfico", e); }
@@ -267,10 +272,27 @@ export class ReportesComponent implements OnInit {
 
       autoTable(doc, {
         startY: startY,
-        head: [['Fecha', 'Producto', 'Proveedor', 'Orden #', 'Costo Pagado']],
-        body: this.historialCostos.map(item => [ new Date(item.fechaCompra).toLocaleDateString(), item.producto, item.proveedor, item.nroOrden, `$ ${item.costoPagado.toLocaleString('es-AR')}` ]),
+        head: [['Fecha Compra', 'Producto', 'Proveedor', 'Orden #', 'Costo Pagado']],
+        body: this.historialCostos.map(item => [ new Date(item.fechaCompra).toLocaleDateString('es-AR'), item.producto, item.proveedor, item.nroOrden, `$ ${item.costoPagado.toLocaleString('es-AR')}` ]),
       });
-      doc.save('historial_costos.pdf');
     }
+
+    // ✅ 4. MAGIA DE PAGINACIÓN Y PIE DE PÁGINA (Con el fix ts)
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(9);
+        doc.setTextColor(150);
+        doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
+        doc.text(`Sistema POS Masterserv - Auditoría`, 14, pageHeight - 10);
+        doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
+    }
+
+    // ✅ 5. GUARDAR
+    const nombreArchivo = `Reporte_${this.activeTab}_${fechaHora.replace(/[\/:, ]/g, '-')}.pdf`;
+    doc.save(nombreArchivo);
   }
 }
