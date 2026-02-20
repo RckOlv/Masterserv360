@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/caja")
+@RequestMapping("/caja")
 @CrossOrigin(origins = "*") // Ajusta los orígenes según tu seguridad
 public class CajaController {
 
