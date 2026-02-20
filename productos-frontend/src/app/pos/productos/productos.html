@@ -1,7 +1,7 @@
 <div class="productos-container">
   <div class="card masterserv-card">
     
-    <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center">
+    <div class="card-header masterserv-card-header d-flex justify-content-between align-items-center" style="position: relative; z-index: 1050;">
       <h4 class="masterserv-title">
         <i class="bi bi-box-seam me-2"></i>Gestión de Productos
       </h4>
@@ -12,7 +12,8 @@
           <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Plan de Contingencia">
             <i class="bi bi-download me-1"></i> Exportar Lista
           </button>
-          <ul class="dropdown-menu dropdown-menu-dark shadow">
+          
+          <ul class="dropdown-menu dropdown-menu-dark shadow" style="position: absolute; z-index: 9999;">
             <li><button class="dropdown-item" (click)="exportarCatalogoPDF()"><i class="bi bi-file-earmark-pdf text-danger me-2"></i>Descargar PDF (Para imprimir)</button></li>
             <li><button class="dropdown-item" (click)="exportarCatalogoExcel()"><i class="bi bi-file-earmark-excel text-success me-2"></i>Descargar Excel (Para celular)</button></li>
           </ul>
@@ -29,7 +30,7 @@
 
     <div class="card-body masterserv-card-body d-flex flex-column">
       
-      <form [formGroup]="filtroForm" (ngSubmit)="aplicarFiltros()" class="masterserv-filter p-3 mb-3 rounded border">
+      <form [formGroup]="filtroForm" (ngSubmit)="aplicarFiltros()" class="masterserv-filter p-3 mb-3 rounded border" style="position: relative; z-index: 1000;">
         <div class="row g-2 align-items-end">
           <div class="col-md-5">
             <label class="form-label form-label-sm masterserv-label">Nombre</label>
@@ -86,7 +87,7 @@
         </div>
       </form>
 
-      <div class="content-main flex-grow-1 d-flex flex-column">
+      <div class="content-main flex-grow-1 d-flex flex-column" style="position: relative; z-index: 10;">
         
         <div *ngIf="isLoading" class="loading-container flex-grow-1 d-flex align-items-center justify-content-center">
           <div class="spinner-border masterserv-spinner" role="status">
