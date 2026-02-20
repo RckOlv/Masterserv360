@@ -6,6 +6,7 @@ import com.masterserv.productos.dto.VentaDTO;
 import com.masterserv.productos.dto.VentaFiltroDTO;
 import com.masterserv.productos.dto.VentaResumenDTO;
 import com.masterserv.productos.entity.*;
+import com.masterserv.productos.entity.Caja; // ✅ Entidad de Caja
 import com.masterserv.productos.enums.EstadoCupon;
 import com.masterserv.productos.enums.EstadoVenta;
 import com.masterserv.productos.enums.TipoDescuento;
@@ -14,7 +15,8 @@ import com.masterserv.productos.exceptions.CuponNoValidoException;
 import com.masterserv.productos.mapper.VentaMapper;
 import com.masterserv.productos.repository.UsuarioRepository;
 import com.masterserv.productos.repository.VentaRepository;
-import com.masterserv.productos.repository.AuditoriaRepository; // ✅ Import corregido
+import com.masterserv.productos.repository.AuditoriaRepository;
+import com.masterserv.productos.repository.CajaRepository; // ✅ Repo de Caja
 import com.masterserv.productos.specification.VentaSpecification;
 
 import com.masterserv.productos.event.VentaRealizadaEvent;
@@ -64,7 +66,8 @@ public class VentaService {
     @Autowired private CuponService cuponService;
     @Autowired private CarritoService carritoService;
     @Autowired private ApplicationEventPublisher eventPublisher;
-    @Autowired private AuditoriaRepository auditoriaRepository; // ✅ Inyección de Auditoría
+    @Autowired private AuditoriaRepository auditoriaRepository; 
+    @Autowired private CajaRepository cajaRepository; // ✅ Inyección de Caja
     
     @Autowired private ProcesoAutomaticoService procesoAutomaticoService;
 
@@ -72,6 +75,10 @@ public class VentaService {
     public VentaDTO create(VentaDTO ventaDTO, String vendedorEmail) {
         Usuario vendedor = usuarioRepository.findByEmail(vendedorEmail)
                 .orElseThrow(() -> new RuntimeException("Vendedor no encontrado: " + vendedorEmail));
+
+        // ✅ 1) VERIFICACIÓN ESTRICTA: ¿TIENE LA CAJA ABIERTA?
+        Caja cajaAbierta = cajaRepository.findCajaAbiertaByUsuario(vendedor.getId())
+                .orElseThrow(() -> new RuntimeException("¡ALTO! No puedes vender. Debes abrir tu caja primero."));
 
         Usuario cliente = usuarioRepository.findById(ventaDTO.getClienteId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado: " + ventaDTO.getClienteId()));
@@ -83,8 +90,12 @@ public class VentaService {
         venta.setCliente(cliente);
         venta.setDetalles(new HashSet<>());
         venta.setMontoDescuento(null);
+        
+        // Asignamos el método de pago (si no viene, por defecto es EFECTIVO)
+        String metodoPago = ventaDTO.getMetodoPago() != null ? ventaDTO.getMetodoPago().toUpperCase() : "EFECTIVO";
+        venta.setMetodoPago(metodoPago); 
 
-        // 1) Validar Cupón
+        // 2) Validar Cupón
         Cupon cuponAplicado = null;
         if (ventaDTO.getCodigoCupon() != null && !ventaDTO.getCodigoCupon().isBlank()) {
             try {
@@ -96,7 +107,7 @@ public class VentaService {
             }
         }
 
-        // 2) Procesar Detalles y calcular Subtotal
+        // 3) Procesar Detalles y calcular Subtotal
         BigDecimal subtotal = BigDecimal.ZERO;
         Set<DetalleVenta> detallesVenta = new HashSet<>(); 
 
@@ -115,38 +126,50 @@ public class VentaService {
         
         venta.setDetalles(detallesVenta);
 
-        // 3) Calcular Descuento
+        // 4) Calcular Descuento
         BigDecimal descuentoTotal = calcularDescuento(cuponAplicado, subtotal, detallesVenta);
         
-        // 4) Calcular Total Final
-        venta.setTotalVenta(subtotal.subtract(descuentoTotal).max(BigDecimal.ZERO));
+        // 5) Calcular Total Final
+        BigDecimal totalFinal = subtotal.subtract(descuentoTotal).max(BigDecimal.ZERO);
+        venta.setTotalVenta(totalFinal);
 
-        // 5) Marcar Cupón como USADO
+        // ✅ 6) ACTUALIZAR LOS FONDOS DE LA CAJA EN TIEMPO REAL
+        if ("TARJETA".equals(metodoPago) || "DEBITO".equals(metodoPago) || "CREDITO".equals(metodoPago)) {
+            cajaAbierta.setVentasTarjeta(cajaAbierta.getVentasTarjeta().add(totalFinal));
+        } else if ("TRANSFERENCIA".equals(metodoPago)) {
+            cajaAbierta.setVentasTransferencia(cajaAbierta.getVentasTransferencia().add(totalFinal));
+        } else {
+            // Por defecto, si es efectivo o algo no reconocido, va al cajón físico
+            cajaAbierta.setVentasEfectivo(cajaAbierta.getVentasEfectivo().add(totalFinal));
+        }
+        cajaRepository.save(cajaAbierta); // Guardamos la plata en la caja
+
+        // 7) Marcar Cupón como USADO
         if (cuponAplicado != null) {
             cuponService.marcarCuponComoUsado(cuponAplicado, venta);
         }
 
-        // 6) Guardar venta
+        // 8) Guardar venta
         Venta ventaGuardada = ventaRepository.save(venta);
 
-        // 7) Registrar Movimientos de Stock (Esto ya dispara auditoría de producto)
+        // 9) Registrar Movimientos de Stock
         for (DetalleVenta det : ventaGuardada.getDetalles()) {
             registrarMovimientoStockSalida(ventaGuardada, det, vendedor);
         }
 
-        // 8) Asignar puntos
+        // 10) Asignar puntos
         puntosService.asignarPuntosPorVenta(ventaGuardada);
 
-        // 9) Vaciar carrito
+        // 11) Vaciar carrito
         carritoService.vaciarCarrito(vendedorEmail);
 
-        // 10) PUBLICAR EVENTO
+        // 12) PUBLICAR EVENTO
         eventPublisher.publishEvent(new VentaRealizadaEvent(this, ventaGuardada.getId()));
         
-        // 11) --- AUDITORÍA DE TRANSACCIÓN DE VENTA ---
+        // 13) AUDITORÍA DE TRANSACCIÓN DE VENTA
         registrarAuditoriaVenta(ventaGuardada, vendedor);
 
-        // 12) --- DISPARADOR INTELIGENTE REPOSICIÓN ---
+        // 14) DISPARADOR INTELIGENTE REPOSICIÓN
         new Thread(() -> {
             try {
                 Thread.sleep(2000); 
@@ -205,8 +228,6 @@ public class VentaService {
         }
     }
 
-    // --- MÉTODOS EXISTENTES CORREGIDOS ---
-
     private BigDecimal calcularDescuento(Cupon cupon, BigDecimal subtotal, Set<DetalleVenta> detalles) {
         if (cupon == null) return BigDecimal.ZERO;
         if (cupon.getTipoDescuento() == TipoDescuento.FIJO) {
@@ -252,6 +273,22 @@ public class VentaService {
         Usuario user = usuarioRepository.findByEmail(emailCancela)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + emailCancela));
 
+        // ✅ REVERTIR DINERO DE LA CAJA AL CANCELAR (Opcional pero recomendado)
+        Caja cajaAbierta = cajaRepository.findCajaAbiertaByUsuario(user.getId()).orElse(null);
+        if (cajaAbierta != null) {
+            String metodo = venta.getMetodoPago() != null ? venta.getMetodoPago().toUpperCase() : "EFECTIVO";
+            BigDecimal total = venta.getTotalVenta();
+            
+            if ("TARJETA".equals(metodo) || "DEBITO".equals(metodo) || "CREDITO".equals(metodo)) {
+                cajaAbierta.setVentasTarjeta(cajaAbierta.getVentasTarjeta().subtract(total));
+            } else if ("TRANSFERENCIA".equals(metodo)) {
+                cajaAbierta.setVentasTransferencia(cajaAbierta.getVentasTransferencia().subtract(total));
+            } else {
+                cajaAbierta.setVentasEfectivo(cajaAbierta.getVentasEfectivo().subtract(total));
+            }
+            cajaRepository.save(cajaAbierta);
+        }
+
         for (DetalleVenta det : venta.getDetalles()) {
             productoService.reponerStock(det.getProducto().getId(), det.getCantidad());
             registrarMovimientoStockReposicion(venta, det, user);
@@ -269,7 +306,7 @@ public class VentaService {
 
         Venta ventaCancelada = ventaRepository.save(venta);
         
-        // ✅ REGISTRO DE AUDITORÍA DE CANCELACIÓN
+        // REGISTRO DE AUDITORÍA DE CANCELACIÓN
         registrarAuditoriaCancelacion(ventaCancelada, user);
     }
 
@@ -358,6 +395,11 @@ public class VentaService {
             infoVenta.add(new Chunk("Nº Venta: " + venta.getId() + "\n", new Font(Font.HELVETICA, 14, Font.BOLD)));
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
             infoVenta.add("Fecha: " + venta.getFechaVenta().format(formatter) + "\n");
+            
+            // ✅ AGREGAMOS EL MÉTODO DE PAGO AL TICKET
+            String metodo = venta.getMetodoPago() != null ? venta.getMetodoPago() : "EFECTIVO";
+            infoVenta.add("Método de Pago: " + metodo + "\n");
+            
             infoVenta.add("Cliente: " + venta.getCliente().getNombre() + " " + venta.getCliente().getApellido() + "\n");
             if(venta.getCliente().getDocumento() != null) infoVenta.add("DNI/CUIT: " + venta.getCliente().getDocumento() + "\n");
             infoVenta.add("Atendido por: " + (venta.getVendedor() != null ? venta.getVendedor().getNombre() : "Sistema") + "\n");

@@ -32,6 +32,8 @@ public class VentaDTO {
     private String codigoCupon;      
     private BigDecimal montoDescuento; 
 
+    private String metodoPago;
+
     // --- Campos de Entrada (Para creación POST) ---
     // Nota: clienteId ya está definido arriba, así que Lombok genera un solo setClienteId para ambos usos.
 

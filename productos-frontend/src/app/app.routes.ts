@@ -130,6 +130,7 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'configuracion', component: ConfiguracionComponent, canActivate: [AuthGuard] },
       { path: 'reportes-avanzados', component: ReportesComponent, canActivate: [AuthGuard] },
+      { path: 'caja', loadComponent: () => import('./pos/caja/caja') },
     ]
   },
 

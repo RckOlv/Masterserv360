@@ -1,0 +1,151 @@
+<div class="container-fluid p-4 text-white">
+  
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold text-success"><i class="bi bi-safe2-fill"></i> Gestión de Caja</h2>
+  </div>
+
+  <div *ngIf="isLoading" class="text-center py-5">
+    <div class="spinner-border text-success" role="status"></div>
+    <p class="mt-2 text-white-50">Verificando estado de la caja...</p>
+  </div>
+
+  <div *ngIf="!isLoading && !cajaActual" class="row justify-content-center animate__animated animate__fadeIn">
+    <div class="col-md-6 col-lg-5">
+      <div class="card bg-dark border-secondary shadow-lg text-center p-4">
+        <i class="bi bi-lock-fill text-danger" style="font-size: 4rem;"></i>
+        <h3 class="text-white mt-3">La caja está cerrada</h3>
+        <p class="text-white-50">Debes abrir la caja para poder registrar ventas en el Punto de Venta.</p>
+        
+        <hr class="border-secondary">
+
+        <div class="form-group text-start mb-4">
+          <label class="text-white fw-bold mb-2">Fondo inicial de caja (Cambio) *</label>
+          <div class="input-group input-group-lg">
+            <span class="input-group-text bg-dark text-success border-secondary">$</span>
+            <input type="number" class="form-control bg-dark text-white border-secondary fw-bold" 
+                   [(ngModel)]="montoInicialInput" placeholder="Ej: 5000">
+          </div>
+        </div>
+
+        <button class="btn btn-success btn-lg w-100 fw-bold" (click)="abrirCaja()" [disabled]="isProcessing">
+          <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-2"></span>
+          <i class="bi bi-unlock-fill me-2" *ngIf="!isProcessing"></i> ABRIR CAJA AHORA
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!isLoading && cajaActual" class="animate__animated animate__fadeIn">
+    
+    <div class="alert alert-success border-0 shadow-sm d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h5 class="mb-0 fw-bold"><i class="bi bi-unlock-fill"></i> Turno Iniciado</h5>
+        <small>Abierta el: {{ cajaActual.fechaApertura | date:'dd/MM/yyyy HH:mm' }}</small>
+      </div>
+      <span class="badge bg-success fs-6 px-3 py-2">CAJA ABIERTA</span>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="card bg-dark border-secondary h-100">
+          <div class="card-body">
+            <h6 class="text-white-50 mb-1">Fondo Inicial</h6>
+            <h3 class="text-white mb-0">{{ cajaActual.montoInicial | currency:'ARS':'symbol':'1.0-0' }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card bg-dark border-secondary h-100 border-start border-success border-4">
+          <div class="card-body">
+            <h6 class="text-white-50 mb-1"><i class="bi bi-cash-stack text-success"></i> Ventas Efectivo</h6>
+            <h3 class="text-success mb-0">+ {{ cajaActual.ventasEfectivo | currency:'ARS':'symbol':'1.0-0' }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card bg-dark border-secondary h-100 border-start border-info border-4">
+          <div class="card-body">
+            <h6 class="text-white-50 mb-1"><i class="bi bi-credit-card-2-front text-info"></i> Ventas Tarjeta</h6>
+            <h3 class="text-info mb-0">+ {{ cajaActual.ventasTarjeta | currency:'ARS':'symbol':'1.0-0' }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card bg-dark border-secondary h-100 border-start border-warning border-4">
+          <div class="card-body">
+            <h6 class="text-white-50 mb-1"><i class="bi bi-phone text-warning"></i> Transferencias</h6>
+            <h3 class="text-warning mb-0">+ {{ cajaActual.ventasTransferencia | currency:'ARS':'symbol':'1.0-0' }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card" style="background: linear-gradient(45deg, #198754, #20c997); border: none;">
+          <div class="card-body text-center py-4">
+            <h5 class="text-white-50 fw-bold">EFECTIVO ESPERADO EN CAJÓN</h5>
+            <h1 class="display-4 text-white fw-bold my-2">{{ totalEsperadoEfectivo | currency:'ARS':'symbol':'1.0-0' }}</h1>
+            <small class="text-white-50">(Fondo Inicial + Ventas en Efectivo)</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 d-flex align-items-stretch">
+         <div class="card bg-dark border-secondary w-100 text-center d-flex flex-column justify-content-center">
+             <div class="card-body d-flex flex-column justify-content-center">
+                 <h4 class="text-white-50">Total Facturado Hoy</h4>
+                 <h2 class="text-white">{{ totalVentasDelDia | currency:'ARS':'symbol':'1.0-0' }}</h2>
+                 <button class="btn btn-danger btn-lg mt-3 fw-bold shadow" (click)="abrirModalCierre()">
+                    <i class="bi bi-box-arrow-right"></i> ARQUEO Y CIERRE DE CAJA
+                 </button>
+             </div>
+         </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="modal fade" id="modalCierreCaja" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark border-danger text-white">
+      <div class="modal-header border-secondary bg-danger text-white">
+        <h5 class="modal-title fw-bold"><i class="bi bi-calculator"></i> Arqueo de Caja</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        
+        <p class="text-white-50 mb-4 text-center">Cuenta los billetes y monedas que hay físicamente en el cajón e ingresa el monto total aquí abajo.</p>
+
+        <div class="form-group text-center">
+          <label class="h5 fw-bold text-warning mb-3">Dinero físico contado:</label>
+          <div class="input-group input-group-lg w-75 mx-auto shadow-lg">
+            <span class="input-group-text bg-dark text-warning border-secondary">$</span>
+            <input type="number" class="form-control bg-dark text-white border-secondary text-center fs-2 fw-bold" 
+                   [(ngModel)]="montoDeclaradoInput" placeholder="0">
+          </div>
+        </div>
+
+        <div class="alert alert-secondary mt-4 border-0 bg-opacity-10 bg-white">
+            <div class="d-flex justify-content-between mb-1"><span>Sistema espera:</span> <strong>{{ totalEsperadoEfectivo | currency:'ARS':'symbol':'1.0-0' }}</strong></div>
+            <div class="d-flex justify-content-between mb-1"><span>Tú declaraste:</span> <strong>{{ montoDeclaradoInput | currency:'ARS':'symbol':'1.0-0' }}</strong></div>
+            <hr class="border-secondary my-2">
+            
+            <div class="d-flex justify-content-between fw-bold" 
+                 [ngClass]="(montoDeclaradoInput - totalEsperadoEfectivo) < 0 ? 'text-danger' : ((montoDeclaradoInput - totalEsperadoEfectivo) > 0 ? 'text-warning' : 'text-success')">
+                <span>Diferencia:</span> 
+                <span>{{ (montoDeclaradoInput - totalEsperadoEfectivo) | currency:'ARS':'symbol':'1.0-0' }}</span>
+            </div>
+        </div>
+
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger fw-bold px-4" (click)="cerrarCaja()" [disabled]="isProcessing">
+          <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-2"></span> Confirmar Cierre
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

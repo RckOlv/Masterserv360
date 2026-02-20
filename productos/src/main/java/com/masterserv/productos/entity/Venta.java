@@ -38,6 +38,9 @@ public class Venta extends AuditableEntity {
     @Column(name = "total_venta", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalVenta;
 
+    @Column(name = "metodo_pago")
+    private String metodoPago;
+
     // --- Relaciones ---
 
     @ManyToOne(fetch = FetchType.LAZY)
