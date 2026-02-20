@@ -37,12 +37,22 @@
 
   <div *ngIf="!isLoading && cajaActual" class="animate__animated animate__fadeIn">
     
-    <div class="alert alert-success border-0 shadow-sm d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center p-3 mb-4 rounded shadow-sm" 
+         style="background-color: #1a1d20; border: 1px solid #333; border-left: 5px solid #198754;">
       <div>
-        <h5 class="mb-0 fw-bold"><i class="bi bi-unlock-fill"></i> Turno Iniciado</h5>
-        <small>Abierta el: {{ cajaActual.fechaApertura | date:'dd/MM/yyyy HH:mm' }}</small>
+        <h5 class="mb-1 fw-bold text-white">
+          <i class="bi bi-unlock-fill text-success me-2"></i>Turno Iniciado
+        </h5>
+        <small class="text-white-50">
+          Abierta el: <strong class="text-light">{{ cajaActual.fechaApertura | date:'dd/MM/yyyy HH:mm' }}</strong>
+        </small>
       </div>
-      <span class="badge bg-success fs-6 px-3 py-2">CAJA ABIERTA</span>
+      <div class="text-end">
+        <span class="badge bg-success text-white fs-6 px-3 py-2 shadow-sm d-block mb-1">
+          <i class="bi bi-check-circle me-1"></i> CAJA ABIERTA
+        </span>
+        <small class="text-white-50" style="font-size: 0.75rem;">Operativa para ventas</small>
+      </div>
     </div>
 
     <div class="row g-3 mb-4">
