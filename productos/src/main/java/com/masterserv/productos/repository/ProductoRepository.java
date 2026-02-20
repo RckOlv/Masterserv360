@@ -112,22 +112,22 @@ List<ValorizacionInventarioDTO> obtenerValorizacionPorCategoria();
 // y filtra si la fecha es anterior al límite o si NUNCA se vendió.
 @Query(value = """
         SELECT 
-            p.id AS productoId, 
-            p.nombre AS nombre, 
-            c.nombre AS categoria, 
-            p.stock_actual AS stockActual, 
-            COALESCE(p.precio_costo, 0) AS costoUnitario, 
-            (p.stock_actual * COALESCE(p.precio_costo, 0)) AS capitalParado, 
-            MAX(v.fecha_venta) AS ultimaVenta,
-            CAST(EXTRACT(DAY FROM (NOW() - COALESCE(MAX(v.fecha_venta), '2000-01-01'))) AS INTEGER) AS diasSinVenta
+            p.id AS "productoId", 
+            p.nombre AS "nombre", 
+            c.nombre AS "categoria", 
+            p.stock_actual AS "stockActual", 
+            COALESCE(p.precio_costo, 0) AS "costoUnitario", 
+            (p.stock_actual * COALESCE(p.precio_costo, 0)) AS "capitalParado", 
+            MAX(v.fecha_creacion) AS "ultimaVenta",
+            COALESCE(CAST(EXTRACT(DAY FROM (NOW() - MAX(v.fecha_creacion))) AS INTEGER), 9999) AS "diasSinVenta"
         FROM producto p 
         LEFT JOIN detalle_venta dv ON p.id = dv.producto_id 
         LEFT JOIN venta v ON dv.venta_id = v.id 
         JOIN categoria c ON p.categoria_id = c.id
         WHERE p.stock_actual > 0 AND p.estado = 'ACTIVO'
         GROUP BY p.id, p.nombre, c.nombre, p.stock_actual, p.precio_costo
-        HAVING MAX(v.fecha_venta) IS NULL OR MAX(v.fecha_venta) < :fechaLimite
-        ORDER BY capitalParado DESC
+        HAVING MAX(v.fecha_creacion) IS NULL OR MAX(v.fecha_creacion) < :fechaLimite
+        ORDER BY "capitalParado" DESC
         """, nativeQuery = true)
     List<StockInmovilizadoDTO> obtenerStockInmovilizado(@Param("fechaLimite") java.time.LocalDateTime fechaLimite);
 
