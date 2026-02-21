@@ -2,23 +2,30 @@ import Swal from 'sweetalert2';
 
 export function mostrarToast(mensaje: string, tipo: 'success' | 'danger' | 'warning' | 'info' = 'info') {
   
-  // SweetAlert usa 'error' en lugar de 'danger', así que hacemos la conversión automática
   const iconType = tipo === 'danger' ? 'error' : tipo;
 
   Swal.fire({
-    toast: true, // Esto hace que sea una alerta chiquita y no un cartel gigante en el medio
-    position: 'top-end', // Arriba a la derecha
+    toast: true,
+    position: 'top-end',
     icon: iconType,
     title: mensaje,
     showConfirmButton: false,
-    timer: 3000, // Desaparece en 3 segundos
-    timerProgressBar: true, // Le pone la barrita de tiempo abajo
-    background: '#1e1e1e', // Fondo oscuro modo Dark!
-    color: '#ffffff', // Letra blanca
+    timer: 3000,
+    timerProgressBar: true,
+    background: '#1e1e1e',
+    color: '#ffffff',
     showCloseButton: true,
     didOpen: (toast) => {
-      toast.addEventListener('mouseenter', Swal.stopTimer)
-      toast.addEventListener('mouseleave', Swal.resumeTimer)
+      toast.addEventListener('mouseenter', Swal.stopTimer);
+      toast.addEventListener('mouseleave', Swal.resumeTimer);
+      
+      // 🔥 EL GOLPE DE GRACIA 🔥
+      // Agarramos el contenedor de la alerta y le inyectamos el z-index máximo directo en el HTML
+      const container = toast.parentElement;
+      if (container) {
+        container.style.setProperty('z-index', '2147483647', 'important');
+        container.style.setProperty('pointer-events', 'auto', 'important');
+      }
     }
   });
 }
