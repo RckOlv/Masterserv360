@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router'; // ✅ Agregado RouterModule
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 
@@ -11,7 +11,8 @@ import { UsuarioService } from '../../service/usuario.service';
 import { ProductoService } from '../../service/producto.service';
 import { RolService } from '../../service/rol.service';
 import { ClienteService } from '../../service/cliente.service';
-import { PuntosService } from '../../service/puntos.service'; // <--- (1) NUEVO
+import { PuntosService } from '../../service/puntos.service';
+import { CajaService } from '../../service/caja.service'; // ✅ NUEVO SERVICIO
 
 // --- Modelos ---
 import { CarritoDTO } from '../../models/carrito.model';
@@ -25,7 +26,7 @@ import { AddItemCarritoDTO } from '../../models/add-item-carrito.model';
 import { Page } from '../../models/page.model';
 import { CuponDTO } from '../../models/cupon.model';
 import { ClienteDTO } from '../../models/cliente.dto';
-import { ClienteFidelidadDTO } from '../../models/cliente-fidelidad.dto'; // <--- (2) NUEVO
+import { ClienteFidelidadDTO } from '../../models/cliente-fidelidad.dto';
 
 // --- RxJS y ng-select ---
 import { NgSelectModule } from '@ng-select/ng-select';
@@ -41,7 +42,7 @@ declare var bootstrap: any;
 @Component({
   selector: 'app-punto-venta',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NgSelectModule],
+  imports: [CommonModule, ReactiveFormsModule, NgSelectModule, RouterModule], // ✅ Añadido RouterModule
   templateUrl: './punto-venta.html',
   styleUrls: ['./punto-venta.css']
 })
@@ -53,7 +54,8 @@ export default class PuntoVentaComponent implements OnInit {
   private productoService = inject(ProductoService);
   private rolService = inject(RolService);
   private clienteService = inject(ClienteService);
-  private puntosService = inject(PuntosService); // <--- (3) INYECTAR
+  private puntosService = inject(PuntosService);
+  private cajaService = inject(CajaService); // ✅ INYECTADO
   private router = inject(Router);
   private fb = inject(FormBuilder);
 
@@ -61,6 +63,11 @@ export default class PuntoVentaComponent implements OnInit {
   public isLoadingCarrito = true;
   public isFinalizandoVenta = false;
   public errorMessage: string | null = null;
+
+  // --- VARIABLES DE CAJA ---
+  public isCajaAbierta = false;
+  public cargandoCaja = true;
+  public usuarioId: number = 0;
 
   public cuponAplicado: CuponDTO | null = null;
   public montoDescuento: number = 0;
@@ -122,6 +129,7 @@ export default class PuntoVentaComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.verificarEstadoCaja(); // ✅ LÓGICA DE CAJA
     this.cargarCarrito();
     this.initProductoSearch();
     this.initClienteSearch();
@@ -138,6 +146,34 @@ export default class PuntoVentaComponent implements OnInit {
             this.calcularTotales();
         }
     });
+  }
+
+  // ✅ VERIFICAR CAJA AL INICIAR
+  verificarEstadoCaja() {
+    this.cargandoCaja = true;
+    const token = localStorage.getItem('jwt_token');
+    if (token) {
+      try {
+        const payload = token.split('.')[1];
+        const datosUsuario = JSON.parse(atob(payload));
+        this.usuarioId = datosUsuario.id;
+
+        this.cajaService.verificarCajaAbierta(this.usuarioId).subscribe({
+          next: (caja) => {
+            this.isCajaAbierta = !!caja;
+            this.cargandoCaja = false;
+          },
+          error: () => {
+            this.isCajaAbierta = false;
+            this.cargandoCaja = false;
+          }
+        });
+      } catch (e) {
+        this.cargandoCaja = false;
+      }
+    } else {
+        this.cargandoCaja = false;
+    }
   }
 
   // --- CARGAR DATOS FIDELIZACIÓN ---
@@ -441,14 +477,9 @@ export default class PuntoVentaComponent implements OnInit {
           map((page: Page<ProductoDTO>) => {
             const productos = page.content;
             // ---------- AJUSTE DE STOCK SEGÚN CARRITO ACTUAL ----------
-            // Recorremos los productos encontrados
             return productos.map(prod => {
-              // Buscamos si este producto ya está en el carrito actual
               const itemEnCarrito = this.carrito?.items?.find(item => item.productoId === prod.id);
-              
               if (itemEnCarrito) {
-                // Si existe, restamos la cantidad del carrito al stock que viene de BD
-                // (Aseguramos que no sea negativo visualmente con Math.max)
                 prod.stockActual = Math.max(0, prod.stockActual - itemEnCarrito.cantidad);
               }
               return prod;
@@ -466,6 +497,12 @@ export default class PuntoVentaComponent implements OnInit {
   }
 
   agregarAlCarrito(): void {
+    // ✅ VALIDACIÓN DE CAJA AL AGREGAR
+    if (!this.isCajaAbierta) {
+        mostrarToast('Debes iniciar tu turno de caja primero.', 'danger');
+        return;
+    }
+
     this.productoSearchForm.markAllAsTouched();
     this.errorMessage = null;
 
@@ -599,6 +636,12 @@ export default class PuntoVentaComponent implements OnInit {
   }
 
   finalizarVenta(): void {
+    // ✅ VALIDACIÓN DE CAJA AL FINALIZAR
+    if (!this.isCajaAbierta) {
+        mostrarToast('Venta bloqueada: Debes abrir la caja primero.', 'danger');
+        return;
+    }
+
     this.clienteForm.markAllAsTouched();
 
     if (!this.carrito?.items?.length) {

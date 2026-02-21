@@ -1,11 +1,12 @@
-package com.masterserv.productos.service; // Ajusta el paquete
+package com.masterserv.productos.service;
 
 import com.masterserv.productos.dto.AbrirCajaDTO;
 import com.masterserv.productos.dto.CerrarCajaDTO;
+import com.masterserv.productos.dto.RetiroCajaDTO; // ✅ Importamos el nuevo DTO
 import com.masterserv.productos.entity.Caja;
-import com.masterserv.productos.entity.Usuario; // Asegúrate de importar tu entidad
+import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.repository.CajaRepository;
-import com.masterserv.productos.repository.UsuarioRepository; // Necesitas el repo de usuarios
+import com.masterserv.productos.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,9 @@ public class CajaService {
         nuevaCaja.setUsuario(cajero);
         nuevaCaja.setMontoInicial(dto.getMontoInicial());
         
+        // Inicializamos las extracciones en CERO para evitar errores matemáticos
+        nuevaCaja.setExtracciones(BigDecimal.ZERO);
+        
         return cajaRepository.save(nuevaCaja);
     }
 
@@ -59,15 +63,37 @@ public class CajaService {
         caja.setEstado("CERRADA");
         caja.setMontoDeclarado(dto.getMontoDeclarado());
 
-        // EL GRAN CÁLCULO DEL ARQUEO:
-        // Cuánto debería haber: Monto Inicial + Ventas en Efectivo
-        BigDecimal totalEsperadoCajon = caja.getMontoInicial().add(caja.getVentasEfectivo());
+        // EL GRAN CÁLCULO DEL ARQUEO (AHORA CON RETIROS):
+        // Cuánto debería haber: Monto Inicial + Ventas en Efectivo - Extracciones
+        BigDecimal extracciones = caja.getExtracciones() != null ? caja.getExtracciones() : BigDecimal.ZERO;
+        
+        BigDecimal totalEsperadoCajon = caja.getMontoInicial()
+                .add(caja.getVentasEfectivo())
+                .subtract(extracciones); // ✅ RESTAMOS LO QUE SACARON PARA GALLETITAS
         
         // Diferencia = Lo que el cajero declara que hay - Lo que el sistema dice que debería haber
-        // Si da negativo, FALTÓ plata. Si da positivo, SOBRÓ plata.
         BigDecimal diferencia = dto.getMontoDeclarado().subtract(totalEsperadoCajon);
         caja.setDiferencia(diferencia);
 
+        return cajaRepository.save(caja);
+    }
+
+    // 4. RETIRAR DINERO PARA GASTOS VARIOS (Sangría/Extracción)
+    @Transactional
+    public Caja registrarRetiro(RetiroCajaDTO dto) {
+        Caja caja = cajaRepository.findById(dto.getCajaId())
+                .orElseThrow(() -> new RuntimeException("Caja no encontrada"));
+
+        if ("CERRADA".equals(caja.getEstado())) {
+            throw new RuntimeException("No puedes sacar dinero de una caja cerrada.");
+        }
+
+        // Validación de seguridad para que la suma no explote si es null
+        BigDecimal extraccionActual = caja.getExtracciones() != null ? caja.getExtracciones() : BigDecimal.ZERO;
+        
+        // Le sumamos el nuevo retiro al acumulador total de la caja
+        caja.setExtracciones(extraccionActual.add(dto.getMonto()));
+        
         return cajaRepository.save(caja);
     }
 }

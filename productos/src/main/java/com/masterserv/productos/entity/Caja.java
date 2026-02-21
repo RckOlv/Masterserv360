@@ -48,6 +48,9 @@ public class Caja {
     @Column(nullable = false)
     private String estado; // "ABIERTA" o "CERRADA"
 
+	@Column(name = "extracciones")
+    private BigDecimal extracciones = BigDecimal.ZERO;
+
     @PrePersist
     public void prePersist() {
         if (this.fechaApertura == null) {

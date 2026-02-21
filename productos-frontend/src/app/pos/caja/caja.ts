@@ -12,11 +12,11 @@ declare var bootstrap: any;
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './caja.html',
-  styleUrls: ['./caja.css'] // Si no usas CSS propio, puedes borrar esta línea
+  styleUrls: ['./caja.css']
 })
 export default class CajaComponent implements OnInit {
   private cajaService = inject(CajaService);
-  private authService = inject(AuthService); // Asumo que tienes un servicio para sacar el ID del usuario
+  private authService = inject(AuthService);
 
   cajaActual: Caja | null = null;
   isLoading = true;
@@ -25,29 +25,28 @@ export default class CajaComponent implements OnInit {
   // Formularios
   montoInicialInput: number = 0;
   montoDeclaradoInput: number = 0;
+  
+  // Formulario de Retiro (NUEVO)
+  montoRetiroInput: number = 0;
+  motivoRetiroInput: string = '';
+  
   isProcessing = false;
+  isRetiring = false;
 
   ngOnInit() {
     this.obtenerUsuarioYCaja();
   }
 
   obtenerUsuarioYCaja() {
-    // 1. Buscamos el token en el LocalStorage
     const token = localStorage.getItem('jwt_token');
-
     if (token) {
       try {
-        // 2. Un JWT tiene 3 partes separadas por puntos. Agarramos la del medio (payload)
         const payload = token.split('.')[1];
-        
-        // 3. Desencriptamos de Base64 a texto y lo convertimos en un Objeto JSON
         const datosUsuario = JSON.parse(atob(payload));
-        
-        // 4. ¡Atrapamos el ID!
         this.usuarioId = datosUsuario.id;
 
         if (this.usuarioId) {
-          this.cargarCaja(); // Ahora que tenemos el ID, vamos a ver si tiene la caja abierta
+          this.cargarCaja();
         } else {
           mostrarToast('Error: El token no contiene un ID de usuario.', 'danger');
           this.isLoading = false;
@@ -89,11 +88,48 @@ export default class CajaComponent implements OnInit {
         this.cajaActual = cajaAbierta;
         this.montoInicialInput = 0;
         this.isProcessing = false;
-        mostrarToast('¡Caja abierta con éxito! Ya puedes vender.', 'success');
+        mostrarToast('¡Caja abierta con éxito!', 'success');
       },
       error: (err) => {
         this.isProcessing = false;
         mostrarToast(err.error?.message || 'Error al abrir la caja.', 'danger');
+      }
+    });
+  }
+
+  // Lógica de Retiro/Extracción (NUEVO)
+  abrirModalRetiro() {
+    this.montoRetiroInput = 0;
+    this.motivoRetiroInput = '';
+    const modalEl = document.getElementById('modalRetiroCaja');
+    if (modalEl) {
+      new bootstrap.Modal(modalEl).show();
+    }
+  }
+
+  registrarRetiro() {
+    if (this.montoRetiroInput <= 0) {
+      mostrarToast('Ingresa un monto válido.', 'warning');
+      return;
+    }
+    if (!this.motivoRetiroInput.trim()) {
+      mostrarToast('Debes indicar el motivo del gasto.', 'warning');
+      return;
+    }
+    if (!this.cajaActual) return;
+
+    this.isRetiring = true;
+    this.cajaService.registrarRetiro(this.cajaActual.id, this.montoRetiroInput, this.motivoRetiroInput).subscribe({
+      next: (cajaActualizada) => {
+        this.cajaActual = cajaActualizada;
+        this.isRetiring = false;
+        const modalEl = document.getElementById('modalRetiroCaja');
+        if (modalEl) { bootstrap.Modal.getInstance(modalEl)?.hide(); }
+        mostrarToast('Retiro registrado correctamente.', 'success');
+      },
+      error: (err) => {
+        this.isRetiring = false;
+        mostrarToast('Error al registrar el retiro.', 'danger');
       }
     });
   }
@@ -108,30 +144,18 @@ export default class CajaComponent implements OnInit {
 
   cerrarCaja() {
     if (!this.cajaActual) return;
-    if (this.montoDeclaradoInput < 0) {
-      mostrarToast('El monto declarado no puede ser negativo.', 'warning');
-      return;
-    }
-
     this.isProcessing = true;
     this.cajaService.cerrarCaja(this.cajaActual.id, this.montoDeclaradoInput).subscribe({
       next: (cajaCerrada) => {
-        this.cajaActual = null; // La caja se cerró, volvemos a la pantalla de apertura
+        this.cajaActual = null;
         this.isProcessing = false;
-        
-        // Ocultar Modal
         const modalEl = document.getElementById('modalCierreCaja');
         if (modalEl) { bootstrap.Modal.getInstance(modalEl)?.hide(); }
 
-        // Mensaje de diferencia
         const dif = cajaCerrada.diferencia || 0;
-        if (dif === 0) {
-            mostrarToast('Caja cerrada perfectamente. Arqueo cuadrado.', 'success');
-        } else if (dif > 0) {
-            mostrarToast(`Caja cerrada. SOBRARON $${dif}`, 'warning');
-        } else {
-            mostrarToast(`Caja cerrada. FALTARON $${Math.abs(dif)}`, 'danger');
-        }
+        if (dif === 0) mostrarToast('Caja cerrada correctamente.', 'success');
+        else if (dif > 0) mostrarToast(`Cierre con SOBRANTE de $${dif}`, 'warning');
+        else mostrarToast(`Cierre con FALTANTE de $${Math.abs(dif)}`, 'danger');
       },
       error: (err) => {
         this.isProcessing = false;
@@ -140,10 +164,11 @@ export default class CajaComponent implements OnInit {
     });
   }
 
-  // Cálculos dinámicos para la vista
+  // Cálculos dinámicos (MODIFICADOS PARA RESTAR EXTRACCIONES)
   get totalEsperadoEfectivo(): number {
     if (!this.cajaActual) return 0;
-    return this.cajaActual.montoInicial + this.cajaActual.ventasEfectivo;
+    const extracciones = this.cajaActual.extracciones || 0;
+    return this.cajaActual.montoInicial + this.cajaActual.ventasEfectivo - extracciones;
   }
 
   get totalVentasDelDia(): number {

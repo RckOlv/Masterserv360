@@ -2,6 +2,7 @@ package com.masterserv.productos.controller; // Ajusta el paquete
 
 import com.masterserv.productos.dto.AbrirCajaDTO;
 import com.masterserv.productos.dto.CerrarCajaDTO;
+import com.masterserv.productos.dto.RetiroCajaDTO;
 import com.masterserv.productos.entity.Caja;
 import com.masterserv.productos.service.CajaService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,5 +34,10 @@ public class CajaController {
     @PostMapping("/cerrar")
     public ResponseEntity<Caja> cerrarCaja(@RequestBody CerrarCajaDTO dto) {
         return ResponseEntity.ok(cajaService.cerrarCaja(dto));
+    }
+
+	@PostMapping("/retiro")
+    public ResponseEntity<Caja> registrarRetiro(@RequestBody RetiroCajaDTO dto) {
+        return ResponseEntity.ok(cajaService.registrarRetiro(dto));
     }
 }

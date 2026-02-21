@@ -14,7 +14,7 @@
       <div class="card bg-dark border-secondary shadow-lg text-center p-4">
         <i class="bi bi-lock-fill text-danger" style="font-size: 4rem;"></i>
         <h3 class="text-white mt-3">La caja está cerrada</h3>
-        <p class="text-white-50">Debes abrir la caja para poder registrar ventas en el Punto de Venta.</p>
+        <p class="text-white-50">Debes abrir la caja para poder registrar ventas.</p>
         
         <hr class="border-secondary">
 
@@ -48,10 +48,7 @@
         </small>
       </div>
       <div class="text-end">
-        <span class="badge bg-success text-white fs-6 px-3 py-2 shadow-sm d-block mb-1">
-          <i class="bi bi-check-circle me-1"></i> CAJA ABIERTA
-        </span>
-        <small class="text-white-50" style="font-size: 0.75rem;">Operativa para ventas</small>
+        <span class="badge bg-success text-white fs-6 px-3 py-2">CAJA ABIERTA</span>
       </div>
     </div>
 
@@ -67,54 +64,88 @@
       <div class="col-md-3">
         <div class="card bg-dark border-secondary h-100 border-start border-success border-4">
           <div class="card-body">
-            <h6 class="text-white-50 mb-1"><i class="bi bi-cash-stack text-success"></i> Ventas Efectivo</h6>
+            <h6 class="text-white-50 mb-1">Ventas Efectivo</h6>
             <h3 class="text-success mb-0">+ {{ cajaActual.ventasEfectivo | currency:'ARS':'symbol':'1.0-0' }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card bg-dark border-secondary h-100 border-start border-danger border-4">
+          <div class="card-body">
+            <h6 class="text-white-50 mb-1">Retiros/Gastos</h6>
+            <h3 class="text-danger mb-0">- {{ (cajaActual.extracciones || 0) | currency:'ARS':'symbol':'1.0-0' }}</h3>
           </div>
         </div>
       </div>
       <div class="col-md-3">
         <div class="card bg-dark border-secondary h-100 border-start border-info border-4">
           <div class="card-body">
-            <h6 class="text-white-50 mb-1"><i class="bi bi-credit-card-2-front text-info"></i> Ventas Tarjeta</h6>
-            <h3 class="text-info mb-0">+ {{ cajaActual.ventasTarjeta | currency:'ARS':'symbol':'1.0-0' }}</h3>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card bg-dark border-secondary h-100 border-start border-warning border-4">
-          <div class="card-body">
-            <h6 class="text-white-50 mb-1"><i class="bi bi-phone text-warning"></i> Transferencias</h6>
-            <h3 class="text-warning mb-0">+ {{ cajaActual.ventasTransferencia | currency:'ARS':'symbol':'1.0-0' }}</h3>
+            <h6 class="text-white-50 mb-1">Otros Medios (Tarjeta/Transf)</h6>
+            <h3 class="text-info mb-0">{{ (cajaActual.ventasTarjeta + cajaActual.ventasTransferencia) | currency:'ARS':'symbol':'1.0-0' }}</h3>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="row">
+    <div class="row g-4">
       <div class="col-md-6">
-        <div class="card" style="background: linear-gradient(45deg, #198754, #20c997); border: none;">
-          <div class="card-body text-center py-4">
+        <div class="card h-100" style="background: linear-gradient(45deg, #198754, #20c997); border: none;">
+          <div class="card-body text-center py-4 d-flex flex-column justify-content-center">
             <h5 class="text-white-50 fw-bold">EFECTIVO ESPERADO EN CAJÓN</h5>
-            <h1 class="display-4 text-white fw-bold my-2">{{ totalEsperadoEfectivo | currency:'ARS':'symbol':'1.0-0' }}</h1>
-            <small class="text-white-50">(Fondo Inicial + Ventas en Efectivo)</small>
+            <h1 class="display-3 text-white fw-bold my-2">{{ totalEsperadoEfectivo | currency:'ARS':'symbol':'1.0-0' }}</h1>
+            <small class="text-white-50">(Inicial + Ventas Efec. - Gastos)</small>
           </div>
         </div>
       </div>
-      <div class="col-md-6 d-flex align-items-stretch">
-         <div class="card bg-dark border-secondary w-100 text-center d-flex flex-column justify-content-center">
-             <div class="card-body d-flex flex-column justify-content-center">
-                 <h4 class="text-white-50">Total Facturado Hoy</h4>
-                 <h2 class="text-white">{{ totalVentasDelDia | currency:'ARS':'symbol':'1.0-0' }}</h2>
-                 <button class="btn btn-danger btn-lg mt-3 fw-bold shadow" (click)="abrirModalCierre()">
-                    <i class="bi bi-box-arrow-right"></i> ARQUEO Y CIERRE DE CAJA
-                 </button>
+      <div class="col-md-6">
+         <div class="card bg-dark border-secondary h-100 text-center">
+             <div class="card-body d-flex flex-column justify-content-center p-4">
+                 <h4 class="text-white-50">Total Facturado (Todo medio)</h4>
+                 <h2 class="text-white mb-4">{{ totalVentasDelDia | currency:'ARS':'symbol':'1.0-0' }}</h2>
+                 
+                 <div class="d-flex gap-2">
+                    <button class="btn btn-warning btn-lg flex-grow-1 fw-bold" (click)="abrirModalRetiro()">
+                        <i class="bi bi-wallet2"></i> RETIRAR DINERO
+                    </button>
+                    <button class="btn btn-danger btn-lg flex-grow-1 fw-bold" (click)="abrirModalCierre()">
+                        <i class="bi bi-box-arrow-right"></i> CERRAR CAJA
+                    </button>
+                 </div>
              </div>
          </div>
       </div>
     </div>
-
   </div>
+</div>
 
+<div class="modal fade" id="modalRetiroCaja" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark border-warning text-white">
+      <div class="modal-header border-secondary bg-warning text-dark">
+        <h5 class="modal-title fw-bold"><i class="bi bi-wallet2"></i> Registrar Gasto / Retiro</h5>
+        <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <div class="mb-4">
+            <label class="h5 text-warning fw-bold">¿Cuánto dinero retiras?</label>
+            <div class="input-group input-group-lg w-75 mx-auto">
+                <span class="input-group-text bg-dark text-warning border-secondary">$</span>
+                <input type="number" class="form-control bg-dark text-white border-secondary text-center" [(ngModel)]="montoRetiroInput">
+            </div>
+        </div>
+        <div class="text-start">
+            <label class="small text-white-50 mb-1">Motivo (Ej: Facturas, Limpieza, Yerba...)</label>
+            <input type="text" class="form-control bg-dark text-white border-secondary" [(ngModel)]="motivoRetiroInput">
+        </div>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-warning fw-bold text-dark px-4" (click)="registrarRetiro()" [disabled]="isRetiring">
+            <span *ngIf="isRetiring" class="spinner-border spinner-border-sm me-2"></span>Confirmar Retiro
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="modalCierreCaja" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
@@ -124,36 +155,26 @@
         <h5 class="modal-title fw-bold"><i class="bi bi-calculator"></i> Arqueo de Caja</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body p-4">
-        
-        <p class="text-white-50 mb-4 text-center">Cuenta los billetes y monedas que hay físicamente en el cajón e ingresa el monto total aquí abajo.</p>
-
-        <div class="form-group text-center">
-          <label class="h5 fw-bold text-warning mb-3">Dinero físico contado:</label>
-          <div class="input-group input-group-lg w-75 mx-auto shadow-lg">
+      <div class="modal-body p-4 text-center">
+        <label class="h5 fw-bold text-warning mb-3">Dinero físico en cajón:</label>
+        <div class="input-group input-group-lg w-75 mx-auto mb-4">
             <span class="input-group-text bg-dark text-warning border-secondary">$</span>
-            <input type="number" class="form-control bg-dark text-white border-secondary text-center fs-2 fw-bold" 
-                   [(ngModel)]="montoDeclaradoInput" placeholder="0">
-          </div>
+            <input type="number" class="form-control bg-dark text-white border-secondary text-center fs-2" [(ngModel)]="montoDeclaradoInput">
         </div>
 
-        <div class="alert alert-secondary mt-4 border-0 bg-opacity-10 bg-white">
-            <div class="d-flex justify-content-between mb-1"><span>Sistema espera:</span> <strong>{{ totalEsperadoEfectivo | currency:'ARS':'symbol':'1.0-0' }}</strong></div>
-            <div class="d-flex justify-content-between mb-1"><span>Tú declaraste:</span> <strong>{{ montoDeclaradoInput | currency:'ARS':'symbol':'1.0-0' }}</strong></div>
+        <div class="alert alert-secondary bg-opacity-10 text-start border-0">
+            <div class="d-flex justify-content-between mb-1"><span>Esperado (Sistema):</span> <strong>{{ totalEsperadoEfectivo | currency:'ARS':'symbol':'1.0-0' }}</strong></div>
+            <div class="d-flex justify-content-between mb-1"><span>Declarado:</span> <strong>{{ montoDeclaradoInput | currency:'ARS':'symbol':'1.0-0' }}</strong></div>
             <hr class="border-secondary my-2">
-            
-            <div class="d-flex justify-content-between fw-bold" 
-                 [ngClass]="(montoDeclaradoInput - totalEsperadoEfectivo) < 0 ? 'text-danger' : ((montoDeclaradoInput - totalEsperadoEfectivo) > 0 ? 'text-warning' : 'text-success')">
-                <span>Diferencia:</span> 
-                <span>{{ (montoDeclaradoInput - totalEsperadoEfectivo) | currency:'ARS':'symbol':'1.0-0' }}</span>
+            <div class="d-flex justify-content-between fw-bold" [ngClass]="(montoDeclaradoInput - totalEsperadoEfectivo) < 0 ? 'text-danger' : 'text-success'">
+                <span>Diferencia:</span> <span>{{ (montoDeclaradoInput - totalEsperadoEfectivo) | currency:'ARS':'symbol':'1.0-0' }}</span>
             </div>
         </div>
-
       </div>
       <div class="modal-footer border-secondary">
         <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-danger fw-bold px-4" (click)="cerrarCaja()" [disabled]="isProcessing">
-          <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-2"></span> Confirmar Cierre
+          <span *ngIf="isProcessing" class="spinner-border spinner-border-sm me-2"></span>Confirmar Cierre
         </button>
       </div>
     </div>

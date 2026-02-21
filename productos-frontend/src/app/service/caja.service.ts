@@ -11,6 +11,7 @@ export interface Caja {
   montoInicial: number;
   ventasEfectivo: number;
   ventasTarjeta: number;
+  extracciones: number;
   ventasTransferencia: number;
   montoDeclarado?: number;
   diferencia?: number;
@@ -34,5 +35,9 @@ export class CajaService {
 
   cerrarCaja(cajaId: number, montoDeclarado: number): Observable<Caja> {
     return this.http.post<Caja>(`${this.apiUrl}/cerrar`, { cajaId, montoDeclarado });
+  }
+
+  registrarRetiro(cajaId: number, monto: number, motivo: string): Observable<Caja> {
+    return this.http.post<Caja>(`${this.apiUrl}/retiro`, { cajaId, monto, motivo });
   }
 }
