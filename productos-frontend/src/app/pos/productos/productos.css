@@ -522,7 +522,7 @@
   position: relative;
   flex-shrink: 0;
   display: flex;
-  justify-content: between;
+  justify-content: space-between;
   align-items: center;
 }
 
@@ -623,4 +623,13 @@
   .masterserv-title {
     font-size: 1.2rem;
   }
+}
+
+/* ==========================================================================
+   FORZAR ALERTAS SWEETALERT POR ENCIMA DE TABLAS Y MODALES
+   ========================================================================== */
+::ng-deep .swal2-container,
+::ng-deep .swal2-container.swal2-top-end,
+::ng-deep .swal2-container.swal2-backdrop-show {
+    z-index: 2147483647 !important;
 }
