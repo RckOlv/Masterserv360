@@ -1,6 +1,6 @@
 import Swal from 'sweetalert2';
 
-export function mostrarToast(mensaje: string, tipo: 'success' | 'danger' | 'warning' | 'info') {
+export function mostrarToast(mensaje: string, tipo: 'success' | 'danger' | 'warning' | 'info' = 'info') {
   
   // SweetAlert usa 'error' en lugar de 'danger', así que hacemos la conversión automática
   const iconType = tipo === 'danger' ? 'error' : tipo;
