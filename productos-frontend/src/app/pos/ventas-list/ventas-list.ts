@@ -294,7 +294,7 @@ export default class VentasListComponent implements OnInit {
       `¿Seguro que deseas cancelar la Venta #${venta.id}? Esta acción repondrá el stock y restará el dinero de la caja.`
     ).then((confirmado) => {
       if (confirmado) {
-        this.cancelingVentaId = venta.id;
+        this.cancelingVentaId = venta.id ?? null;
         this.errorMessage = null;
 
         this.ventaService.cancelarVenta(venta.id!).subscribe({
