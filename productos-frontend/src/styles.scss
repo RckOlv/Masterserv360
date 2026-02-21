@@ -462,4 +462,20 @@ app-sidebar {
     padding: 15px;
     padding-top: 80px; /* Dejamos espacio arriba para que el botón hamburguesa no tape nada */
   }
+
+  /* ==========================================================================
+   FORZAR ALERTAS Y TOASTS POR ENCIMA DE TODO (z-index)
+   ========================================================================== */
+
+/* Si usas SweetAlert2 para los toasts */
+.swal2-container {
+    z-index: 99999 !important;
+}
+
+/* Si usas el Toast nativo de Bootstrap o alguna librería como ngx-toastr */
+.toast-container, 
+#toast-container, 
+.cdk-overlay-container {
+    z-index: 99999 !important;
+}
 }

@@ -1,21 +1,24 @@
-// Agregamos | 'info' en la lista de opciones válidas
-export function mostrarToast(mensaje: string, tipo: 'success' | 'danger' | 'warning' | 'info' = 'success') {
-  const toastEl = document.getElementById('appToast');
-  const toastMsg = document.getElementById('toastMessage');
-  if (!toastEl || !toastMsg) return;
+import Swal from 'sweetalert2';
 
-  // Cambia color según tipo
-  toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info');
+export function mostrarToast(mensaje: string, tipo: 'success' | 'danger' | 'warning' | 'info') {
   
-  toastEl.classList.add(
-    tipo === 'success' ? 'bg-success' :
-    tipo === 'danger' ? 'bg-danger' :
-    tipo === 'warning' ? 'bg-warning' :
-    tipo === 'info' ? 'bg-info' : 'bg-success'
-  );
+  // SweetAlert usa 'error' en lugar de 'danger', así que hacemos la conversión automática
+  const iconType = tipo === 'danger' ? 'error' : tipo;
 
-  toastMsg.textContent = mensaje;
-
-  const toast = new (window as any).bootstrap.Toast(toastEl);
-  toast.show();
+  Swal.fire({
+    toast: true, // Esto hace que sea una alerta chiquita y no un cartel gigante en el medio
+    position: 'top-end', // Arriba a la derecha
+    icon: iconType,
+    title: mensaje,
+    showConfirmButton: false,
+    timer: 3000, // Desaparece en 3 segundos
+    timerProgressBar: true, // Le pone la barrita de tiempo abajo
+    background: '#1e1e1e', // Fondo oscuro modo Dark!
+    color: '#ffffff', // Letra blanca
+    showCloseButton: true,
+    didOpen: (toast) => {
+      toast.addEventListener('mouseenter', Swal.stopTimer)
+      toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+  });
 }
