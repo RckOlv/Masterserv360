@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CategoriaService } from '../../service/categoria.service';
 import { CategoriaDTO } from '../../models/categoria.model';
-import { mostrarToast } from '../../utils/toast';
+import { mostrarToast, confirmarAccion } from '../../utils/toast'; // ✅ AÑADIDO confirmarAccion
 import { HttpErrorResponse } from '@angular/common/http';
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
 
@@ -158,42 +158,56 @@ export default class CategoriasComponent implements OnInit {
     }
   }
 
+  /** ✅ ELIMINAR (DESACTIVAR) CATEGORÍA MIGRADO */
   eliminarCategoria(id?: number) {
     if (!id) return;
-    if (confirm('¿Estás seguro de marcar esta categoría como INACTIVA?')) {
-      this.isLoading = true;
-      this.errorMessage = null;
-      this.categoriaService.softDelete(id).subscribe({
-        next: () => {
-          this.listarCategorias(); 
-          mostrarToast('Categoría marcada como inactiva', 'warning');
-        },
-        error: (err: HttpErrorResponse) => {
-          console.error('Error al eliminar categoría:', err);
-          this.handleError(err, 'eliminar');
-          this.isLoading = false;
-        },
-      });
-    }
+    
+    confirmarAccion(
+      'Desactivar Categoría', 
+      '¿Estás seguro de marcar esta categoría como INACTIVA?'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.isLoading = true;
+        this.errorMessage = null;
+        this.categoriaService.softDelete(id).subscribe({
+          next: () => {
+            this.listarCategorias(); 
+            mostrarToast('Categoría marcada como inactiva', 'warning');
+          },
+          error: (err: HttpErrorResponse) => {
+            console.error('Error al eliminar categoría:', err);
+            this.handleError(err, 'eliminar');
+            this.isLoading = false;
+          },
+        });
+      }
+    });
   }
 
+  /** ✅ REACTIVAR CATEGORÍA MIGRADO */
   reactivarCategoria(id?: number) {
      if (!id) return;
-     if (confirm('¿Estás seguro de REACTIVAR esta categoría?')) {
-       this.isLoading = true;
-       this.errorMessage = null;
-       this.categoriaService.reactivar(id).subscribe({
-         next: () => {
-           this.listarCategorias(); 
-           mostrarToast('Categoría reactivada correctamente', 'success');
-         },
-         error: (err: HttpErrorResponse) => {
-           console.error('Error al reactivar categoría:', err);
-           this.handleError(err, 'reactivar');
-           this.isLoading = false;
-         },
-       });
-     }
+     
+     confirmarAccion(
+       'Reactivar Categoría', 
+       '¿Estás seguro de REACTIVAR esta categoría?'
+     ).then((confirmado) => {
+       if (confirmado) {
+         this.isLoading = true;
+         this.errorMessage = null;
+         this.categoriaService.reactivar(id).subscribe({
+           next: () => {
+             this.listarCategorias(); 
+             mostrarToast('Categoría reactivada correctamente', 'success');
+           },
+           error: (err: HttpErrorResponse) => {
+             console.error('Error al reactivar categoría:', err);
+             this.handleError(err, 'reactivar');
+             this.isLoading = false;
+           },
+         });
+       }
+     });
    }
 
   // --- MENTOR: REFACTORIZACIÓN DE ERRORES ---

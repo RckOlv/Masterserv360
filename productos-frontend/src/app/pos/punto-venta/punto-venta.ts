@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router'; // ✅ Agregado RouterModule
+import { Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 
@@ -12,7 +12,7 @@ import { ProductoService } from '../../service/producto.service';
 import { RolService } from '../../service/rol.service';
 import { ClienteService } from '../../service/cliente.service';
 import { PuntosService } from '../../service/puntos.service';
-import { CajaService } from '../../service/caja.service'; // ✅ NUEVO SERVICIO
+import { CajaService } from '../../service/caja.service';
 
 // --- Modelos ---
 import { CarritoDTO } from '../../models/carrito.model';
@@ -34,7 +34,7 @@ import { Observable, Subject, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap, tap, take } from 'rxjs/operators';
 
 // --- Utils ---
-import { mostrarToast } from '../../utils/toast';
+import { mostrarToast, confirmarAccion } from '../../utils/toast'; // ✅ AÑADIDO confirmarAccion
 import Swal from 'sweetalert2';
 
 declare var bootstrap: any;
@@ -42,7 +42,7 @@ declare var bootstrap: any;
 @Component({
   selector: 'app-punto-venta',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, NgSelectModule, RouterModule], // ✅ Añadido RouterModule
+  imports: [CommonModule, ReactiveFormsModule, NgSelectModule, RouterModule],
   templateUrl: './punto-venta.html',
   styleUrls: ['./punto-venta.css']
 })
@@ -55,7 +55,7 @@ export default class PuntoVentaComponent implements OnInit {
   private rolService = inject(RolService);
   private clienteService = inject(ClienteService);
   private puntosService = inject(PuntosService);
-  private cajaService = inject(CajaService); // ✅ INYECTADO
+  private cajaService = inject(CajaService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
 
@@ -77,7 +77,6 @@ export default class PuntoVentaComponent implements OnInit {
   // --- FIDELIZACIÓN POS ---
   public infoFidelidad: ClienteFidelidadDTO | null = null;
   public isLoadingFidelidad = false;
-  // -------------------------
 
   public nuevoClienteForm: FormGroup;
   public isGuardandoCliente = false;
@@ -129,26 +128,24 @@ export default class PuntoVentaComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.verificarEstadoCaja(); // ✅ LÓGICA DE CAJA
+    this.verificarEstadoCaja();
     this.cargarCarrito();
     this.initProductoSearch();
     this.initClienteSearch();
     this.setupDocumentValidation();
     
-    // --- ESCUCHAR CAMBIOS DE CLIENTE ---
     this.clienteForm.get('clienteId')?.valueChanges.subscribe(clienteId => {
         if (clienteId) {
             this.cargarInfoFidelidad(clienteId);
         } else {
             this.infoFidelidad = null;
-            this.cuponAplicado = null; // Si cambia cliente, quitamos cupón
+            this.cuponAplicado = null;
             this.clienteForm.patchValue({ codigoCupon: null }, { emitEvent: false });
             this.calcularTotales();
         }
     });
   }
 
-  // ✅ VERIFICAR CAJA AL INICIAR
   verificarEstadoCaja() {
     this.cargandoCaja = true;
     const token = localStorage.getItem('jwt_token');
@@ -176,7 +173,6 @@ export default class PuntoVentaComponent implements OnInit {
     }
   }
 
-  // --- CARGAR DATOS FIDELIZACIÓN ---
   cargarInfoFidelidad(clienteId: number) {
       this.isLoadingFidelidad = true;
       this.puntosService.getFidelidadCliente(clienteId).subscribe({
@@ -191,13 +187,11 @@ export default class PuntoVentaComponent implements OnInit {
       });
   }
 
-  // --- APLICAR CUPÓN DESDE TARJETA ---
   usarCuponDeLista(codigo: string) {
       this.clienteForm.patchValue({ codigoCupon: codigo });
       this.aplicarCupon();
   }
 
-  // --- NUEVO: CANJEAR RECOMPENSA DESDE POS ---
   canjearRecompensaEnPos(recompensa: any) {
       Swal.fire({
           title: '¿Canjear Puntos?',
@@ -222,11 +216,9 @@ export default class PuntoVentaComponent implements OnInit {
 
       if (!clienteId) return;
 
-      // Usamos el servicio seguro para POS
       this.puntosService.canjearPuntosPos(clienteId, recompensaId).subscribe({
           next: (cuponGenerado) => {
               mostrarToast('¡Canje exitoso! Cupón generado.', 'success');
-              // Recargar la info para ver el nuevo cupón en la lista
               this.cargarInfoFidelidad(clienteId);
           },
           error: (err) => {
@@ -245,7 +237,6 @@ export default class PuntoVentaComponent implements OnInit {
     }
   }
 
-  // --- VALIDACIONES DINÁMICAS ---
   setupDocumentValidation() {
       const tipoControl = this.nuevoClienteForm.get('tipoDocumentoBusqueda');
       const docControl = this.nuevoClienteForm.get('documento');
@@ -476,7 +467,6 @@ export default class PuntoVentaComponent implements OnInit {
         return this.productoService.filtrarProductos(filtro, 0, 20).pipe(
           map((page: Page<ProductoDTO>) => {
             const productos = page.content;
-            // ---------- AJUSTE DE STOCK SEGÚN CARRITO ACTUAL ----------
             return productos.map(prod => {
               const itemEnCarrito = this.carrito?.items?.find(item => item.productoId === prod.id);
               if (itemEnCarrito) {
@@ -484,7 +474,6 @@ export default class PuntoVentaComponent implements OnInit {
               }
               return prod;
             });
-            // ------------------------------------------
           }),
           catchError(() => {
             mostrarToast('Error al buscar productos', 'danger');
@@ -497,7 +486,6 @@ export default class PuntoVentaComponent implements OnInit {
   }
 
   agregarAlCarrito(): void {
-    // ✅ VALIDACIÓN DE CAJA AL AGREGAR
     if (!this.isCajaAbierta) {
         mostrarToast('Debes iniciar tu turno de caja primero.', 'danger');
         return;
@@ -597,46 +585,59 @@ export default class PuntoVentaComponent implements OnInit {
     });
   }
 
+  /** ✅ QUITAR DEL CARRITO MIGRADO */
   quitarDelCarrito(item: ItemCarritoDTO): void {
-     if (!confirm(`Quitar "${item.productoNombre}"?`)) return;
-
-    this.isLoadingCarrito = true;
-    this.errorMessage = null;
-    this.carritoService.quitarItem(item.id!).subscribe({
-      next: (carritoActualizado) => {
-        this.carrito = { ...carritoActualizado };
-        this.calcularTotales();
-        mostrarToast(`"${item.productoNombre}" quitado.`, 'success');
-        this.isLoadingCarrito = false;
-      },
-      error: (err: HttpErrorResponse) => {
-        this.handleError(err, 'Quitar Producto');
-        this.isLoadingCarrito = false;
+    confirmarAccion(
+      'Quitar Producto', 
+      `¿Seguro que deseas quitar "${item.productoNombre}"?`
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.isLoadingCarrito = true;
+        this.errorMessage = null;
+        this.carritoService.quitarItem(item.id!).subscribe({
+          next: (carritoActualizado) => {
+            this.carrito = { ...carritoActualizado };
+            this.calcularTotales();
+            mostrarToast(`"${item.productoNombre}" quitado.`, 'success');
+            this.isLoadingCarrito = false;
+          },
+          error: (err: HttpErrorResponse) => {
+            this.handleError(err, 'Quitar Producto');
+            this.isLoadingCarrito = false;
+          }
+        });
       }
     });
   }
 
+  /** ✅ VACIAR CARRITO MIGRADO */
   vaciarCarrito(): void {
-     if (!this.carrito?.items?.length || !confirm("Vaciar todo el carrito?")) return;
+    if (!this.carrito?.items?.length) return;
 
-    this.isLoadingCarrito = true;
-    this.errorMessage = null;
-    this.carritoService.vaciarCarrito().subscribe({
-      next: (carritoVacio) => {
-        this.carrito = { ...carritoVacio };
-        this.calcularTotales();
-         mostrarToast('Carrito vaciado.', 'success');
-        this.isLoadingCarrito = false;
-        },
-      error: (err: HttpErrorResponse) => {
-        this.handleError(err, 'Vaciar Carrito');
-        this.isLoadingCarrito = false;
+    confirmarAccion(
+      'Vaciar Carrito', 
+      '¿Seguro que deseas vaciar todo el carrito?'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.isLoadingCarrito = true;
+        this.errorMessage = null;
+        this.carritoService.vaciarCarrito().subscribe({
+          next: (carritoVacio) => {
+            this.carrito = { ...carritoVacio };
+            this.calcularTotales();
+            mostrarToast('Carrito vaciado.', 'success');
+            this.isLoadingCarrito = false;
+          },
+          error: (err: HttpErrorResponse) => {
+            this.handleError(err, 'Vaciar Carrito');
+            this.isLoadingCarrito = false;
+          }
+        });
       }
     });
   }
 
   finalizarVenta(): void {
-    // ✅ VALIDACIÓN DE CAJA AL FINALIZAR
     if (!this.isCajaAbierta) {
         mostrarToast('Venta bloqueada: Debes abrir la caja primero.', 'danger');
         return;
@@ -711,7 +712,7 @@ export default class PuntoVentaComponent implements OnInit {
         this.clienteForm.reset();
         this.productoSearchForm.reset({ cantidadAgregar: 1 });
         this.cuponAplicado = null;
-        this.infoFidelidad = null; // Resetear info fidelidad
+        this.infoFidelidad = null; 
         this.montoDescuento = 0;
         this.totalFinal = 0;
         this.isFinalizandoVenta = false;

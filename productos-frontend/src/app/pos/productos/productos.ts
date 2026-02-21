@@ -9,7 +9,7 @@ import { AuthService } from '../../service/auth.service';
 import { ProductoDTO } from '../../models/producto.model';
 import { ProductoFiltroDTO } from '../../models/producto-filtro.model';
 import { CategoriaDTO } from '../../models/categoria.model';
-import { mostrarToast } from '../../utils/toast';
+import { mostrarToast, confirmarAccion } from '../../utils/toast'; // ✅ AÑADIDO confirmarAccion
 import { Page } from '../../models/page.model'; 
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
@@ -189,17 +189,31 @@ export default class ProductosComponent implements OnInit {
     });
   }
 
+  /** ✅ ELIMINAR PRODUCTO MIGRADO */
   eliminarProducto(id: number | undefined): void {
     if (!id) return;
-    if (confirm(`¿Estás seguro de que deseas eliminar este producto?`)) {
-      this.isLoading = true;
-      this.errorMessage = null;
+    
+    confirmarAccion(
+      'Eliminar Producto',
+      '¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.isLoading = true;
+        this.errorMessage = null;
 
-      this.productoService.eliminarProducto(id).subscribe({
-        next: () => { mostrarToast('Producto eliminado exitosamente.', 'success'); this.cargarProductos(); },
-        error: (err: HttpErrorResponse) => { console.error('Error al eliminar producto:', err); this.handleError(err, 'eliminar'); this.isLoading = false; }
-      });
-    }
+        this.productoService.eliminarProducto(id).subscribe({
+          next: () => { 
+            mostrarToast('Producto eliminado exitosamente.', 'success'); 
+            this.cargarProductos(); 
+          },
+          error: (err: HttpErrorResponse) => { 
+            console.error('Error al eliminar producto:', err); 
+            this.handleError(err, 'eliminar'); 
+            this.isLoading = false; 
+          }
+        });
+      }
+    });
   }
 
   private handleError(err: HttpErrorResponse, context: string) {
@@ -221,7 +235,6 @@ export default class ProductosComponent implements OnInit {
         estado: formValues.estado, estadoStock: formValues.estadoStock, conStock: null, precioMax: null
     };
 
-    // Pedimos 10,000 productos para asegurarnos de traer todo el catálogo
     this.productoService.filtrarProductos(filtro, 0, 10000).subscribe({
       next: (page) => {
         this.isLoading = false;
@@ -238,11 +251,9 @@ export default class ProductosComponent implements OnInit {
     this.obtenerTodosParaExportar((productos) => {
         const doc = new jsPDF();
         
-        // ✅ 1. Obtenemos Fecha, Hora y Usuario
         const fechaHora = new Date().toLocaleString('es-AR'); 
         const usuario = localStorage.getItem('username') || localStorage.getItem('email') || 'Administrador';
 
-        // ✅ 2. ENCABEZADO PRINCIPAL
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.text('Catálogo de Productos', 14, 20);
@@ -253,7 +264,6 @@ export default class ProductosComponent implements OnInit {
         doc.text(`Fecha y Hora: ${fechaHora}`, 14, 34);
         doc.text(`Total de artículos: ${productos.length}`, 14, 40);
 
-        // ✅ 3. TABLA DE DATOS
         autoTable(doc, {
             startY: 45, 
             head: [['Código', 'Nombre', 'Categoría', 'Stock', 'Precio ($)']],
@@ -268,7 +278,6 @@ export default class ProductosComponent implements OnInit {
             headStyles: { fillColor: [33, 37, 41] }, 
         });
 
-        // ✅ 4. MAGIA DE PAGINACIÓN Y PIE DE PÁGINA (Con el fix de ts)
         const pageCount = (doc as any).internal.getNumberOfPages();
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
@@ -276,19 +285,13 @@ export default class ProductosComponent implements OnInit {
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
             doc.setFontSize(9);
-            doc.setTextColor(150); // Color gris claro
+            doc.setTextColor(150); 
             
-            // Línea separadora al final de la página
             doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
-            
-            // Texto a la izquierda
             doc.text(`Sistema POS Masterserv - Auditoría`, 14, pageHeight - 10);
-            
-            // Texto a la derecha (Página X de Y)
             doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
         }
 
-        // ✅ 5. GUARDAR
         const nombreArchivo = `Catalogo_${fechaHora.replace(/[\/:, ]/g, '-')}.pdf`;
         doc.save(nombreArchivo);
     });

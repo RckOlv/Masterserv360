@@ -19,7 +19,7 @@ import { forkJoin, Observable, Subject, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
 
 // --- Utils ---
-import { mostrarToast } from '../../utils/toast';
+import { mostrarToast, confirmarAccion } from '../../utils/toast'; // ✅ AÑADIDO confirmarAccion
 import { HttpErrorResponse } from '@angular/common/http';
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
 
@@ -282,27 +282,33 @@ export default class VentasListComponent implements OnInit {
     }
   }
 
+  /** ✅ CANCELAR VENTA MIGRADO */
   onCancelarVenta(venta: VentaDTO): void {
     if (!venta || venta.estado !== 'COMPLETADA' || !venta.id) {
       mostrarToast("Solo se pueden cancelar ventas completadas.", 'warning');
       return;
     }
-    if (!confirm(`¿Seguro que deseas cancelar la Venta #${venta.id}? Esta acción repondrá el stock.`)) {
-      return;
-    }
-    this.cancelingVentaId = venta.id;
-    this.errorMessage = null;
+    
+    confirmarAccion(
+      'Cancelar Venta',
+      `¿Seguro que deseas cancelar la Venta #${venta.id}? Esta acción repondrá el stock y restará el dinero de la caja.`
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.cancelingVentaId = venta.id;
+        this.errorMessage = null;
 
-    this.ventaService.cancelarVenta(venta.id).subscribe({
-      next: () => {
-        mostrarToast(`Venta #${venta.id} cancelada exitosamente. Stock repuesto.`, 'success');
-        this.cancelingVentaId = null;
-        this.aplicarFiltros(); 
-      },
-      error: (err: HttpErrorResponse) => {
-        console.error("Error al cancelar venta:", err);
-        this.handleCriticalError(err.error?.message || "No se pudo cancelar la venta.");
-        this.cancelingVentaId = null;
+        this.ventaService.cancelarVenta(venta.id!).subscribe({
+          next: () => {
+            mostrarToast(`Venta #${venta.id} cancelada exitosamente. Stock repuesto.`, 'success');
+            this.cancelingVentaId = null;
+            this.aplicarFiltros(); 
+          },
+          error: (err: HttpErrorResponse) => {
+            console.error("Error al cancelar venta:", err);
+            this.handleCriticalError(err.error?.message || "No se pudo cancelar la venta.");
+            this.cancelingVentaId = null;
+          }
+        });
       }
     });
   }
@@ -313,5 +319,4 @@ export default class VentasListComponent implements OnInit {
       this.isLoading = false;
       this.isLoadingFilters = false;
   }
-
 }

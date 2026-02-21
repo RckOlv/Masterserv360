@@ -7,7 +7,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { CarritoService } from '../../service/carrito.service';
 import { VentaService } from '../../service/venta.service';
 import { UsuarioService } from '../../service/usuario.service';
-import { RolService } from '../../service/rol.service'; // <-- ¡IMPORTAR ROL SERVICE!
+import { RolService } from '../../service/rol.service';
 
 // Imports de Modelos
 import { CarritoDTO } from '../../models/carrito.model';
@@ -20,18 +20,16 @@ import { UsuarioFiltroDTO } from '../../models/usuario-filtro.model';
 // Imports para ng-select y RxJS
 import { NgSelectModule } from '@ng-select/ng-select';
 import { Observable, Subject, of } from 'rxjs';
-// --- ¡NUEVO IMPORT 'take'! ---
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap, tap, take } from 'rxjs/operators';
-// --------------------------
 
 // Utils
-import { mostrarToast } from '../../utils/toast';
+import { confirmarAccion, mostrarToast } from '../../utils/toast';
 
 @Component({
   selector: 'app-carrito',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, NgSelectModule],
-  templateUrl: './carrito.html', // Asumo que renombraste el .html
+  templateUrl: './carrito.html', 
   styleUrls: ['./carrito.css']
 })
 export default class CarritoComponent implements OnInit {
@@ -40,7 +38,7 @@ export default class CarritoComponent implements OnInit {
   private carritoService = inject(CarritoService);
   private ventaService = inject(VentaService);
   private usuarioService = inject(UsuarioService);
-  private rolService = inject(RolService); // <-- ¡INYECTAR ROL SERVICE!
+  private rolService = inject(RolService); 
   private router = inject(Router);
   private fb = inject(FormBuilder);
 
@@ -71,7 +69,6 @@ export default class CarritoComponent implements OnInit {
 
   /** Carga el carrito */
   cargarCarrito(): void {
-    // ... (sin cambios aquí, tu código es correcto)
     this.isLoading = true;
     this.errorMessage = null;
     this.carritoService.getCarrito().subscribe({
@@ -90,57 +87,43 @@ export default class CarritoComponent implements OnInit {
     });
   }
 
-  /**
-   * --- ¡MÉTODO MODIFICADO PARA USAR ROL ID DINÁMICO! ---
-   * Configura el Observable para buscar clientes usando el ID de Rol obtenido de la API.
-   */
+  /** Configura el Observable para buscar clientes */
   initClienteSearch(): void {
     this.clientes$ = this.clienteSearch$.pipe(
       debounceTime(300),
       distinctUntilChanged(),
-      // 1. Usamos switchMap para obtener PRIMERO el ID del rol cliente
       switchMap(term =>
-        this.rolService.getClienteRoleId().pipe( // Llama al método cacheado del RolService
-          take(1), // Solo necesitamos el ID una vez por cada búsqueda de término
-          // 2. Pasamos el término y el ID obtenido (o null) al siguiente paso
+        this.rolService.getClienteRoleId().pipe( 
+          take(1), 
           map(clienteId => ({ term: term, clienteId: clienteId }))
         )
       ),
-      tap(() => this.isLoadingClientes = true), // Muestra spinner
-      // 3. Usamos otro switchMap para HACER LA BÚSQUEDA de usuarios
-      switchMap(({ term, clienteId }) => { // Recibimos el término y el clienteId
-        // Validaciones: no buscar si no hay término, o si no pudimos obtener el rolId
+      tap(() => this.isLoadingClientes = true), 
+      switchMap(({ term, clienteId }) => { 
         if (!term || term.length < 2 || clienteId === null) {
-             // Si clienteId es null, significa que hubo un error crítico al obtenerlo.
-             // Ya se mostró un toast en RolService, aquí simplemente no buscamos.
-             console.warn("No se buscarán clientes porque el término es corto o el rolId es nulo:", {term, clienteId});
              return of([]);
          }
 
-        // 4. Construimos el filtro usando el rolId DINÁMICO
         const filtro: UsuarioFiltroDTO = {
             nombreOEmail: term,
-            rolId: clienteId, // <-- ¡YA NO ESTÁ HARDCODEADO!
+            rolId: clienteId, 
             estado: 'ACTIVO'
         };
 
-        // 5. Llamamos al servicio de usuarios
         return this.usuarioService.filtrarUsuarios(filtro, 0, 20).pipe(
           map(page => page.content),
           catchError(() => {
-            const errorMsg = 'Error al buscar clientes';
-            mostrarToast(errorMsg, 'danger');
+            mostrarToast('Error al buscar clientes', 'danger');
             return of([]);
           })
         );
       }),
-      tap(() => this.isLoadingClientes = false) // Oculta spinner
+      tap(() => this.isLoadingClientes = false) 
     );
   }
 
   /** Actualizar cantidad */
   actualizarCantidad(item: ItemCarritoDTO, event: Event): void {
-    // ... (sin cambios aquí, tu código es correcto)
     const inputElement = event.target as HTMLInputElement;
     let nuevaCantidad = parseInt(inputElement.value, 10);
 
@@ -175,63 +158,67 @@ export default class CarritoComponent implements OnInit {
     });
   }
 
-  /** Quitar item */
+  /** ✅ Quitar item CORREGIDO */
   quitarItem(item: ItemCarritoDTO): void {
-    // ... (sin cambios aquí, tu código es correcto)
-     if (!confirm(`¿Seguro que deseas quitar "${item.productoNombre}" del carrito?`)) {
-      return;
-    }
-
-    this.isLoading = true;
-    this.carritoService.quitarItem(item.id!).subscribe({
-      next: (carritoActualizado) => {
-        this.carrito = carritoActualizado;
-        mostrarToast(`"${item.productoNombre}" quitado del carrito`, 'success');
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error("Error al quitar item:", err);
-        this.errorMessage = "No se pudo quitar el item.";
-       if (this.errorMessage) {
-           mostrarToast(this.errorMessage, 'danger');
-        }
-        this.isLoading = false;
+    confirmarAccion(
+      'Quitar Producto', 
+      `¿Seguro que deseas quitar "${item.productoNombre}" del carrito?`
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.isLoading = true;
+        this.carritoService.quitarItem(item.id!).subscribe({
+          next: (carritoActualizado) => {
+            this.carrito = carritoActualizado;
+            mostrarToast(`"${item.productoNombre}" quitado del carrito`, 'success');
+            this.isLoading = false;
+          },
+          error: (err) => {
+            console.error("Error al quitar item:", err);
+            this.errorMessage = "No se pudo quitar el item.";
+            if (this.errorMessage) {
+                mostrarToast(this.errorMessage, 'danger');
+            }
+            this.isLoading = false;
+          }
+        });
       }
     });
   }
 
-  /** Vaciar carrito */
+  /** ✅ Vaciar carrito CORREGIDO */
   vaciarCarrito(): void {
-    // ... (sin cambios aquí, tu código es correcto)
     if (!this.carrito || !this.carrito.items || this.carrito.items.length === 0) {
       return;
     }
-    if (!confirm("¿Seguro que deseas vaciar todo el carrito?")) {
-      return;
-    }
 
-    this.isLoading = true;
-    this.carritoService.vaciarCarrito().subscribe({
-      next: (carritoVacio) => {
-        this.carrito = carritoVacio;
-        mostrarToast('Carrito vaciado', 'success');
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error("Error al vaciar carrito:", err);
-        this.errorMessage = "No se pudo vaciar el carrito.";
-        if (this.errorMessage) {
-           mostrarToast(this.errorMessage, 'danger');
-        }
-        this.isLoading = false;
+    confirmarAccion(
+      'Vaciar Carrito', 
+      '¿Seguro que deseas vaciar todo el carrito?'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.isLoading = true;
+        this.carritoService.vaciarCarrito().subscribe({
+          next: (carritoVacio) => {
+            this.carrito = carritoVacio;
+            mostrarToast('Carrito vaciado', 'success');
+            this.isLoading = false;
+          },
+          error: (err) => {
+            console.error("Error al vaciar carrito:", err);
+            this.errorMessage = "No se pudo vaciar el carrito.";
+            if (this.errorMessage) {
+               mostrarToast(this.errorMessage, 'danger');
+            }
+            this.isLoading = false;
+          }
+        });
       }
     });
   }
 
-  /** Finalizar venta */
+  /** ✅ Finalizar venta CORREGIDO */
   finalizarVenta(): void {
-    // ... (sin cambios aquí, tu código es correcto)
-     this.clienteForm.markAllAsTouched();
+    this.clienteForm.markAllAsTouched();
 
     if (!this.carrito || !this.carrito.items || this.carrito.items.length === 0) {
       mostrarToast('El carrito está vacío.', 'warning');
@@ -242,38 +229,40 @@ export default class CarritoComponent implements OnInit {
       return;
     }
 
-    if (!confirm("¿Confirmar y finalizar la venta? Esta acción descontará el stock.")) {
-      return;
-    }
+    confirmarAccion(
+      'Finalizar Venta', 
+      '¿Confirmar y finalizar la venta? Esta acción descontará el stock.'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.isFinalizando = true;
+        this.errorMessage = null;
 
-    this.isFinalizando = true;
-    this.errorMessage = null;
+        const ventaDTO: VentaDTO = {
+          clienteId: this.clienteForm.get('clienteId')?.value,
+          detalles: this.carrito!.items.map(item => ({
+            productoId: item.productoId,
+            cantidad: item.cantidad
+          }))
+        };
 
-    const ventaDTO: VentaDTO = {
-      clienteId: this.clienteForm.get('clienteId')?.value,
-      detalles: this.carrito.items.map(item => ({
-        productoId: item.productoId,
-        cantidad: item.cantidad
-      }))
-    };
-
-    this.ventaService.crearVenta(ventaDTO).subscribe({
-      next: (ventaCreada) => {
-        mostrarToast(`Venta #${ventaCreada.id} creada exitosamente.`, 'success');
-        this.carrito = null;
-        this.clienteForm.reset();
-        this.isFinalizando = false;
-        // this.router.navigate(['/ventas', ventaCreada.id]); // Ejemplo
-        this.cargarCarrito();
-      },
-      error: (err) => {
-        console.error("Error al finalizar la venta:", err);
-        this.errorMessage = err.error?.message || "Error al procesar la venta. Verifique el stock.";
-        if (this.errorMessage) {
-           mostrarToast(this.errorMessage, 'danger');
-        }
-        this.isFinalizando = false;
-        this.cargarCarrito();
+        this.ventaService.crearVenta(ventaDTO).subscribe({
+          next: (ventaCreada) => {
+            mostrarToast(`Venta #${ventaCreada.id} creada exitosamente.`, 'success');
+            this.carrito = null;
+            this.clienteForm.reset();
+            this.isFinalizando = false;
+            this.cargarCarrito();
+          },
+          error: (err) => {
+            console.error("Error al finalizar la venta:", err);
+            this.errorMessage = err.error?.message || "Error al procesar la venta. Verifique el stock.";
+            if (this.errorMessage) {
+               mostrarToast(this.errorMessage, 'danger');
+            }
+            this.isFinalizando = false;
+            this.cargarCarrito();
+          }
+        });
       }
     });
   }

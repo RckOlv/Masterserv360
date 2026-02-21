@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SolicitudService, ListaEsperaItem } from '../../service/solicitud.service';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
-import { mostrarToast } from '../../utils/toast';
+import { mostrarToast, confirmarAccion } from '../../utils/toast'; // ✅ AÑADIDO confirmarAccion
 
 @Component({
   selector: 'app-solicitudes-list',
@@ -36,15 +36,21 @@ export default class SolicitudesListComponent implements OnInit {
     });
   }
 
+  /** ✅ ELIMINAR SOLICITUD MIGRADO */
   eliminar(id: number) {
-    if(!confirm('¿Borrar de la lista?')) return;
-    
-    this.solicitudService.eliminar(id).subscribe({
-      next: () => {
-        mostrarToast('Eliminado', 'success');
-        this.cargarDatos();
-      },
-      error: () => mostrarToast('Error al eliminar', 'danger')
+    confirmarAccion(
+      'Eliminar de la lista',
+      '¿Borrar de la lista?'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.solicitudService.eliminar(id).subscribe({
+          next: () => {
+            mostrarToast('Eliminado', 'success');
+            this.cargarDatos();
+          },
+          error: () => mostrarToast('Error al eliminar', 'danger')
+        });
+      }
     });
   }
 }

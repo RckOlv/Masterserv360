@@ -5,7 +5,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { PermisoService } from '../../service/permiso.service';
 import { PermisoDTO } from '../../models/permiso.model';
-import { mostrarToast } from '../../utils/toast'; 
+import { mostrarToast, confirmarAccion } from '../../utils/toast'; // ✅ AÑADIDO confirmarAccion
 import { HttpErrorResponse } from '@angular/common/http';
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
 
@@ -165,20 +165,27 @@ export default class PermisoComponent implements OnInit {
     }
   }
 
+  /** ✅ ELIMINAR PERMISO MIGRADO */
   eliminarPermiso(id: number | undefined) { 
     if (!id) return; 
-    if (confirm('¿Seguro que deseas eliminar este permiso? Esta acción es PERMANENTE y puede romper el sistema si está en uso.')) {
-      this.permisoService.softDelete(id).subscribe({ 
-        next: () => {
-          this.cargarPermisos();
-          mostrarToast('Permiso eliminado (marcado como inactivo)', 'warning');
-        },
-        error: (err: HttpErrorResponse) => {
-          console.error('Error al eliminar', err);
-          mostrarToast(err.error?.message || 'Error al eliminar el permiso.', 'danger');
-        }
-      });
-    }
+    
+    confirmarAccion(
+      'Eliminar Permiso', 
+      '¿Seguro que deseas eliminar este permiso? Esta acción es PERMANENTE y puede romper el sistema si está en uso.'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.permisoService.softDelete(id).subscribe({ 
+          next: () => {
+            this.cargarPermisos();
+            mostrarToast('Permiso eliminado (marcado como inactivo)', 'warning');
+          },
+          error: (err: HttpErrorResponse) => {
+            console.error('Error al eliminar', err);
+            mostrarToast(err.error?.message || 'Error al eliminar el permiso.', 'danger');
+          }
+        });
+      }
+    });
   }
 
   resetForm() {

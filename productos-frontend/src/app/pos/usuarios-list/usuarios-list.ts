@@ -8,14 +8,10 @@ import { UsuarioFiltroDTO } from '../../models/usuario-filtro.model';
 import { Page } from '../../models/page.model';
 import { RolService } from '../../service/rol.service'; 
 import { RolDTO } from '../../models/rol.model';
-import { mostrarToast } from '../../utils/toast';
+import { mostrarToast, confirmarAccion } from '../../utils/toast'; // ✅ AÑADIDO confirmarAccion
 
-// --- Mentor: INICIO DE LA MODIFICACIÓN ---
-// 1. Importar la nueva directiva de permisos
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
-// import { AuthService } from '../../service/auth.service'; // Ya no se necesita
-import { HttpErrorResponse } from '@angular/common/http'; // Para el helper de errores
-// --- Mentor: FIN DE LA MODIFICACIÓN ---
+import { HttpErrorResponse } from '@angular/common/http'; 
 
 @Component({
   selector: 'app-usuario-list',
@@ -24,10 +20,7 @@ import { HttpErrorResponse } from '@angular/common/http'; // Para el helper de e
     CommonModule, 
     RouterModule, 
     ReactiveFormsModule,
-    // --- Mentor: INICIO DE LA MODIFICACIÓN ---
-    // 2. Añadir la directiva a los imports del componente
     HasPermissionDirective
-    // --- Mentor: FIN DE LA MODIFICACIÓN ---
   ], 
   templateUrl: './usuarios-list.html',
   styleUrls: ['./usuarios-list.css']
@@ -54,7 +47,6 @@ export default class UsuarioListComponent implements OnInit {
   private usuarioService = inject(UsuarioService);
   private rolService = inject(RolService);
   private fb = inject(FormBuilder);
-  // --- Mentor: ELIMINAMOS AuthService y la variable isAdmin ---
 
   constructor() {
     this.filtroForm = this.fb.group({
@@ -66,7 +58,6 @@ export default class UsuarioListComponent implements OnInit {
   }
 
   ngOnInit() {
-    // --- Mentor: ELIMINAMOS la asignación de 'isAdmin' ---
     this.cargarRoles();
     this.cargarUsuarios(); 
   }
@@ -92,9 +83,9 @@ export default class UsuarioListComponent implements OnInit {
         this.usuariosPage = data;
         this.isLoading = false;
       },
-      error: (err: HttpErrorResponse) => { // Mentor: Usamos HttpErrorResponse
+      error: (err: HttpErrorResponse) => {
         console.error('Error al cargar usuarios:', err);
-        this.handleError(err, 'cargar'); // Mentor: Usamos el helper
+        this.handleError(err, 'cargar'); 
         this.isLoading = false;
       }
     });
@@ -115,36 +106,50 @@ export default class UsuarioListComponent implements OnInit {
     this.aplicarFiltros();
   }
 
+  /** ✅ ELIMINAR/DESACTIVAR USUARIO MIGRADO */
   eliminarUsuario(id: number | undefined) { 
     if (!id) return;
-    if (confirm('¿Seguro que deseas marcar este usuario como INACTIVO?')) { 
-      this.usuarioService.softDelete(id).subscribe({ 
-        next: () => {
-          mostrarToast('Usuario marcado como inactivo', 'warning');
-          this.cargarUsuarios(); 
-        },
-        error: (err: HttpErrorResponse) => { // Mentor: Usamos HttpErrorResponse
-           console.error('Error al eliminar usuario:', err);
-           this.handleError(err, 'eliminar');
-        }
-      });
-    }
+    
+    confirmarAccion(
+      'Desactivar Usuario',
+      '¿Seguro que deseas marcar este usuario como INACTIVO?'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.usuarioService.softDelete(id).subscribe({ 
+          next: () => {
+            mostrarToast('Usuario marcado como inactivo', 'warning');
+            this.cargarUsuarios(); 
+          },
+          error: (err: HttpErrorResponse) => {
+             console.error('Error al eliminar usuario:', err);
+             this.handleError(err, 'eliminar');
+          }
+        });
+      }
+    });
   }
   
+  /** ✅ REACTIVAR USUARIO MIGRADO */
   reactivarUsuario(id: number | undefined) {
     if (!id) return;
-    if (confirm('¿Seguro que deseas REACTIVAR este usuario?')) {
-      this.usuarioService.reactivar(id).subscribe({
-        next: () => {
-          mostrarToast('Usuario reactivado correctamente', 'success');
-          this.cargarUsuarios(); 
-        },
-        error: (err: HttpErrorResponse) => { // Mentor: Usamos HttpErrorResponse
-           console.error('Error al reactivar usuario:', err);
-           this.handleError(err, 'reactivar');
-        }
-      });
-    }
+
+    confirmarAccion(
+      'Reactivar Usuario',
+      '¿Seguro que deseas REACTIVAR este usuario?'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.usuarioService.reactivar(id).subscribe({
+          next: () => {
+            mostrarToast('Usuario reactivado correctamente', 'success');
+            this.cargarUsuarios(); 
+          },
+          error: (err: HttpErrorResponse) => {
+             console.error('Error al reactivar usuario:', err);
+             this.handleError(err, 'reactivar');
+          }
+        });
+      }
+    });
   }
 
   // --- Métodos de Paginación ---

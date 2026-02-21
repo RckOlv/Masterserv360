@@ -6,7 +6,7 @@ import { RolService } from '../../service/rol.service';
 import { PermisoService } from '../../service/permiso.service'; 
 import { RolDTO } from '../../models/rol.model'; 
 import { PermisoDTO } from '../../models/permiso.model'; 
-import { mostrarToast } from '../../utils/toast'; 
+import { mostrarToast, confirmarAccion } from '../../utils/toast'; // ✅ AÑADIDO confirmarAccion
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { forkJoin, Observable } from 'rxjs'; 
@@ -175,20 +175,27 @@ export default class RolesComponent implements OnInit {
     });
   }
 
+  /** ✅ ELIMINAR ROL MIGRADO */
   eliminarRol(id: number | undefined) {
     if (!id) return; 
-    if (confirm('¿Seguro que deseas eliminar este ROL? (Acción permanente)')) {
-      this.rolService.eliminar(id).subscribe({
-        next: () => {
-          this.cargarRolesYPermisos(); 
-          mostrarToast('Rol eliminado', 'warning');
-        },
-        error: (err: HttpErrorResponse) => {
-           console.error('Error al eliminar', err);
-           mostrarToast(err.error?.message || 'Error al eliminar (¿está en uso por un usuario?)', 'danger');
-        }
-      });
-    }
+    
+    confirmarAccion(
+      'Eliminar Rol', 
+      '¿Seguro que deseas eliminar este ROL? (Acción permanente)'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.rolService.eliminar(id).subscribe({
+          next: () => {
+            this.cargarRolesYPermisos(); 
+            mostrarToast('Rol eliminado', 'warning');
+          },
+          error: (err: HttpErrorResponse) => {
+             console.error('Error al eliminar', err);
+             mostrarToast(err.error?.message || 'Error al eliminar (¿está en uso por un usuario?)', 'danger');
+          }
+        });
+      }
+    });
   }
 
   resetForm() {

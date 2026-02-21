@@ -11,7 +11,7 @@ import { ReglaPuntosDTO } from '../../models/regla-puntos.model';
 import { CategoriaDTO } from '../../models/categoria.model'; 
 import { RecompensaDTO } from '../../models/recompensa.model'; 
 import { TipoDescuento } from '../../models/enums/tipo-descuento.enum'; 
-import { mostrarToast } from '../../utils/toast';
+import { mostrarToast, confirmarAccion } from '../../utils/toast'; // ✅ AÑADIDO confirmarAccion
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
 
 declare var bootstrap: any;
@@ -158,37 +158,44 @@ export default class ReglasPuntosComponent implements OnInit {
     });
   }
 
+  /** ✅ CONFIRMAR CREACIÓN DE REGLA MIGRADO */
   onSubmitRegla(): void {
     this.reglaForm.markAllAsTouched();
     if (this.reglaForm.invalid) {
       mostrarToast('Revise los campos obligatorios de la regla.', 'warning');
       return;
     }
-    if (!confirm("¿Crear nueva regla? La anterior será caducada.")) return;
 
-    this.isSubmitting = true;
-    
-    // ✅ IMPORTANTE: getRawValue() incluye campos disabled
-    const formValue = this.reglaForm.getRawValue();
-    
-    const nuevaReglaDTO: ReglaPuntosDTO = { 
-      descripcion: formValue.descripcion,
-      montoGasto: formValue.montoGasto,
-      puntosGanados: formValue.puntosGanados,
-      equivalenciaPuntos: formValue.equivalenciaPuntos, 
-      caducidadPuntosMeses: formValue.caducidadPuntosMeses
-    };
-    
-    this.reglaPuntosService.crearNuevaReglaActiva(nuevaReglaDTO).subscribe({
-      next: () => {
-        mostrarToast('¡Nueva regla activada!', 'success');
-        this.isSubmitting = false;
-        this.reglaForm.reset({ montoGasto: 1000, puntosGanados: 100, equivalenciaPuntos: 10, caducidadPuntosMeses: 12 });
-        this.cargarDatos(); 
-      },
-      error: (err) => { 
-        this.isSubmitting = false;
-        mostrarToast('Error al crear regla.', 'danger');
+    confirmarAccion(
+      'Crear Nueva Regla', 
+      '¿Crear nueva regla? La anterior pasará a ser caducada.'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.isSubmitting = true;
+        
+        // ✅ IMPORTANTE: getRawValue() incluye campos disabled
+        const formValue = this.reglaForm.getRawValue();
+        
+        const nuevaReglaDTO: ReglaPuntosDTO = { 
+          descripcion: formValue.descripcion,
+          montoGasto: formValue.montoGasto,
+          puntosGanados: formValue.puntosGanados,
+          equivalenciaPuntos: formValue.equivalenciaPuntos, 
+          caducidadPuntosMeses: formValue.caducidadPuntosMeses
+        };
+        
+        this.reglaPuntosService.crearNuevaReglaActiva(nuevaReglaDTO).subscribe({
+          next: () => {
+            mostrarToast('¡Nueva regla activada!', 'success');
+            this.isSubmitting = false;
+            this.reglaForm.reset({ montoGasto: 1000, puntosGanados: 100, equivalenciaPuntos: 10, caducidadPuntosMeses: 12 });
+            this.cargarDatos(); 
+          },
+          error: (err) => { 
+            this.isSubmitting = false;
+            mostrarToast('Error al crear regla.', 'danger');
+          }
+        });
       }
     });
   }
@@ -284,14 +291,21 @@ export default class ReglasPuntosComponent implements OnInit {
     });
   }
 
+  /** ✅ ELIMINAR RECOMPENSA MIGRADO */
   eliminarRecompensa(id: number): void {
-    if (!confirm("¿Eliminar recompensa?")) return;
-    this.recompensaService.eliminar(id).subscribe({
-      next: () => {
-        mostrarToast("Eliminada.", 'success');
-        this.cargarDatos();
-      },
-      error: () => mostrarToast("Error al eliminar.", 'danger')
+    confirmarAccion(
+      'Eliminar Recompensa', 
+      '¿Estás seguro de eliminar esta recompensa?'
+    ).then((confirmado) => {
+      if (confirmado) {
+        this.recompensaService.eliminar(id).subscribe({
+          next: () => {
+            mostrarToast("Eliminada.", 'success');
+            this.cargarDatos();
+          },
+          error: () => mostrarToast("Error al eliminar.", 'danger')
+        });
+      }
     });
   }
 
