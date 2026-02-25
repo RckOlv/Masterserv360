@@ -9,7 +9,7 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-
+import java.util.List;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -54,20 +54,28 @@ public class JwtTokenUtil {
 
     // --- Generación de Token (Enriquecido) ---
     public String generateToken(Usuario usuario) {
-        Map<String, Object> claims = new HashMap<>();
-        
-        // Roles
-        claims.put("roles", usuario.getRoles().stream()
-                .map(rol -> rol.getNombreRol()) 
-                .collect(Collectors.toList()));
+    Map<String, Object> claims = new HashMap<>();
+    
+    // 1. Meter Roles
+    claims.put("roles", usuario.getRoles().stream()
+            .map(rol -> rol.getNombreRol()) 
+            .collect(Collectors.toList()));
 
-        // Datos Personales
-        claims.put("nombre", usuario.getNombre());
-        claims.put("apellido", usuario.getApellido());
-        claims.put("id", usuario.getId());
+    // Extraemos todos los permisos de todos sus roles
+    List<String> permisos = usuario.getRoles().stream()
+            .flatMap(rol -> rol.getPermisos().stream())
+            .map(p -> p.getNombrePermiso())
+            .distinct()
+            .collect(Collectors.toList());
+    claims.put("permisos", permisos); 
 
-        return createToken(claims, usuario.getEmail());
-    }
+    // Datos Personales
+    claims.put("nombre", usuario.getNombre());
+    claims.put("apellido", usuario.getApellido());
+    claims.put("id", usuario.getId());
+
+    return createToken(claims, usuario.getEmail());
+}
 
     // Método legacy para UserDetails (Opcional)
     public String generateToken(UserDetails userDetails) {

@@ -91,9 +91,20 @@ export class AuthService {
   }
   
   private getPermissionsFromStorage(): string[] {
-    const permissions = localStorage.getItem(this.PERMISSIONS_KEY);
-    return permissions ? JSON.parse(permissions) : [];
+  // 1. Intentamos sacar del localStorage (lo que se guardó al loguear)
+  const permissions = localStorage.getItem(this.PERMISSIONS_KEY);
+  if (permissions) {
+    return JSON.parse(permissions);
   }
+
+  // 2. FAILSAFE: Si no hay nada en storage, lo sacamos del Token decodificado
+  const decoded = this.getDecodedToken();
+  if (decoded && decoded.permisos) {
+    return decoded.permisos;
+  }
+
+  return [];
+}
 
   hasToken(): boolean {
     const token = this.getToken();
