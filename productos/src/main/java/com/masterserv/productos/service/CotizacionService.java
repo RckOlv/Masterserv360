@@ -276,36 +276,44 @@ public class CotizacionService {
     }
 
     private void recalcularRecomendacion(Cotizacion cotizacionRef) {
-        List<Cotizacion> competidoras = cotizacionRepository.findByEstado(EstadoCotizacion.RECIBIDA);
-        
-        if (competidoras.isEmpty()) return;
+    List<Cotizacion> competidoras = cotizacionRepository.findByEstado(EstadoCotizacion.RECIBIDA);
+    if (competidoras.isEmpty()) return;
 
-        for (Cotizacion c : competidoras) {
-            c.setEsRecomendada(false);
-        }
+    for (Cotizacion c : competidoras) {
+        c.setEsRecomendada(false);
+    }
 
-        Cotizacion mejorOpcion = competidoras.stream()
-            .max((c1, c2) -> {
-                long itemsC1 = c1.getItems().stream().filter(i -> i.getEstado() == EstadoItemCotizacion.COTIZADO).count();
-                long itemsC2 = c2.getItems().stream().filter(i -> i.getEstado() == EstadoItemCotizacion.COTIZADO).count();
-                int compareItems = Long.compare(itemsC1, itemsC2);
-                if (compareItems != 0) return compareItems;
+    Cotizacion mejorOpcion = competidoras.stream()
+        .max((c1, c2) -> {
+            // 1. Prioridad: Quién cotizó más ítems diferentes
+            long itemsC1 = c1.getItems().stream().filter(i -> i.getEstado() == EstadoItemCotizacion.COTIZADO).count();
+            long itemsC2 = c2.getItems().stream().filter(i -> i.getEstado() == EstadoItemCotizacion.COTIZADO).count();
+            int compareItems = Long.compare(itemsC1, itemsC2);
+            if (compareItems != 0) return compareItems;
 
-                BigDecimal p1 = c1.getPrecioTotalOfertado() != null ? c1.getPrecioTotalOfertado() : BigDecimal.valueOf(Long.MAX_VALUE);
-                BigDecimal p2 = c2.getPrecioTotalOfertado() != null ? c2.getPrecioTotalOfertado() : BigDecimal.valueOf(Long.MAX_VALUE);
-                int comparePrecio = p2.compareTo(p1); 
-                if (comparePrecio != 0) return comparePrecio;
+            // 2. NUEVA PRIORIDAD: Quién ofrece MÁS CANTIDAD total de productos
+            // (Para que no gane el que cotiza "poquito" para que el total sea bajo)
+            int cantTotalC1 = c1.getItems().stream().mapToInt(i -> i.getCantidadSolicitada()).sum();
+            int cantTotalC2 = c2.getItems().stream().mapToInt(i -> i.getCantidadSolicitada()).sum();
+            int compareCant = Integer.compare(cantTotalC1, cantTotalC2);
+            if (compareCant != 0) return compareCant;
 
-                LocalDate f1 = c1.getFechaEntregaOfertada() != null ? c1.getFechaEntregaOfertada() : LocalDate.MAX;
-                LocalDate f2 = c2.getFechaEntregaOfertada() != null ? c2.getFechaEntregaOfertada() : LocalDate.MAX;
-                return f2.compareTo(f1); 
-            })
-            .orElse(null);
+            // 3. Prioridad: Precio Total (A igual cantidad, el más barato)
+            BigDecimal p1 = c1.getPrecioTotalOfertado() != null ? c1.getPrecioTotalOfertado() : BigDecimal.valueOf(Long.MAX_VALUE);
+            BigDecimal p2 = c2.getPrecioTotalOfertado() != null ? c2.getPrecioTotalOfertado() : BigDecimal.valueOf(Long.MAX_VALUE);
+            int comparePrecio = p2.compareTo(p1); // Invertido porque max() busca el "mayor", y queremos el precio menor
+            if (comparePrecio != 0) return comparePrecio;
 
-        if (mejorOpcion != null) {
-            mejorOpcion.setEsRecomendada(true);
-        }
-        
-        cotizacionRepository.saveAll(competidoras);
+            // 4. Prioridad: Fecha de entrega
+            LocalDate f1 = c1.getFechaEntregaOfertada() != null ? c1.getFechaEntregaOfertada() : LocalDate.MAX;
+            LocalDate f2 = c2.getFechaEntregaOfertada() != null ? c2.getFechaEntregaOfertada() : LocalDate.MAX;
+            return f2.compareTo(f1); 
+        })
+        .orElse(null);
+
+    if (mejorOpcion != null) {
+        mejorOpcion.setEsRecomendada(true);
+    }
+    cotizacionRepository.saveAll(competidoras);
     }
 }
