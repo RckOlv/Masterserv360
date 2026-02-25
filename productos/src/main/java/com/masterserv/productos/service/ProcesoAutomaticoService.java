@@ -20,6 +20,7 @@ import org.thymeleaf.context.Context;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @EnableScheduling
@@ -76,17 +77,31 @@ public class ProcesoAutomaticoService {
     }
 
     @Transactional
-    protected List<Cotizacion> crearCotizacionesEnTransaccion() {
-        List<Producto> productosFaltantes = productoRepository.findProductosConStockBajo(); 
+protected List<Cotizacion> crearCotizacionesEnTransaccion() {
+    List<Producto> productosFaltantes = productoRepository.findProductosConStockBajo(); 
 
-        if (productosFaltantes.isEmpty()) return Collections.emptyList();
+    if (productosFaltantes.isEmpty()) return Collections.emptyList();
+    Set<Long> categoriaIds = productosFaltantes.stream()
+            .map(p -> p.getCategoria().getId())
+            .collect(Collectors.toSet());
 
-        List<Proveedor> proveedoresActivos = proveedorRepository.findByEstado(EstadoUsuario.ACTIVO);
-        
-        if (proveedoresActivos.isEmpty()) {
-            logger.warn("⚠️ No hay proveedores activos para reponer stock.");
-            return Collections.emptyList();
-        }
+    // Usamos el nuevo método del repositorio (asegurate de tenerlo en ProveedorRepository)
+    List<Proveedor> proveedoresCandidatos = new ArrayList<>();
+    for (Long catId : categoriaIds) {
+        proveedoresCandidatos.addAll(
+            proveedorRepository.findByEstadoAndCategorias_Id(EstadoUsuario.ACTIVO, catId)
+        );
+    }
+    
+    // Eliminamos duplicados por si un proveedor tiene varias de las categorías que faltan
+    List<Proveedor> proveedoresActivos = proveedoresCandidatos.stream()
+            .distinct()
+            .collect(Collectors.toList());
+
+    if (proveedoresActivos.isEmpty()) {
+        logger.warn("⚠️ No hay proveedores activos con los rubros necesarios.");
+        return Collections.emptyList();
+    }
 
         List<Cotizacion> nuevasCotizaciones = new ArrayList<>();
 
@@ -325,7 +340,7 @@ public class ProcesoAutomaticoService {
     }
 
     private boolean proveedorVendeCategoria(Proveedor proveedor, Categoria categoria) {
-        if (proveedor.getCategorias() == null || proveedor.getCategorias().isEmpty()) return true;
+        if (proveedor.getCategorias() == null || proveedor.getCategorias().isEmpty()) return false;
         return proveedor.getCategorias().stream()
                 .anyMatch(c -> c.getId().equals(categoria.getId()));
     }

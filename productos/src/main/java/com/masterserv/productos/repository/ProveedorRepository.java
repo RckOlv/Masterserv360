@@ -39,4 +39,7 @@ public interface ProveedorRepository extends JpaRepository<Proveedor, Long> {
     @Override
     @EntityGraph(attributePaths = {"categorias"})
     Optional<Proveedor> findById(Long id); 
+
+    @EntityGraph(attributePaths = {"categorias"})
+    List<Proveedor> findByEstadoAndCategorias_Id(com.masterserv.productos.enums.EstadoUsuario estado, Long categoriaId);
 }
