@@ -100,19 +100,25 @@ export class ReportesComponent implements OnInit {
   // --- LÓGICA DEL BUSCADOR ---
 
   filtrarProductos() {
-    // 🛡️ Agregá esta validación para que no explote si la lista no está lista
-    if (!this.listaProductos || !Array.isArray(this.listaProductos)) {
-        this.productosFiltrados = [];
-        return;
-    }
+  if (!this.listaProductos || !Array.isArray(this.listaProductos)) {
+      this.productosFiltrados = [];
+      this.mostrarDropdown = false;
+      return;
+  }
 
-    // Acá sigue tu código normal, que seguro es algo así:
-    const texto = this.busquedaInput.toLowerCase();
+  const texto = this.busquedaInput.trim().toLowerCase();
+  if (texto === '') {
+      this.productosFiltrados = [];
+      this.mostrarDropdown = false;
+      return;
+  }
+    // Si hay texto, filtramos y abrimos el dropdown
     this.productosFiltrados = this.listaProductos.filter(p => 
         p.nombre.toLowerCase().includes(texto)
     );
+    // Oculta el dropdown si no encontró nada para no mostrar un cuadro vacío
     this.mostrarDropdown = this.productosFiltrados.length > 0;
-}
+  }
 
   seleccionarProducto(prod: any) {
     this.busquedaProducto = prod.nombre;
