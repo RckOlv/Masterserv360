@@ -34,7 +34,7 @@
 }
 
 /* 🌟 ESTA ES LA PESTAÑA ACTIVA 🌟 */
-.nav-tabs .nav-link.active-tab {
+.nav-tabs .nav-link.active {
   color: #E41E26 !important; /* Texto rojo intenso */
   border-bottom: 3px solid #E41E26 !important; /* Subrayado rojo grueso */
   background: rgba(228, 30, 38, 0.08); /* Fondito rojo translúcido */

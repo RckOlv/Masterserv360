@@ -24,19 +24,7 @@ interface CostoAgrupado {
   standalone: true,
   imports: [CommonModule, FormsModule, BaseChartDirective],
   templateUrl: './reportes.html',
-  styles: [`
-    .nav-tabs .nav-link.active { background-color: #0d6efd; color: white; border-color: #0d6efd; }
-    .nav-tabs .nav-link { color: #adb5bd; cursor: pointer; }
-    .nav-tabs .nav-link:hover { color: #fff; border-color: #495057; }
-    .total-card { background: linear-gradient(45deg, #198754, #20c997); color: white; }
-    .form-control-dark { background-color: #212529; border-color: #495057; color: #fff; }
-    .form-control-dark:focus { background-color: #212529; border-color: #0d6efd; color: #fff; }
-    .text-bright { color: #ffffff !important; opacity: 1 !important; }
-    .text-dim { color: rgba(255,255,255,0.7) !important; }
-    .chart-container { position: relative; height: 300px; width: 100%; }
-    /* Hover para el acordeón */
-    .fila-agrupada:hover { background-color: rgba(255,255,255,0.05) !important; transition: 0.2s; }
-  `]
+  styles: [`.reportes.css`] 
 })
 export class ReportesComponent implements OnInit {
   private reporteService = inject(ReporteService);
@@ -84,16 +72,18 @@ export class ReportesComponent implements OnInit {
   };
   
   ngOnInit() {
-    this.obtenerUsuarioActual();
-    this.cargarValorizacion();
-    this.reporteService.getProductosParaFiltro().subscribe({
-        next: (data) => {
-            this.listaProductos = data;
-            this.productosFiltrados = data;
-        },
-        error: (err) => console.error("No se pudieron cargar los productos", err)
-    });
-  }
+  this.obtenerUsuarioActual();
+  this.cargarValorizacion();
+  
+  this.reporteService.getProductosParaFiltro().subscribe({
+      next: (data: any) => {
+          const productos = data.content ? data.content : data;
+          this.listaProductos = productos;
+          this.productosFiltrados = productos;
+      },
+      error: (err) => console.error("No se pudieron cargar los productos", err)
+  });
+}
 
   obtenerUsuarioActual() {
     const user = localStorage.getItem('username') || localStorage.getItem('email');

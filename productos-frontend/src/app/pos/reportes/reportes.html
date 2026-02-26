@@ -15,17 +15,17 @@
       
       <ul class="nav nav-tabs border-secondary pt-3 px-3">
         <li class="nav-item">
-          <a class="nav-link text-white-50" [class.active-tab]="activeTab === 'valorizacion'" (click)="cambiarTab('valorizacion')" style="cursor: pointer;">
+          <a class="nav-link text-white-50" [class.active]="activeTab === 'valorizacion'" (click)="cambiarTab('valorizacion')" style="cursor: pointer;">
             <i class="bi bi-cash-coin me-1"></i> Valorización
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link text-white-50" [class.active-tab]="activeTab === 'inmovilizado'" (click)="cambiarTab('inmovilizado')" style="cursor: pointer;">
+          <a class="nav-link text-white-50" [class.active]="activeTab === 'inmovilizado'" (click)="cambiarTab('inmovilizado')" style="cursor: pointer;">
             <i class="bi bi-snow2 me-1"></i> Stock Inmovilizado
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link text-white-50" [class.active-tab]="activeTab === 'costos'" (click)="cambiarTab('costos')" style="cursor: pointer;">
+          <a class="nav-link text-white-50" [class.active]="activeTab === 'costos'" (click)="cambiarTab('costos')" style="cursor: pointer;">
             <i class="bi bi-graph-up-arrow me-1"></i> Evolución Costos
           </a>
         </li>
