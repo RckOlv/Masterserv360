@@ -145,7 +145,9 @@ export default class CajaComponent implements OnInit {
   cerrarCaja() {
     if (!this.cajaActual) return;
     this.isProcessing = true;
-    this.cajaService.cerrarCaja(this.cajaActual.id, this.montoDeclaradoInput).subscribe({
+    
+    // ✅ ACA ESTA EL CAMBIO: Le pasamos this.usuarioId en el medio
+    this.cajaService.cerrarCaja(this.cajaActual.id, this.usuarioId, this.montoDeclaradoInput).subscribe({
       next: (cajaCerrada) => {
         this.cajaActual = null;
         this.isProcessing = false;

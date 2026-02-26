@@ -33,8 +33,8 @@ export class CajaService {
     return this.http.post<Caja>(`${this.apiUrl}/abrir`, { usuarioId, montoInicial });
   }
 
-  cerrarCaja(cajaId: number, montoDeclarado: number): Observable<Caja> {
-    return this.http.post<Caja>(`${this.apiUrl}/cerrar`, { cajaId, montoDeclarado });
+  cerrarCaja(cajaId: number, usuarioId: number, montoDeclarado: number): Observable<Caja> {
+    return this.http.post<Caja>(`${this.apiUrl}/cerrar`, { cajaId, usuarioId, montoDeclarado });
   }
 
   registrarRetiro(cajaId: number, monto: number, motivo: string): Observable<Caja> {

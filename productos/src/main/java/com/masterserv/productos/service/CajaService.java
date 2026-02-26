@@ -28,28 +28,32 @@ public class CajaService {
     @Autowired
     private AuditoriaRepository auditoriaRepository;
 
+    // ✅ AHORA BUSCA LA CAJA DEL LOCAL, NO LA DEL USUARIO
     public Caja obtenerCajaAbierta(Long usuarioId) {
-        return cajaRepository.findCajaAbiertaByUsuario(usuarioId).orElse(null);
+        // Ignoramos el usuarioId y buscamos si hay alguna caja abierta en el sistema
+        return cajaRepository.findFirstByEstado("ABIERTA").orElse(null);
     }
 
     @Transactional
     public Caja abrirCaja(AbrirCajaDTO dto) {
-        if (obtenerCajaAbierta(dto.getUsuarioId()) != null) {
-            throw new RuntimeException("El usuario ya tiene una caja abierta.");
+        // Verificamos si EL LOCAL ya tiene una caja abierta
+        if (obtenerCajaAbierta(null) != null) {
+            throw new RuntimeException("Ya existe una caja abierta en el local.");
         }
 
-        Usuario cajero = usuarioRepository.findById(dto.getUsuarioId())
+        Usuario cajeroQueAbre = usuarioRepository.findById(dto.getUsuarioId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         Caja nuevaCaja = new Caja();
-        nuevaCaja.setUsuario(cajero);
+        nuevaCaja.setUsuario(cajeroQueAbre); // Queda registrado quién la abrió
         nuevaCaja.setMontoInicial(dto.getMontoInicial());
         nuevaCaja.setExtracciones(BigDecimal.ZERO);
+        nuevaCaja.setEstado("ABIERTA"); // Aseguramos el estado
         
         Caja guardada = cajaRepository.save(nuevaCaja);
 
-        registrarAuditoriaCaja(cajero, guardada.getId(), "CAJA_ABRIR", 
-            String.format("Apertura de turno. Monto inicial: $%s", dto.getMontoInicial()),
+        registrarAuditoriaCaja(cajeroQueAbre, guardada.getId(), "CAJA_ABRIR", 
+            String.format("Apertura de caja general. Monto inicial: $%s", dto.getMontoInicial()),
             null, "{ \"Efectivo Inicial\": " + dto.getMontoInicial() + " }");
 
         return guardada;
@@ -63,6 +67,10 @@ public class CajaService {
         if ("CERRADA".equals(caja.getEstado())) {
             throw new RuntimeException("Esta caja ya fue cerrada anteriormente.");
         }
+
+        // Buscamos quién es el usuario que está cerrando la caja (puede ser distinto al que la abrió)
+        Usuario cajeroQueCierra = usuarioRepository.findById(dto.getUsuarioId())
+                .orElse(caja.getUsuario());
 
         caja.setFechaCierre(LocalDateTime.now());
         caja.setEstado("CERRADA");
@@ -78,10 +86,10 @@ public class CajaService {
 
         Caja cerrada = cajaRepository.save(caja);
 
-        String detalleArqueo = String.format("Cierre de caja. Declarado: $%s | Esperado: $%s | Diferencia: $%s", 
+        String detalleArqueo = String.format("Cierre de caja general. Declarado: $%s | Esperado: $%s | Diferencia: $%s", 
             dto.getMontoDeclarado(), totalEsperadoCajon, diferencia);
         
-        registrarAuditoriaCaja(caja.getUsuario(), cerrada.getId(), "CAJA_CERRAR", detalleArqueo,
+        registrarAuditoriaCaja(cajeroQueCierra, cerrada.getId(), "CAJA_CERRAR", detalleArqueo,
             "{ \"Esperado\": " + totalEsperadoCajon + " }", 
             "{ \"Declarado\": " + dto.getMontoDeclarado() + ", \"Diferencia\": " + diferencia + " }");
 
@@ -102,10 +110,13 @@ public class CajaService {
         
         Caja actualizada = cajaRepository.save(caja);
 
+        // Opcional: si tu DTO de retiro trae el ID del usuario que lo hace, se podría usar aquí
+        Usuario operario = caja.getUsuario(); 
+
         String detalleRetiro = String.format("Retiro de efectivo (Sangría). Monto: $%s | Motivo: %s", 
             dto.getMonto(), dto.getMotivo());
         
-        registrarAuditoriaCaja(caja.getUsuario(), actualizada.getId(), "CAJA_RETIRO", detalleRetiro,
+        registrarAuditoriaCaja(operario, actualizada.getId(), "CAJA_RETIRO", detalleRetiro,
             "{ \"Retiros anteriores\": " + extraccionActual + " }", 
             "{ \"Total Retiros\": " + actualizada.getExtracciones() + " }");
 

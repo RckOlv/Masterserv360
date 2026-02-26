@@ -6,5 +6,6 @@ import java.math.BigDecimal;
 @Data
 public class CerrarCajaDTO {
     private Long cajaId;
-    private BigDecimal montoDeclarado; // La plata física que el cajero contó en el cajón
+    private Long usuarioId;
+    private BigDecimal montoDeclarado;
 }
