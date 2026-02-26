@@ -5,22 +5,12 @@ import com.masterserv.productos.dto.ProductoDTO;
 import com.masterserv.productos.dto.ProductoFiltroDTO;
 import com.masterserv.productos.dto.ProductoPublicoDTO;
 import com.masterserv.productos.dto.ProductoPublicoFiltroDTO;
-import com.masterserv.productos.entity.Producto;
-import com.masterserv.productos.entity.Categoria;
-import com.masterserv.productos.entity.SolicitudProducto;
-import com.masterserv.productos.entity.Usuario;
-import com.masterserv.productos.entity.ListaEspera;
-import com.masterserv.productos.entity.MovimientoStock;
+import com.masterserv.productos.entity.*;
 import com.masterserv.productos.enums.EstadoListaEspera;
 import com.masterserv.productos.enums.TipoMovimiento;
-import com.masterserv.productos.repository.SolicitudProductoRepository;
-import com.masterserv.productos.repository.UsuarioRepository;
-import com.masterserv.productos.repository.ListaEsperaRepository;
-import com.masterserv.productos.repository.MovimientoStockRepository;
+import com.masterserv.productos.repository.*;
 import com.masterserv.productos.mapper.ProductoMapper;
-import com.masterserv.productos.repository.ProductoRepository;
 import com.masterserv.productos.specification.ProductoSpecification;
-import com.masterserv.productos.repository.CategoriaRepository;
 import com.masterserv.productos.exceptions.StockInsuficienteException;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +41,7 @@ public class ProductoService {
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private SolicitudProductoRepository solicitudProductoRepository;
     @Autowired private ListaEsperaRepository listaEsperaRepository;
+    @Autowired private AuditoriaRepository auditoriaRepository;
 
     @Autowired 
     @Lazy
@@ -116,14 +107,14 @@ public class ProductoService {
     @Transactional
     public ProductoDTO create(ProductoDTO productoDTO) {
         if (productoRepository.existsByNombreIgnoreCase(productoDTO.nombre())) {
-            throw new IllegalArgumentException("¡Error! Ya existe un producto con el nombre '" + productoDTO.nombre() + "'.");
+            throw new IllegalArgumentException("Ya existe un producto con el nombre '" + productoDTO.nombre() + "'.");
         }
         if (productoRepository.existsByCodigo(productoDTO.codigo())) {
             throw new IllegalArgumentException("Ya existe un producto con el código: " + productoDTO.codigo());
         }
         
         Categoria categoria = categoriaRepository.findById(productoDTO.categoriaId())
-                .orElseThrow(() -> new EntityNotFoundException("Error al crear producto: La Categoría con ID " + productoDTO.categoriaId() + " no existe."));
+                .orElseThrow(() -> new EntityNotFoundException("La Categoría con ID " + productoDTO.categoriaId() + " no existe."));
         
         Producto producto = productoMapper.toProducto(productoDTO);
         producto.setCategoria(categoria);
@@ -181,20 +172,15 @@ public class ProductoService {
         }
     }
 
-    /**
-     * ACTUALIZACIÓN DE FICHA DE PRODUCTO
-     * Nota: Aquí NO se modifica el stock. El stock solo se modifica en 'ajustarStock' o 'reponerStock'.
-     */
     @Transactional
     public ProductoDTO update(Long id, ProductoDTO productoDTO) {
         if (productoRepository.existsByNombreIgnoreCaseAndIdNot(productoDTO.nombre(), id)) {
-            throw new IllegalArgumentException("¡Error! El nombre '" + productoDTO.nombre() + "' ya lo está usando otro producto.");
+            throw new IllegalArgumentException("El nombre '" + productoDTO.nombre() + "' ya está en uso.");
         }
 
         Producto productoExistente = productoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
 
-        // Mapeamos los cambios del DTO a la entidad (Nombre, Precios, Descripción, etc.)
         productoMapper.updateProductoFromDto(productoDTO, productoExistente);
 
         if (productoDTO.categoriaId() != null && 
@@ -208,13 +194,8 @@ public class ProductoService {
         if (productoDTO.estado() != null) {
             productoExistente.setEstado(productoDTO.estado());
         }
-        
-        // Importante: Aseguramos que el stock NO cambie aquí, por si el Mapper intentó tocarlo.
-        // (Aunque si el DTO tiene stock null, el mapper suele ignorarlo, pero por seguridad).
-        // productoExistente.setStockActual(productoExistente.getStockActual()); // Redundante pero seguro.
 
         Producto productoActualizado = productoRepository.save(productoExistente);
-
         return productoMapper.toProductoDTO(productoActualizado);
     }
 
@@ -279,18 +260,15 @@ public class ProductoService {
             throw new StockInsuficienteException("Stock insuficiente.");
         }
 
-        int stockNuevo = stockAnterior - cantidadADescontar;
-        producto.setStockActual(stockNuevo);
+        producto.setStockActual(stockAnterior - cantidadADescontar);
         return productoRepository.save(producto);
     }
     
-    // MÉTODO USADO POR PEDIDOS
     @Transactional(propagation = Propagation.REQUIRED)
     public Producto reponerStock(Long productoId, int cantidadAReponer) {
         return reponerStock(productoId, cantidadAReponer, null);
     }
 
-    // MÉTODO USADO POR PEDIDOS (Con cambio de precio opcional)
     @Transactional(propagation = Propagation.REQUIRED)
     public Producto reponerStock(Long productoId, int cantidadAReponer, BigDecimal nuevoCosto) {
          if (cantidadAReponer <= 0) throw new IllegalArgumentException("Cantidad debe ser positiva.");
@@ -307,7 +285,6 @@ public class ProductoService {
         }
         Producto productoGuardado = productoRepository.save(producto);
 
-        // Notificación de Lista de Espera
         if (stockAnterior <= 0 && stockNuevo > 0) {
              try { procesoAutomaticoService.procesarListaEspera(productoId); } catch (Exception e) {}
         }
@@ -315,10 +292,6 @@ public class ProductoService {
          return productoGuardado;
     }
 
-    /**
-     * MÉTODO DE AJUSTE MANUAL (Botón "Ajustar Stock")
-     * Este SÍ registra el movimiento como AJUSTE_MANUAL.
-     */
     @Transactional
     public void ajustarStock(MovimientoStockDTO dto, String emailUsuario) {
         Producto producto = productoRepository.findById(dto.getProductoId())
@@ -331,9 +304,6 @@ public class ProductoService {
         int cantidadAjuste = dto.getCantidad(); 
         int nuevoStock = stockAnterior + cantidadAjuste;
 
-        System.out.println("🚀 [AJUSTE MANUAL] Prod: " + producto.getNombre());
-        System.out.println("   --> Stock Anterior: " + stockAnterior + " | Nuevo: " + nuevoStock);
-
         if (nuevoStock < 0) {
             throw new StockInsuficienteException("El ajuste dejaría el stock en negativo.");
         }
@@ -341,24 +311,52 @@ public class ProductoService {
         producto.setStockActual(nuevoStock);
         productoRepository.save(producto);
 
-        // REGISTRO DE MOVIMIENTO
+        // Registro detallado en MovimientoStock
         MovimientoStock movimiento = new MovimientoStock();
         movimiento.setFecha(LocalDateTime.now());
         movimiento.setCantidad(cantidadAjuste);
-        movimiento.setTipoMovimiento(TipoMovimiento.AJUSTE_MANUAL); // <--- Etiqueta Correcta
+        movimiento.setTipoMovimiento(TipoMovimiento.AJUSTE_MANUAL);
         movimiento.setMotivo(dto.getMotivo());
         movimiento.setProducto(producto);
         movimiento.setUsuario(usuario);
         movimientoStockRepository.save(movimiento);
 
+        // Registro explícito en Auditoría para seguimiento de inventario
+        registrarAuditoriaManual(producto, usuario, stockAnterior, nuevoStock, cantidadAjuste, dto.getMotivo());
+
         if (stockAnterior <= 0 && nuevoStock > 0) {
-            System.out.println("📢 STOCK RECUPERADO (Ajuste Manual): Llamando a notificación DIRECTA...");
             try {
                 procesoAutomaticoService.procesarListaEspera(producto.getId());
             } catch (Exception e) {
-                System.err.println("⚠️ Falló la llamada directa a notificaciones: " + e.getMessage());
-                e.printStackTrace();
+                System.err.println("Error en notificación de lista de espera: " + e.getMessage());
             }
+        }
+    }
+
+    /**
+     * Persiste un registro de auditoría específico para ajustes manuales de stock.
+     */
+    private void registrarAuditoriaManual(Producto producto, Usuario usuario, int anterior, int nuevo, int variacion, String motivo) {
+        try {
+            Auditoria audit = new Auditoria();
+            audit.setFecha(LocalDateTime.now());
+            audit.setUsuario(usuario.getEmail());
+            audit.setEntidad("Producto");
+            audit.setEntidadId(producto.getId().toString());
+            audit.setAccion("AJUSTE_MANUAL");
+
+            String detalle = String.format("⚙️ Ajuste Manual. Prod: %s | Variación: %d | Motivo: %s", 
+                    producto.getNombre(), variacion, motivo);
+            
+            if (detalle.length() > 255) detalle = detalle.substring(0, 255);
+            
+            audit.setDetalle(detalle);
+            audit.setValorAnterior("{ \"Stock\": " + anterior + " }");
+            audit.setValorNuevo("{ \"Stock\": " + nuevo + ", \"Variacion\": " + variacion + " }");
+
+            auditoriaRepository.save(audit);
+        } catch (Exception e) {
+            System.err.println("Error al registrar auditoría de ajuste: " + e.getMessage());
         }
     }
 }

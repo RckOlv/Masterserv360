@@ -77,8 +77,6 @@ export default class AuditoriaListComponent implements OnInit {
   verDetalles(log: Auditoria) {
     this.selectedLog = log;
     
-    // ✅ CORRECCIÓN: Tipamos explícitamente como 'any' o 'Record<string, any>'
-    // para permitir el acceso por índice [key]
     let rawAnteriores: any = {};
     let rawNuevos: any = {};
 
@@ -102,7 +100,6 @@ export default class AuditoriaListComponent implements OnInit {
     allKeys.forEach(key => {
        if (['passwordHash', 'hibernateLazyInitializer', 'handler', 'roles', 'permisos', 'password'].includes(key)) return;
 
-       // Ahora TypeScript ya no se quejará aquí:
        const rawValAntes = rawAnteriores[key];
        const rawValNuevo = rawNuevos[key];
        
@@ -136,7 +133,7 @@ export default class AuditoriaListComponent implements OnInit {
     this.selectedLog = null;
   }
 
- private formatValue(val: any): string {
+  private formatValue(val: any): string {
     if (val === null || val === undefined) return '-';
     if (typeof val === 'boolean') return val ? 'Sí' : 'No';
     if (Array.isArray(val)) {
@@ -177,6 +174,9 @@ export default class AuditoriaListComponent implements OnInit {
       case 'ACTUALIZAR': return 'bg-warning text-dark'; 
       case 'ELIMINAR': return 'bg-danger'; 
       case 'AJUSTE_MANUAL': return 'bg-info text-dark fw-bold'; 
+      case 'SALIDA_VENTA': return 'bg-primary'; 
+      case 'ENTRADA_PEDIDO': return 'bg-info';
+      case 'CAJA_ABRIR': case 'CAJA_CERRAR': return 'bg-light text-dark';
       default: return 'bg-secondary';
     }
   }
