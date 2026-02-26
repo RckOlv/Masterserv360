@@ -151,19 +151,37 @@ public class ClienteService {
     }
 
     private void enviarEmailBienvenida(String email, String nombre, String pass) {
-        String asunto = "Bienvenido a Masterserv360 - Activa tu cuenta";
-        String cuerpo = String.format(
-            "Hola %s,\n\n" +
-            "Te hemos registrado en nuestro sistema.\n" +
-            "Tus credenciales temporales son:\n\n" +
-            "Usuario: %s\n" +
-            "Contraseña: %s\n\n" +
-            "⚠️ IMPORTANTE: Por seguridad, deberás cambiar esta contraseña al ingresar por primera vez.\n" +
-            "Ingresa aquí: http://localhost:4200/login\n\n" +
-            "Saludos,\nEl equipo de Masterserv360",
-            nombre, email, pass
-        );
-        
-        emailService.enviarEmail(email, asunto, cuerpo);
+        String asunto = "Tus accesos a Masterserv360 🔐";
+        String urlFrontend = "https://masterserv360.vercel.app/login";
+
+        String cuerpoHtml = """
+            <div style="font-family: Arial, sans-serif; color: #fff; background-color: #121212; max-width: 600px; margin: auto; border: 1px solid #333; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #dc3545; padding: 20px; text-align: center;">
+                    <h2 style="color: white; margin: 0;">Masterserv360</h2>
+                </div>
+                <div style="padding: 20px; background-color: #1a1a1a;">
+                    <h3 style="color: #fff; margin-top: 0;">¡Hola %s! 👋</h3>
+                    <p style="color: #ccc; font-size: 15px;">Te hemos registrado exitosamente en nuestro sistema. Aquí tienes tus credenciales de acceso temporal:</p>
+                    
+                    <div style="background-color: #2a2a2a; padding: 15px; border-left: 4px solid #0dcaf0; margin: 20px 0; border-radius: 4px;">
+                        <p style="margin: 5px 0; color: #fff; font-size: 16px;"><strong>Usuario:</strong> %s</p>
+                        <p style="margin: 5px 0; color: #fff; font-size: 16px;"><strong>Contraseña:</strong> %s</p>
+                    </div>
+                    
+                    <div style="background-color: #ffc107; color: #000; padding: 12px; border-radius: 4px; font-size: 13px; font-weight: bold; margin-bottom: 25px; text-align: center;">
+                        ⚠️ IMPORTANTE: Por seguridad, el sistema te pedirá cambiar esta contraseña al ingresar por primera vez.
+                    </div>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="%s" style="background-color: #dc3545; color: white; padding: 14px 28px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; letter-spacing: 1px;">Ingresar al Sistema</a>
+                    </div>
+                    
+                    <p style="font-size: 12px; color: #777; border-top: 1px solid #333; padding-top: 15px; text-align: center;">
+                        Saludos,<br>El equipo de Masterserv360
+                    </p>
+                </div>
+            </div>
+            """.formatted(nombre, email, pass, urlFrontend);
+        emailService.enviarEmailHtml(email, asunto, cuerpoHtml);
     }
 }
