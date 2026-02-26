@@ -174,9 +174,11 @@ export default class AuditoriaListComponent implements OnInit {
       case 'ACTUALIZAR': return 'bg-warning text-dark'; 
       case 'ELIMINAR': return 'bg-danger'; 
       case 'AJUSTE_MANUAL': return 'bg-info text-dark fw-bold'; 
-      case 'SALIDA_VENTA': return 'bg-primary'; 
-      case 'ENTRADA_PEDIDO': return 'bg-info';
-      case 'CAJA_ABRIR': case 'CAJA_CERRAR': return 'bg-light text-dark';
+      case 'SALIDA_VENTA': return 'bg-primary text-white'; 
+      case 'ENTRADA_PEDIDO': return 'bg-success text-white';
+      case 'CAJA_ABRIR': return 'bg-light text-dark border';
+      case 'CAJA_CERRAR': return 'bg-dark text-white border';
+      case 'CAJA_RETIRO': return 'bg-danger text-white fw-bold';
       default: return 'bg-secondary';
     }
   }
