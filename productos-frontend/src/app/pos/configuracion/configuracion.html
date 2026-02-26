@@ -107,15 +107,6 @@
                         <img *ngIf="config.logoUrl" [src]="config.logoUrl" alt="Logo Preview" style="max-width: 100%; max-height: 100px;">
                         <span *ngIf="!config.logoUrl" class="text-muted fst-italic">Sin logo seleccionado</span>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label text-white-50">Color Principal</label>
-                        <div class="d-flex gap-2">
-                            <input type="color" class="form-control form-control-color bg-dark border-secondary" 
-                                   [(ngModel)]="config.colorPrincipal" title="Elige un color">
-                            <input type="text" class="form-control bg-dark text-white border-secondary" 
-                                   [(ngModel)]="config.colorPrincipal">
-                        </div>
-                    </div>
 
                     <div class="alert masterserv-alert-info mt-auto">
                         <i class="bi bi-info-circle me-2"></i>

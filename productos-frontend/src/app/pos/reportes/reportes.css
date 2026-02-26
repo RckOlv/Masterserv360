@@ -1,0 +1,53 @@
+/* Heredamos la estructura principal de productos.css */
+@import '../productos/productos.css'; 
+
+/* ================================
+   ESTILOS ESPECÍFICOS PARA REPORTES (TABS)
+   ================================ */
+
+.nav-tabs {
+  border-bottom: 1px solid #9E9E9E;
+}
+
+.nav-tabs .nav-item {
+  margin-bottom: -1px;
+}
+
+.nav-tabs .nav-link {
+  border: 1px solid transparent;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  color: #E0E0E0;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.nav-tabs .nav-link:hover {
+  border-color: transparent;
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-tabs .nav-link.active-tab {
+  color: #E41E26 !important;
+  background-color: #1a1a1a;
+  border-color: #9E9E9E #9E9E9E #1a1a1a;
+  font-weight: 700;
+}
+
+/* Botón Danger adaptado para el PDF */
+.masterserv-btn-danger {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  border: none;
+  color: white;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.masterserv-btn-danger:hover {
+  background: linear-gradient(135deg, #e4606d 0%, #dc3545 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+  color: white;
+}
