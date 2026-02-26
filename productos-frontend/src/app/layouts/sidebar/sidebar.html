@@ -111,18 +111,20 @@
               <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
             </a>
           </li>
-          <li>
+          
+          <li *appHasPermission="'VENTAS_CREATE'">
             <a routerLink="/pos/punto-venta" routerLinkActive="active">
               <i class="bi bi-display"></i> <span>Punto de Venta</span>
             </a>
           </li>
-          <li class="nav-item">
+          
+          <li class="nav-item" *appHasPermission="'VENTAS_CREATE'">
             <a routerLink="/pos/caja" routerLinkActive="active" class="nav-link text-white">
               <i class="bi bi-safe2-fill me-2 text-success"></i> Gestión de Caja
             </a>
           </li>
 
-          <li>
+          <li *appHasPermission="'VENTAS_READ_SELF'">
             <a routerLink="/pos/ventas-historial" routerLinkActive="active">
               <i class="bi bi-receipt"></i> <span>Ventas</span>
             </a>
@@ -131,7 +133,7 @@
       </div>
     </div>
 
-    <div class="menu-section">
+    <div class="menu-section" *appHasPermission="'PRODUCTOS_READ'">
       <div class="section-header" (click)="toggleSection('inventario')" [class.active]="sections['inventario']">
         <span class="section-title">INVENTARIO</span>
         <i class="bi bi-chevron-down arrow-icon"></i>
@@ -139,22 +141,21 @@
 
       <div class="section-content" [class.show]="sections['inventario']">
         <ul class="nav-list">
-          <li>
+          <li *appHasPermission="'PRODUCTOS_READ'">
             <a routerLink="/pos/productos" routerLinkActive="active">
               <i class="bi bi-box-seam"></i> <span>Productos</span>
             </a>
           </li>
-          <li>
+          <li *appHasPermission="'CATEGORIAS_READ'">
             <a routerLink="/pos/categorias" routerLinkActive="active">
               <i class="bi bi-tags"></i> <span>Categorías</span>
             </a>
           </li>
-
         </ul>
       </div>
     </div>
 
-    <div class="menu-section" *appHasPermission="'PROVEEDORES_MANAGE'">
+    <div class="menu-section" *appHasPermission="'PROVEEDORES_READ'">
       <div class="section-header" (click)="toggleSection('compras')" [class.active]="sections['compras']">
         <span class="section-title">COMPRAS</span>
         <i class="bi bi-chevron-down arrow-icon"></i>
@@ -162,17 +163,17 @@
 
       <div class="section-content" [class.show]="sections['compras']">
         <ul class="nav-list">
-          <li>
+          <li *appHasPermission="'PROVEEDORES_READ'">
             <a routerLink="/pos/proveedores" routerLinkActive="active">
               <i class="bi bi-truck"></i> <span>Proveedores</span>
             </a>
           </li>
-          <li>
+          <li *appHasPermission="'PROVEEDORES_READ'">
             <a routerLink="/pos/comparativa-precios" routerLinkActive="active">
-              <i class="bi bi-inbox-fill"></i> <span>Cotizaciones (Productos)</span>
+              <i class="bi bi-inbox-fill"></i> <span>Cotizaciones</span>
             </a>
           </li>
-          <li>
+          <li *appHasPermission="'PEDIDOS_READ'">
             <a routerLink="/pos/pedidos" routerLinkActive="active">
               <i class="bi bi-clipboard-data"></i> <span>Pedidos</span>
             </a>
@@ -214,7 +215,7 @@
               <i class="bi bi-key"></i> <span>Permisos</span>
             </a>
           </li>
-          <li>
+          <li *appHasPermission="'PUNTOS_READ'">
             <a routerLink="/pos/reglas-puntos" routerLinkActive="active">
               <i class="bi bi-star-fill"></i> <span>Reglas Puntos</span>
             </a>
@@ -226,13 +227,24 @@
               </a>
           </li>
 
-          <li>
-            <a routerLink="/pos/reportes-avanzados" routerLinkActive="active">
-              <i class="bi bi-bar-chart-steps"></i> <span>Reportes</span>
-            </a>
-          </li>
-
         </ul>
+      </div>
+    </div>
+    
+    <div class="menu-section" *appHasPermission="'REPORT_READ'">
+      <div class="section-header" (click)="toggleSection('reportes')" [class.active]="sections['reportes']">
+        <span class="section-title">REPORTES</span>
+        <i class="bi bi-chevron-down arrow-icon"></i>
+      </div>
+      
+      <div class="section-content" [class.show]="sections['reportes']">
+          <ul class="nav-list">
+            <li>
+              <a routerLink="/pos/reportes-avanzados" routerLinkActive="active">
+                <i class="bi bi-bar-chart-steps"></i> <span>Estadísticas</span>
+              </a>
+            </li>
+          </ul>
       </div>
     </div>
 

@@ -117,7 +117,7 @@
                             <td class="text-center">
                                 <button class="btn btn-sm btn-outline-info" 
                                         (click)="verDetalles(log)" 
-                                        [disabled]="!log.valorAnterior && !log.valorNuevo">
+                                        [disabled]="!log.valorAnterior && !log.valorNuevo && !log.detalle">
                                     <i class="bi bi-eye"></i>
                                 </button>
                             </td>
@@ -161,7 +161,7 @@
                     <div class="col-md-6 border-end border-secondary">
                         <div class="p-2 text-center bg-dark border-bottom border-secondary text-danger fw-bold">VALOR ANTERIOR</div>
                         <div class="p-3" style="max-height: 400px; overflow-y: auto;">
-                            <div *ngIf="datosAnteriores.length === 0" class="text-white-50 text-center fst-italic small">Sin datos previos</div>
+                            <div *ngIf="datosAnteriores.length === 0" class="text-white-50 text-center fst-italic small">Sin datos técnicos anteriores</div>
                             <ul class="list-unstyled mb-0">
                                 <li *ngFor="let item of datosAnteriores; let i = index" class="mb-2 border-bottom border-secondary pb-1">
                                     <small class="text-white-50 d-block">{{ item.key }}</small>

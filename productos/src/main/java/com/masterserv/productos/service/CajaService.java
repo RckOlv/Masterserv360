@@ -49,7 +49,8 @@ public class CajaService {
         Caja guardada = cajaRepository.save(nuevaCaja);
 
         registrarAuditoriaCaja(cajero, guardada.getId(), "CAJA_ABRIR", 
-            String.format("Apertura de turno. Monto inicial: $%s", dto.getMontoInicial()));
+            String.format("Apertura de turno. Monto inicial: $%s", dto.getMontoInicial()),
+            null, "{ \"Efectivo Inicial\": " + dto.getMontoInicial() + " }");
 
         return guardada;
     }
@@ -80,7 +81,9 @@ public class CajaService {
         String detalleArqueo = String.format("Cierre de caja. Declarado: $%s | Esperado: $%s | Diferencia: $%s", 
             dto.getMontoDeclarado(), totalEsperadoCajon, diferencia);
         
-        registrarAuditoriaCaja(caja.getUsuario(), cerrada.getId(), "CAJA_CERRAR", detalleArqueo);
+        registrarAuditoriaCaja(caja.getUsuario(), cerrada.getId(), "CAJA_CERRAR", detalleArqueo,
+            "{ \"Esperado\": " + totalEsperadoCajon + " }", 
+            "{ \"Declarado\": " + dto.getMontoDeclarado() + ", \"Diferencia\": " + diferencia + " }");
 
         return cerrada;
     }
@@ -102,15 +105,14 @@ public class CajaService {
         String detalleRetiro = String.format("Retiro de efectivo (Sangría). Monto: $%s | Motivo: %s", 
             dto.getMonto(), dto.getMotivo());
         
-        registrarAuditoriaCaja(caja.getUsuario(), actualizada.getId(), "CAJA_RETIRO", detalleRetiro);
+        registrarAuditoriaCaja(caja.getUsuario(), actualizada.getId(), "CAJA_RETIRO", detalleRetiro,
+            "{ \"Retiros anteriores\": " + extraccionActual + " }", 
+            "{ \"Total Retiros\": " + actualizada.getExtracciones() + " }");
 
         return actualizada;
     }
 
-    /**
-     * Registra el evento en la tabla de auditoría general para seguimiento administrativo.
-     */
-    private void registrarAuditoriaCaja(Usuario usuario, Long cajaId, String accion, String detalle) {
+    private void registrarAuditoriaCaja(Usuario usuario, Long cajaId, String accion, String detalle, String anterior, String nuevo) {
         try {
             Auditoria audit = new Auditoria();
             audit.setFecha(LocalDateTime.now());
@@ -121,6 +123,9 @@ public class CajaService {
             
             if (detalle.length() > 255) detalle = detalle.substring(0, 255);
             audit.setDetalle(detalle);
+
+            audit.setValorAnterior(anterior);
+            audit.setValorNuevo(nuevo);
 
             auditoriaRepository.save(audit);
         } catch (Exception e) {
