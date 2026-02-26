@@ -62,7 +62,9 @@ public interface ItemCotizacionRepository extends JpaRepository<ItemCotizacion, 
            "JOIN i.cotizacion c " +
            "JOIN c.proveedor p " +
            "WHERE i.producto.id = :productoId AND c.estado = 'RECIBIDA' " +
-           "AND i.estado = com.masterserv.productos.enums.EstadoItemCotizacion.COTIZADO " + // 👈 CAMBIADO A COTIZADO
+           "AND i.estado = com.masterserv.productos.enums.EstadoItemCotizacion.COTIZADO " + 
            "ORDER BY i.precioUnitarioOfertado ASC")
     List<DetalleComparativaDTO> findComparativaPorProducto(@Param("productoId") Long productoId);
+
+    List<ItemCotizacion> findByProductoIdAndEstado(Long productoId, com.masterserv.productos.enums.EstadoItemCotizacion estado);
 }

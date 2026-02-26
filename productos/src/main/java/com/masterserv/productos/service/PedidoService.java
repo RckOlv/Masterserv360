@@ -138,38 +138,60 @@ public class PedidoService {
     }
     
     @Transactional
-    public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
-        Usuario usuarioQueConfirma = usuarioRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new EntityNotFoundException("Usuario '" + userEmail + "' no encontrado."));
+public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
+    Usuario usuarioQueConfirma = usuarioRepository.findByEmail(userEmail)
+            .orElseThrow(() -> new EntityNotFoundException("Usuario '" + userEmail + "' no encontrado."));
 
-        Pedido pedido = pedidoRepository.findById(pedidoId)
-                .orElseThrow(() -> new EntityNotFoundException("Pedido no encontrado"));
-        
-        if (pedido.getEstado() != EstadoPedido.PENDIENTE && pedido.getEstado() != EstadoPedido.EN_CAMINO) {
-            throw new IllegalStateException("Solo se pueden completar pedidos PENDIENTES o EN CAMINO. Estado actual: " + pedido.getEstado());
-        }
-
-        for (DetallePedido detalle : pedido.getDetalles()) { 
-            Long productoId = detalle.getProducto().getId();
-            int cantidadRecibida = detalle.getCantidad();
-            
-            productoService.reponerStock(productoId, cantidadRecibida); 
-
-            MovimientoStockDTO movDto = new MovimientoStockDTO(
-                    productoId,
-                    usuarioQueConfirma.getId(), 
-                    TipoMovimiento.ENTRADA_PEDIDO, 
-                    cantidadRecibida,
-                    "Recepción Pedido #" + pedido.getId() + " (" + pedido.getProveedor().getRazonSocial() + ")",
-                    null,
-                    pedidoId 
-            );
-            movimientoStockService.registrarMovimiento(movDto);
-        }
-
-        pedido.setEstado(EstadoPedido.COMPLETADO);
-        pedidoRepository.save(pedido);
+    Pedido pedido = pedidoRepository.findById(pedidoId)
+            .orElseThrow(() -> new EntityNotFoundException("Pedido no encontrado"));
+    
+    if (pedido.getEstado() != EstadoPedido.PENDIENTE && pedido.getEstado() != EstadoPedido.EN_CAMINO) {
+        throw new IllegalStateException("Solo se pueden completar pedidos PENDIENTES o EN CAMINO. Estado actual: " + pedido.getEstado());
     }
+
+    // Usamos un Set para no procesar la misma cotización dos veces
+    Set<Cotizacion> cotizacionesACerrar = new HashSet<>();
+
+    for (DetallePedido detalle : pedido.getDetalles()) { 
+        Long productoId = detalle.getProducto().getId();
+        int cantidadRecibida = detalle.getCantidad();
+        
+        productoService.reponerStock(productoId, cantidadRecibida); 
+
+        //BUSCAR LA COTIZACIÓN ORIGINAL DEL ÍTEM
+        // Buscamos ítems confirmados de este producto que pertenezcan a este proveedor
+        List<ItemCotizacion> itemsCotizados = itemCotizacionRepository.findByProductoIdAndEstado(
+            productoId, EstadoItemCotizacion.CONFIRMADO
+        );
+        
+        for (ItemCotizacion itemC : itemsCotizados) {
+            if (itemC.getCotizacion().getProveedor().getId().equals(pedido.getProveedor().getId())) {
+                itemC.setEstado(EstadoItemCotizacion.COMPLETADO); // El ítem ya llegó al local
+                cotizacionesACerrar.add(itemC.getCotizacion());
+            }
+        }
+
+        MovimientoStockDTO movDto = new MovimientoStockDTO(
+                productoId,
+                usuarioQueConfirma.getId(), 
+                TipoMovimiento.ENTRADA_PEDIDO, 
+                cantidadRecibida,
+                "Recepción Pedido #" + pedido.getId() + " (" + pedido.getProveedor().getRazonSocial() + ")",
+                null,
+                pedidoId 
+        );
+        movimientoStockService.registrarMovimiento(movDto);
+    }
+
+    // Cerrar las cotizaciones vinculadas para que el sistema automático pueda volver a cotizar a futuro
+    for (Cotizacion cot : cotizacionesACerrar) {
+        cot.setEstado(EstadoCotizacion.RECIBIDA); 
+        cotizacionRepository.save(cot);
+    }
+
+    pedido.setEstado(EstadoPedido.COMPLETADO);
+    pedidoRepository.save(pedido);
+}
 
     @Transactional
     public void marcarPedidoCancelado(Long pedidoId) {
