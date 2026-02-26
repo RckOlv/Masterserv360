@@ -110,17 +110,19 @@ export class ReportesComponent implements OnInit {
   // --- LÓGICA DEL BUSCADOR ---
 
   filtrarProductos() {
-    if (!this.busquedaInput) {
-        this.productosFiltrados = this.listaProductos;
-    } else {
-        // Normalizamos para ignorar acentos y mayúsculas
-        const texto = this.busquedaInput.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        this.productosFiltrados = this.listaProductos.filter(p => 
-            p.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(texto)
-        );
+    // 🛡️ Agregá esta validación para que no explote si la lista no está lista
+    if (!this.listaProductos || !Array.isArray(this.listaProductos)) {
+        this.productosFiltrados = [];
+        return;
     }
-    this.mostrarDropdown = true;
-  }
+
+    // Acá sigue tu código normal, que seguro es algo así:
+    const texto = this.busquedaInput.toLowerCase();
+    this.productosFiltrados = this.listaProductos.filter(p => 
+        p.nombre.toLowerCase().includes(texto)
+    );
+    this.mostrarDropdown = this.productosFiltrados.length > 0;
+}
 
   seleccionarProducto(prod: any) {
     this.busquedaProducto = prod.nombre;
