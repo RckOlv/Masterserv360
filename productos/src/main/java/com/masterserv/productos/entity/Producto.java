@@ -39,7 +39,7 @@ public class Producto extends AuditableEntity {
     @Column(name = "precio_costo", nullable = false, precision = 10, scale = 2) 
     private BigDecimal precioCosto;
 
-    @Column(name = "imagen_url", length = 255) 
+    @Column(name = "imagen_url", columnDefinition = "TEXT") 
     private String imagenUrl;
 
     @Column(name = "stock_actual", nullable = false) 
