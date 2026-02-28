@@ -38,7 +38,6 @@ export default class ProductoFormComponent implements OnInit {
   private categoriaService = inject(CategoriaService);
   private router = inject(Router);
   private route = inject(ActivatedRoute); 
-
   public productoForm: FormGroup;
   public categorias: CategoriaDTO[] = []; 
   public esEdicion = false;
@@ -46,13 +45,11 @@ export default class ProductoFormComponent implements OnInit {
   public isLoading = false;
   public pageTitle = 'Nuevo Producto'; 
   public errorMessage: string | null = null;
-  
   private solicitudIdOrigen: number | null = null;
-
-  // Modal Categoría Rápida
   public categoriaForm: FormGroup;
   public isSavingCategoria = false;
   public mostrarModalCategoria = false;
+  public previewUrl: string | ArrayBuffer | null = null;
 
   constructor() {
     this.productoForm = this.fb.group({
@@ -61,8 +58,8 @@ export default class ProductoFormComponent implements OnInit {
       nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(255)]],
       descripcion: [''],
       precioVenta: [null, [Validators.required, Validators.min(0)]],
-      precioCosto: [null, [Validators.required, Validators.min(0)]],
-      imagenUrl: ['', [Validators.maxLength(255)]],
+      precioCosto: [0, [Validators.min(0)]],
+      imagenUrl: [''],
       stockMinimo: [0, [Validators.required, Validators.min(0)]],
       loteReposicion: [1, [Validators.required, Validators.min(1)]],
       estado: ['ACTIVO', Validators.required], 
@@ -156,6 +153,8 @@ export default class ProductoFormComponent implements OnInit {
     this.isLoading = true;
     this.productoService.getProductoById(this.productoId).subscribe({
       next: (producto) => {
+        
+        // 1. Cargamos el formulario
         this.productoForm.patchValue({
           id: producto.id,
           codigo: producto.codigo,
@@ -169,6 +168,7 @@ export default class ProductoFormComponent implements OnInit {
           estado: producto.estado || 'ACTIVO', 
           categoriaId: producto.categoriaId
         });
+        this.previewUrl = producto.imagenUrl || null;
         this.isLoading = false;
       },
       error: (err: any) => {
@@ -213,12 +213,9 @@ export default class ProductoFormComponent implements OnInit {
         this.isLoading = false;
         this.router.navigate(['/pos/productos']);
       },
-      // --- MENTOR: MANEJO DE ERRORES MEJORADO ---
       error: (err: HttpErrorResponse) => {
         console.error('Error al guardar producto:', err);
         this.isLoading = false;
-
-        // 1. Intentamos leer el mensaje del backend
         if (err.error && typeof err.error === 'string') {
            this.errorMessage = err.error;
         } else if (err.error && err.error.message) {
@@ -229,11 +226,9 @@ export default class ProductoFormComponent implements OnInit {
         
         mostrarToast(this.errorMessage!, 'danger');
       }
-      // ------------------------------------------
     });
   }
 
-  // --- MÉTODOS NUEVA CATEGORÍA ---
   abrirModalCategoria() {
     this.categoriaForm.reset();
     this.mostrarModalCategoria = true;
@@ -259,7 +254,6 @@ export default class ProductoFormComponent implements OnInit {
             this.cerrarModalCategoria();
             this.intentarGenerarCodigo();
         },
-        // --- MENTOR: ERROR CATEGORÍA ---
         error: (err) => {
             console.error('Error categoria:', err);
             let msg = 'Error al crear categoría.';
@@ -267,8 +261,29 @@ export default class ProductoFormComponent implements OnInit {
             mostrarToast(msg, 'danger');
             this.isSavingCategoria = false;
         }
-        // -------------------------------
     });
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        mostrarToast("La imagen es muy pesada. Máximo 2MB.", "warning");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.previewUrl = e.target?.result || null;
+        this.productoForm.patchValue({ imagenUrl: this.previewUrl });
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  removerImagen() {
+    this.previewUrl = null;
+    this.productoForm.patchValue({ imagenUrl: '' });
   }
 
   get f() { return this.productoForm.controls; }

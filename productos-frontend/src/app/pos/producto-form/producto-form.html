@@ -54,22 +54,20 @@
               </div>
 
               <div class="row mb-3">
-                <div class="col-md-6">
-                  <label for="precioCosto" class="form-label masterserv-label">Precio Costo <span class="text-danger">*</span></label>
+                <div class="col-md-6" *ngIf="esEdicion">
+                  <label for="precioCosto" class="form-label masterserv-label text-secondary">Precio Costo <small>(Auto)</small></label>
                     <div class="input-group">
-                      <span class="input-group-text masterserv-input">$</span>
-                      <input type="number" id="precioCosto" class="form-control masterserv-input" formControlName="precioCosto" min="0" step="0.01"
-                             [ngClass]="{ 'is-invalid': f['precioCosto'].invalid && f['precioCosto'].touched }">
+                      <span class="input-group-text masterserv-input bg-dark text-secondary">$</span>
+                      <input type="number" id="precioCosto" class="form-control masterserv-input bg-dark text-secondary" formControlName="precioCosto" readonly
+                             [ngClass]="{ 'is-invalid': f['precioCosto'].invalid && f['precioCosto'].touched }"
+                             title="El costo se actualiza al ingresar pedidos">
                   </div>
-                    <div class="invalid-feedback d-block" *ngIf="f['precioCosto'].invalid && f['precioCosto'].touched">
-                        Requerido (Mínimo 0).
-                    </div>
                 </div>
 
-                <div class="col-md-6">
-                  <label for="precioVenta" class="form-label masterserv-label">Precio Venta <span class="text-danger">*</span></label>
+                <div [ngClass]="esEdicion ? 'col-md-6' : 'col-md-12'">
+                  <label for="precioVenta" class="form-label masterserv-label">Precio Venta Público <span class="text-danger">*</span></label>
                   <div class="input-group">
-                    <span class="input-group-text masterserv-input">$</span>
+                    <span class="input-group-text masterserv-input text-success fw-bold">$</span>
                     <input type="number" id="precioVenta" class="form-control masterserv-input" formControlName="precioVenta" min="0" step="0.01"
                            [ngClass]="{ 'is-invalid': f['precioVenta'].invalid && f['precioVenta'].touched }">
                   </div>

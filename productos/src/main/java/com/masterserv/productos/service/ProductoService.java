@@ -119,21 +119,14 @@ public class ProductoService {
         Producto producto = productoMapper.toProducto(productoDTO);
         producto.setCategoria(categoria);
         producto.setEstado("ACTIVO");
-        
-        if (producto.getPrecioCosto() == null) {
-            producto.setPrecioCosto(BigDecimal.ZERO);
-        }
-        
+        producto.setPrecioCosto(BigDecimal.ZERO);
         producto.setStockActual(0);
-        
         Producto productoGuardado = productoRepository.save(producto);
-        
-        if (productoDTO.solicitudId() != null) {
-            procesarSolicitudPorId(productoDTO.solicitudId(), productoGuardado);
-        } else {
-            vincularSolicitudesPorNombre(productoGuardado);
-        }
-
+            if (productoDTO.solicitudId() != null) {
+                procesarSolicitudPorId(productoDTO.solicitudId(), productoGuardado);
+            } else {
+                vincularSolicitudesPorNombre(productoGuardado);
+            }
         return productoMapper.toProductoDTO(productoGuardado);
     }
     
