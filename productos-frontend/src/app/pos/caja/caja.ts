@@ -25,8 +25,9 @@ export default class CajaComponent implements OnInit {
   // Formularios
   montoInicialInput: number = 0;
   montoDeclaradoInput: number = 0;
+  observacionCierreInput: string = ''; // ✅ NUEVO CAMPO PARA JUSTIFICACIÓN
   
-  // Formulario de Retiro (NUEVO)
+  // Formulario de Retiro
   montoRetiroInput: number = 0;
   motivoRetiroInput: string = '';
   
@@ -97,7 +98,6 @@ export default class CajaComponent implements OnInit {
     });
   }
 
-  // Lógica de Retiro/Extracción (NUEVO)
   abrirModalRetiro() {
     this.montoRetiroInput = 0;
     this.motivoRetiroInput = '';
@@ -136,6 +136,7 @@ export default class CajaComponent implements OnInit {
 
   abrirModalCierre() {
     this.montoDeclaradoInput = 0;
+    this.observacionCierreInput = ''; // Limpiamos la observación anterior
     const modalEl = document.getElementById('modalCierreCaja');
     if (modalEl) {
       new bootstrap.Modal(modalEl).show();
@@ -144,20 +145,28 @@ export default class CajaComponent implements OnInit {
 
   cerrarCaja() {
     if (!this.cajaActual) return;
+
+    // ✅ VALIDACIÓN: Si hay diferencia, obligamos a poner observación
+    const dif = this.montoDeclaradoInput - this.totalEsperadoEfectivo;
+    if (dif !== 0 && !this.observacionCierreInput.trim()) {
+        mostrarToast('Hay una diferencia en caja. Debes ingresar un motivo obligatoriamente.', 'warning');
+        return;
+    }
+
     this.isProcessing = true;
-    
-    // ✅ ACA ESTA EL CAMBIO: Le pasamos this.usuarioId en el medio
-    this.cajaService.cerrarCaja(this.cajaActual.id, this.usuarioId, this.montoDeclaradoInput).subscribe({
+
+    // ✅ ACA ESTA EL CAMBIO: Le pasamos la observación al servicio
+    this.cajaService.cerrarCaja(this.cajaActual.id, this.usuarioId, this.montoDeclaradoInput, this.observacionCierreInput).subscribe({
       next: (cajaCerrada) => {
         this.cajaActual = null;
         this.isProcessing = false;
         const modalEl = document.getElementById('modalCierreCaja');
         if (modalEl) { bootstrap.Modal.getInstance(modalEl)?.hide(); }
 
-        const dif = cajaCerrada.diferencia || 0;
-        if (dif === 0) mostrarToast('Caja cerrada correctamente.', 'success');
-        else if (dif > 0) mostrarToast(`Cierre con SOBRANTE de $${dif}`, 'warning');
-        else mostrarToast(`Cierre con FALTANTE de $${Math.abs(dif)}`, 'danger');
+        const difCierre = cajaCerrada.diferencia || 0;
+        if (difCierre === 0) mostrarToast('Caja cerrada correctamente.', 'success');
+        else if (difCierre > 0) mostrarToast(`Cierre con SOBRANTE de $${difCierre}`, 'warning');
+        else mostrarToast(`Cierre con FALTANTE de $${Math.abs(difCierre)}`, 'danger');
       },
       error: (err) => {
         this.isProcessing = false;
@@ -166,7 +175,7 @@ export default class CajaComponent implements OnInit {
     });
   }
 
-  // Cálculos dinámicos (MODIFICADOS PARA RESTAR EXTRACCIONES)
+  // Cálculos dinámicos
   get totalEsperadoEfectivo(): number {
     if (!this.cajaActual) return 0;
     const extracciones = this.cajaActual.extracciones || 0;

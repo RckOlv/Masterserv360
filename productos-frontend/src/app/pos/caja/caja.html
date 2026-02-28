@@ -162,14 +162,21 @@
             <input type="number" class="form-control bg-dark text-white border-secondary text-center fs-2" [(ngModel)]="montoDeclaradoInput">
         </div>
 
-        <div class="alert alert-secondary bg-opacity-10 text-start border-0">
+        <div class="alert alert-secondary bg-opacity-10 text-start border-0 mb-3">
             <div class="d-flex justify-content-between mb-1"><span>Esperado (Sistema):</span> <strong>{{ totalEsperadoEfectivo | currency:'ARS':'symbol':'1.0-0' }}</strong></div>
             <div class="d-flex justify-content-between mb-1"><span>Declarado:</span> <strong>{{ montoDeclaradoInput | currency:'ARS':'symbol':'1.0-0' }}</strong></div>
             <hr class="border-secondary my-2">
-            <div class="d-flex justify-content-between fw-bold" [ngClass]="(montoDeclaradoInput - totalEsperadoEfectivo) < 0 ? 'text-danger' : 'text-success'">
+            
+            <div class="d-flex justify-content-between fw-bold" [ngClass]="(montoDeclaradoInput - totalEsperadoEfectivo) < 0 ? 'text-danger' : ((montoDeclaradoInput - totalEsperadoEfectivo) > 0 ? 'text-warning' : 'text-success')">
                 <span>Diferencia:</span> <span>{{ (montoDeclaradoInput - totalEsperadoEfectivo) | currency:'ARS':'symbol':'1.0-0' }}</span>
             </div>
         </div>
+
+        <div *ngIf="(montoDeclaradoInput - totalEsperadoEfectivo) !== 0" class="text-start animate__animated animate__fadeIn">
+            <label class="small text-warning fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill"></i> Justificación de la diferencia *</label>
+            <textarea class="form-control bg-dark text-white border-warning" rows="2" [(ngModel)]="observacionCierreInput" placeholder="Escribe el motivo del faltante o sobrante..."></textarea>
+        </div>
+
       </div>
       <div class="modal-footer border-secondary">
         <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>

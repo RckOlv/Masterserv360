@@ -8,4 +8,5 @@ public class CerrarCajaDTO {
     private Long cajaId;
     private Long usuarioId;
     private BigDecimal montoDeclarado;
+    private String observacion;
 }

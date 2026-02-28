@@ -45,6 +45,9 @@ public class Caja {
     @Column(name = "diferencia")
     private BigDecimal diferencia; // Sobrante (+) o Faltante (-)
 
+    @Column(name = "observacion_cierre", columnDefinition = "TEXT")
+    private String observacionCierre;
+
     @Column(nullable = false)
     private String estado; // "ABIERTA" o "CERRADA"
 

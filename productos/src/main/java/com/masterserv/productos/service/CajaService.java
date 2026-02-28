@@ -68,7 +68,6 @@ public class CajaService {
             throw new RuntimeException("Esta caja ya fue cerrada anteriormente.");
         }
 
-        // Buscamos quién es el usuario que está cerrando la caja (puede ser distinto al que la abrió)
         Usuario cajeroQueCierra = usuarioRepository.findById(dto.getUsuarioId())
                 .orElse(caja.getUsuario());
 
@@ -83,11 +82,14 @@ public class CajaService {
         
         BigDecimal diferencia = dto.getMontoDeclarado().subtract(totalEsperadoCajon);
         caja.setDiferencia(diferencia);
-
+        caja.setObservacionCierre(dto.getObservacion());
         Caja cerrada = cajaRepository.save(caja);
 
-        String detalleArqueo = String.format("Cierre de caja general. Declarado: $%s | Esperado: $%s | Diferencia: $%s", 
-            dto.getMontoDeclarado(), totalEsperadoCajon, diferencia);
+        String obsDetalle = (dto.getObservacion() != null && !dto.getObservacion().isBlank()) 
+                            ? " | Motivo: " + dto.getObservacion() : "";
+                            
+        String detalleArqueo = String.format("Cierre de caja general. Declarado: $%s | Esperado: $%s | Diferencia: $%s%s", 
+            dto.getMontoDeclarado(), totalEsperadoCajon, diferencia, obsDetalle);
         
         registrarAuditoriaCaja(cajeroQueCierra, cerrada.getId(), "CAJA_CERRAR", detalleArqueo,
             "{ \"Esperado\": " + totalEsperadoCajon + " }", 
