@@ -1,7 +1,7 @@
 <div class="productos-form-container" *appHasPermission="'PRODUCTOS_MANAGE'">
   <div class="container">
     <div class="row justify-content-center">
-      <div class="col-12 col-lg-10 col-xl-8">
+      <div class="col-12 col-lg-10 col-xl-9">
         
         <div class="card masterserv-card">
           
@@ -25,33 +25,64 @@
 
             <form *ngIf="!isLoading || !esEdicion" [formGroup]="productoForm" (ngSubmit)="onSubmit()">
 
-              <div class="row mb-3">
-                <div class="col-md-3">
-                  <label for="codigo" class="form-label masterserv-label">Código <span class="text-danger">*</span></label>
-                  <div class="input-group">
-                    <span class="input-group-text masterserv-input"><i class="bi bi-magic"></i></span>
-                    <input type="text" id="codigo" class="form-control masterserv-input" formControlName="codigo"
-                           readonly placeholder="Auto..."
-                           [ngClass]="{ 'is-invalid': f['codigo'].invalid && f['codigo'].touched }">
+              <div class="row mb-4">
+                
+                <div class="col-md-8">
+                  <div class="row mb-3">
+                    <div class="col-md-4">
+                      <label for="codigo" class="form-label masterserv-label">Código <span class="text-danger">*</span></label>
+                      <div class="input-group">
+                        <span class="input-group-text masterserv-input"><i class="bi bi-magic"></i></span>
+                        <input type="text" id="codigo" class="form-control masterserv-input" formControlName="codigo"
+                               readonly placeholder="Auto..."
+                               [ngClass]="{ 'is-invalid': f['codigo'].invalid && f['codigo'].touched }">
+                      </div>
+                      <div class="invalid-feedback d-block" *ngIf="f['codigo'].invalid && f['codigo'].touched">
+                         Requerido (Se genera auto).
+                      </div>
+                    </div>
+                    <div class="col-md-8 mt-3 mt-md-0">
+                      <label for="nombre" class="form-label masterserv-label">Nombre <span class="text-danger">*</span></label>
+                      <input type="text" id="nombre" class="form-control masterserv-input" formControlName="nombre"
+                             placeholder="Ej: Batería 12V Gel"
+                             [ngClass]="{ 'is-invalid': f['nombre'].invalid && f['nombre'].touched }">
+                      <div class="invalid-feedback" *ngIf="f['nombre'].errors?.['required'] && f['nombre'].touched">El nombre es obligatorio.</div>
+                      <div class="invalid-feedback" *ngIf="f['nombre'].errors?.['minlength'] && f['nombre'].touched">Mínimo 3 letras.</div>
+                    </div>
                   </div>
-                  <div class="invalid-feedback d-block" *ngIf="f['codigo'].invalid && f['codigo'].touched">
-                     Requerido (Se genera automático).
+
+                  <div class="mb-3 mb-md-0"> 
+                    <label for="descripcion" class="form-label masterserv-label">Descripción</label>
+                    <textarea id="descripcion" class="form-control masterserv-input" formControlName="descripcion" rows="4"></textarea>
                   </div>
                 </div>
-                <div class="col-md-9">
-                  <label for="nombre" class="form-label masterserv-label">Nombre <span class="text-danger">*</span></label>
-                  <input type="text" id="nombre" class="form-control masterserv-input" formControlName="nombre"
-                         placeholder="Ej: Batería 12V Gel"
-                         [ngClass]="{ 'is-invalid': f['nombre'].invalid && f['nombre'].touched }">
-                  <div class="invalid-feedback" *ngIf="f['nombre'].errors?.['required'] && f['nombre'].touched">El nombre es obligatorio.</div>
-                  <div class="invalid-feedback" *ngIf="f['nombre'].errors?.['minlength'] && f['nombre'].touched">Mínimo 3 letras.</div>
+
+                <div class="col-md-4 d-flex flex-column align-items-center justify-content-center border-start border-secondary pt-4 pt-md-0 mt-3 mt-md-0">
+                  <label class="form-label masterserv-label text-center w-100 mb-3">Imagen del Producto</label>
+                  
+                  <div class="position-relative d-flex align-items-center justify-content-center bg-dark mb-3" 
+                       style="width: 140px; height: 140px; border-radius: 8px; overflow: hidden; border: 1px dashed #666; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                    <img *ngIf="previewUrl" [src]="previewUrl" alt="Vista previa" style="width: 100%; height: 100%; object-fit: cover;">
+                    <i *ngIf="!previewUrl" class="bi bi-camera text-secondary" style="font-size: 4rem; opacity: 0.5;"></i>
+                  </div>
+                  
+                  <div class="d-flex gap-2">
+                    <input type="file" id="imagenFile" class="d-none" accept="image/*" (change)="onFileSelected($event)">
+                    
+                    <label for="imagenFile" class="btn btn-sm btn-outline-warning m-0" style="cursor: pointer;">
+                      <i class="bi bi-upload me-1"></i> {{ previewUrl ? 'Cambiar Foto' : 'Subir Foto' }}
+                    </label>
+                    
+                    <button *ngIf="previewUrl" type="button" class="btn btn-sm btn-outline-danger" (click)="removerImagen()" title="Quitar imagen">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                  <div class="text-secondary text-center mt-2" style="font-size: 0.75rem;">JPG, PNG, WEBP (Máx 2MB)</div>
                 </div>
+
               </div>
 
-              <div class="mb-3"> 
-                <label for="descripcion" class="form-label masterserv-label">Descripción</label>
-                <textarea id="descripcion" class="form-control masterserv-input" formControlName="descripcion" rows="3"></textarea>
-              </div>
+              <hr class="border-secondary mb-4 opacity-25">
 
               <div class="row mb-3">
                 <div class="col-md-6" *ngIf="esEdicion">
@@ -93,7 +124,7 @@
                     <div class="invalid-feedback" *ngIf="f['stockMinimo'].invalid && f['stockMinimo'].touched">Requerido (Mín 0).</div>
                  </div>
                  
-                 <div class="col-md-6">
+                 <div class="col-md-6 mt-3 mt-md-0">
                    <label for="loteReposicion" class="form-label masterserv-label">Lote de Reposición <span class="text-danger">*</span></label>
                    <input type="number" id="loteReposicion" class="form-control masterserv-input" formControlName="loteReposicion" min="1" step="1"
                           [ngClass]="{ 'is-invalid': f['loteReposicion'].invalid && f['loteReposicion'].touched }">
@@ -101,7 +132,7 @@
                  </div>
               </div>
               
-              <div class="row mb-3">
+              <div class="row mb-4">
                  <div class="col-md-6">
                    <label for="categoriaId" class="form-label masterserv-label">Categoría <span class="text-danger">*</span></label>
                    
@@ -126,7 +157,7 @@
                    </div>
                  </div>
 
-                 <div class="col-md-6">
+                 <div class="col-md-6 mt-3 mt-md-0">
                    <label for="estado" class="form-label masterserv-label">Estado <span class="text-danger">*</span></label>
                     <select id="estado" class="form-select masterserv-input" formControlName="estado"
                             [ngClass]="{ 'is-invalid': f['estado'].invalid && f['estado'].touched }">
@@ -136,31 +167,11 @@
                  </div>
               </div>
 
-              <div class="mb-4"> 
-                <label class="form-label masterserv-label">Imagen del Producto</label>
-                <div class="d-flex align-items-center gap-3">
-                  <div class="position-relative d-flex align-items-center justify-content-center bg-dark" 
-                       style="width: 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 1px dashed #666;">
-                    <img *ngIf="previewUrl" [src]="previewUrl" alt="Vista previa" style="width: 100%; height: 100%; object-fit: cover;">
-                    <i *ngIf="!previewUrl" class="bi bi-camera text-secondary fs-3"></i>
-                  </div>
-                  
-                  <div class="flex-grow-1">
-                    <input type="file" id="imagenFile" class="form-control masterserv-input bg-dark text-white" accept="image/*" (change)="onFileSelected($event)">
-                    <div class="text-secondary small mt-1">Formatos: JPG, PNG, WEBP (Máx 2MB).</div>
-                  </div>
-                  
-                  <button *ngIf="previewUrl" type="button" class="btn btn-outline-danger" (click)="removerImagen()" title="Quitar imagen">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              </div>
-
-              <div class="d-flex justify-content-end mt-4 pt-3 border-top border-metal">
+              <div class="d-flex justify-content-end pt-3 border-top border-secondary">
                 <button type="button" class="btn masterserv-btn-secondary me-2" [routerLink]="['/pos/productos']">
                   <i class="bi bi-arrow-left me-1"></i>Cancelar
                 </button>
-                <button type="submit" class="btn masterserv-btn-primary" [disabled]="productoForm.invalid || isLoading">
+                <button type="submit" class="btn btn-warning fw-bold text-dark px-4" [disabled]="productoForm.invalid || isLoading">
                   <span *ngIf="!isLoading">
                     <i class="bi" [class.bi-check-lg]="!esEdicion" [class.bi-arrow-repeat]="esEdicion"></i>
                     {{ esEdicion ? 'Actualizar Producto' : 'Crear Producto' }}
