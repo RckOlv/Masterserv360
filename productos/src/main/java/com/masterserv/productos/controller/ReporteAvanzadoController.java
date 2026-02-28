@@ -7,12 +7,14 @@ import com.masterserv.productos.dto.reporte.VariacionCostoDTO;
 import com.masterserv.productos.service.ReporteAvanzadoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/reportes-avanzados")
+@PreAuthorize("hasRole('ADMIN')")
 public class ReporteAvanzadoController {
 
     @Autowired private ReporteAvanzadoService reporteService;
