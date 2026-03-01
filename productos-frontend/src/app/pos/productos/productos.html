@@ -205,13 +205,35 @@
               </div>
           </div>
           <form [formGroup]="ajusteForm">
+              
               <div class="mb-3">
                   <label class="form-label small text-white-50">Cantidad a Ajustar *</label>
                   <div class="input-group">
                       <span class="input-group-text bg-dark border-secondary text-white"><i class="bi bi-plus-slash-minus"></i></span>
-                      <input type="number" class="form-control masterserv-input" formControlName="cantidad">
+                      <input type="number" class="form-control masterserv-input" placeholder="Ej: 5 (suma) o -3 (resta)" formControlName="cantidad">
+                  </div>
+
+                  <div class="mt-2 small" *ngIf="ajusteForm.get('cantidad')?.value && ajusteForm.get('cantidad')?.value !== 0 && productoAjustar">
+                    
+                    <span class="text-success fw-bold" *ngIf="ajusteForm.get('cantidad')?.value > 0">
+                      <i class="bi bi-arrow-up-circle-fill me-1"></i> 
+                      Se sumarán {{ ajusteForm.get('cantidad')?.value }} unidades. 
+                      <span class="text-white ms-1">Stock final: {{ productoAjustar.stockActual + ajusteForm.get('cantidad')?.value }}</span>
+                    </span>
+
+                    <span class="text-danger fw-bold" *ngIf="ajusteForm.get('cantidad')?.value < 0">
+                      <i class="bi bi-arrow-down-circle-fill me-1"></i> 
+                      Se restarán {{ ajusteForm.get('cantidad')?.value * -1 }} unidades. 
+                      <span class="text-white ms-1">Stock final: {{ productoAjustar.stockActual + ajusteForm.get('cantidad')?.value }}</span>
+                    </span>
+
+                  </div>
+
+                  <div class="mt-2 small text-muted" *ngIf="!ajusteForm.get('cantidad')?.value || ajusteForm.get('cantidad')?.value === 0">
+                    Ingresá un valor positivo para agregar stock, o negativo para restar.
                   </div>
               </div>
+
               <div class="mb-3">
                   <label class="form-label small text-white-50">Motivo / Justificación *</label>
                   <textarea class="form-control masterserv-input" rows="3" formControlName="motivo"></textarea>
