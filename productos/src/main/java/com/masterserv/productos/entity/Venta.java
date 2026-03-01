@@ -41,6 +41,9 @@ public class Venta extends AuditableEntity {
     @Column(name = "metodo_pago")
     private String metodoPago;
 
+    @Column(name = "observacion_cancelacion", columnDefinition = "TEXT")
+    private String observacionCancelacion;
+
     // --- Relaciones ---
 
     @ManyToOne(fetch = FetchType.LAZY)

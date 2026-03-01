@@ -6,6 +6,7 @@ import com.masterserv.productos.dto.VentaDTO;
 import com.masterserv.productos.dto.VentaFiltroDTO;
 import com.masterserv.productos.dto.VentaResumenDTO;
 import com.masterserv.productos.entity.*;
+import com.masterserv.productos.entity.Caja; 
 import com.masterserv.productos.enums.EstadoCupon;
 import com.masterserv.productos.enums.EstadoVenta;
 import com.masterserv.productos.enums.TipoDescuento;
@@ -253,7 +254,10 @@ public class VentaService {
             registrarMovimientoStockReposicion(venta, det, user, motivo); // <- PASAMOS MOTIVO ACÁ
         }
 
+        // ✅ ACÁ AGREGAMOS EL SETEO DE LA OBSERVACIÓN EN LA ENTIDAD
         venta.setEstado(EstadoVenta.CANCELADA);
+        venta.setObservacionCancelacion(motivo);
+        
         puntosService.revertirPuntosPorVenta(venta);
 
         if (venta.getCupon() != null) {
@@ -266,7 +270,7 @@ public class VentaService {
         Venta ventaCancelada = ventaRepository.save(venta);
         
         // REGISTRO DE AUDITORÍA CON MOTIVO
-        registrarAuditoriaCancelacion(ventaCancelada, user, motivo); // <- PASAMOS MOTIVO ACÁ
+        registrarAuditoriaCancelacion(ventaCancelada, user, motivo); 
     }
 
     // ✅ NUEVO: REGISTRAR REPOSICIÓN CON MOTIVO RECIBIDO

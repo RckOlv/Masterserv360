@@ -18,7 +18,6 @@ public abstract class VentaMapper {
     // --- 1. Mapeo Venta (Entidad -> DTO) ---
     @Mappings({
         @Mapping(source = "cliente.id", target = "clienteId"),
-        // Ignoramos los campos calculados para llenarlos manualmente abajo
         @Mapping(target = "clienteNombre", ignore = true),
         @Mapping(target = "vendedorNombre", ignore = true),
         @Mapping(target = "vendedorId", ignore = true),
@@ -26,7 +25,8 @@ public abstract class VentaMapper {
         @Mapping(target = "fechaVenta", ignore = true),
         @Mapping(source = "detalles", target = "detalles"),
         @Mapping(source = "cupon.codigo", target = "codigoCupon"),
-        @Mapping(target = "comprobantePdf", ignore = true)
+        @Mapping(target = "comprobantePdf", ignore = true),
+        @Mapping(source = "observacionCancelacion", target = "observacionCancelacion")
     })
     public abstract VentaDTO toVentaDTO(Venta venta);
 

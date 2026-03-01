@@ -8,7 +8,7 @@
         <span *ngIf="venta">Detalle de Venta #{{ venta.id }}</span>
         <span *ngIf="!venta">Cargando...</span>
       </h4>
-      <a routerLink="/pos/ventas-historial" class="btn btn-outline-light btn-sm">
+      <a routerLink="/pos/ventas" class="btn btn-outline-light btn-sm">
         <i class="bi bi-arrow-left me-1"></i> Volver al Historial
       </a>
     </div>
@@ -26,6 +26,18 @@
       </div>
       
       <div *ngIf="!isLoading && venta && !errorMessage">
+
+        <div *ngIf="venta.estado === 'CANCELADA'" class="alert border border-danger mb-4 animate__animated animate__fadeIn" style="background-color: rgba(220, 53, 69, 0.1);">
+            <h4 class="text-danger fw-bold mb-2">
+                <i class="bi bi-x-octagon-fill me-2"></i>ESTA VENTA FUE ANULADA (NOTA DE CRÉDITO)
+            </h4>
+            <p class="mb-1 text-white"><strong>Motivo de anulación:</strong> {{ venta.observacionCancelacion || 'No especificado' }}</p>
+            <hr class="border-danger my-2 opacity-50">
+            <p class="mb-0 small text-white-50">
+                <i class="bi bi-info-circle me-1"></i> 
+                El stock de los artículos listados abajo fue devuelto al inventario y el dinero fue restado de la caja correspondiente.
+            </p>
+        </div>
 
         <div class="p-3 mb-4 rounded" style="background-color: #2c2c2c; border: 1px solid #444;">
           <h5 class="text-danger border-bottom border-secondary pb-2 mb-3 text-uppercase">Información General</h5>
@@ -76,7 +88,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let detalle of venta.detalles">
+              <tr *ngFor="let detalle of venta.detalles" [ngClass]="{'opacity-50 text-decoration-line-through': venta.estado === 'CANCELADA'}">
                   <td class="ps-3 fw-bold">{{ detalle.productoNombre || 'N/A' }}</td>
                   <td class="text-center text-white-50 small">{{ detalle.productoCodigo || 'N/A' }}</td>
                   <td class="text-end">{{ detalle.precioUnitario | currency:'ARS':'symbol':'1.2-2' }}</td>
@@ -89,11 +101,13 @@
 
         <div class="row justify-content-end">
           <div class="col-md-5 col-lg-4">
-            <div class="p-3 rounded shadow-sm" style="background-color: #2c2c2c; border: 1px solid #dc3545;">
+            <div class="p-3 rounded shadow-sm" [ngStyle]="{'background-color': '#2c2c2c', 'border': venta.estado === 'CANCELADA' ? '1px dashed #666' : '1px solid #dc3545'}">
               
               <div class="d-flex justify-content-between mb-2">
                 <span class="text-white-50">Subtotal:</span>
-                <span class="fw-bold">{{ ((venta.totalVenta || 0) + (venta.montoDescuento || 0)) | currency:'ARS':'symbol':'1.2-2' }}</span>
+                <span class="fw-bold" [ngClass]="{'text-decoration-line-through text-white-50': venta.estado === 'CANCELADA'}">
+                    {{ ((venta.totalVenta || 0) + (venta.montoDescuento || 0)) | currency:'ARS':'symbol':'1.2-2' }}
+                </span>
               </div>
 
               <div class="d-flex justify-content-between mb-2 text-success" *ngIf="venta.montoDescuento && venta.montoDescuento > 0">
@@ -101,14 +115,18 @@
                   <i class="bi bi-tag-fill me-1"></i> 
                   Descuento <small *ngIf="venta.codigoCupon">({{ venta.codigoCupon }})</small>:
                 </span>
-                <span class="fw-bold">- {{ venta.montoDescuento | currency:'ARS':'symbol':'1.2-2' }}</span>
+                <span class="fw-bold" [ngClass]="{'text-decoration-line-through text-white-50': venta.estado === 'CANCELADA'}">
+                    - {{ venta.montoDescuento | currency:'ARS':'symbol':'1.2-2' }}
+                </span>
               </div>
 
               <hr class="border-secondary my-2">
 
               <div class="d-flex justify-content-between align-items-center">
                 <span class="h5 mb-0 text-white">TOTAL:</span>
-                <span class="h2 mb-0 text-danger fw-bold">{{ (venta.totalVenta || 0) | currency:'ARS':'symbol':'1.2-2' }}</span>
+                <span class="h2 mb-0 fw-bold" [ngClass]="venta.estado === 'CANCELADA' ? 'text-secondary text-decoration-line-through' : 'text-danger'">
+                    {{ (venta.totalVenta || 0) | currency:'ARS':'symbol':'1.2-2' }}
+                </span>
               </div>
 
             </div>
