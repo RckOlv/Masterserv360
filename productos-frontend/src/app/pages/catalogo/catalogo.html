@@ -125,41 +125,33 @@
            class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-xl-3 g-4">
         
         <div class="col" *ngFor="let producto of page.content">
-           <div class="product-card shadow-sm border border-secondary h-100" style="background-color: #1e1e1e; border-radius: 8px; overflow: hidden;">
+           <div class="product-card shadow-sm border border-secondary h-100">
             
-            <div class="card-img-wrapper" style="position: relative; overflow: hidden; background-color: #2c2c2c; height: 200px; padding: 15px; display: flex; align-items: center; justify-content: center;">
-               <img *ngIf="producto.imagenUrl" [src]="producto.imagenUrl" class="card-img" alt="{{ producto.nombre }}" style="width: 100%; height: 100%; object-fit: contain;" (error)="producto.imagenUrl = null">
-               <img *ngIf="!producto.imagenUrl" src="/images/no-image.png" class="card-img placeholder" alt="Sin imagen" style="width: 100%; height: 100%; object-fit: contain; opacity: 0.3;">
+            <div class="image-container">
+               <img *ngIf="producto.imagenUrl" [src]="producto.imagenUrl" alt="{{ producto.nombre }}" (error)="producto.imagenUrl = null">
+               <img *ngIf="!producto.imagenUrl" src="/images/no-image.png" class="placeholder" alt="Sin imagen">
                
-               <span *ngIf="producto.stockActual === 0" class="position-absolute top-0 end-0 badge bg-danger m-2 shadow">AGOTADO</span>
+               <span *ngIf="producto.stockActual === 0" class="badge-stock badge-agotado">AGOTADO</span>
+
+               <div class="hover-overlay">
+                  <span class="badge-hover badge-urgency" *ngIf="producto.stockActual > 0 && producto.stockActual <= (producto.stockMinimo || 5)">
+                    <i class="bi bi-fire me-1"></i> ¡Últimas unidades!
+                  </span>
+                  
+                  <span class="badge-hover badge-available" *ngIf="producto.stockActual > (producto.stockMinimo || 5)">
+                    <i class="bi bi-check-circle me-1"></i> Disponible
+                  </span>
+
+                  <p class="short-desc mt-3">
+                    {{ producto.descripcion || 'Producto de excelente calidad. Consultá por más detalles.' }}
+                  </p>
+               </div>
             </div>
 
-            <div class="card-body p-3">
-              <span class="badge bg-secondary mb-2">{{ producto.nombreCategoria }}</span>
-              <h5 class="card-title text-white text-truncate fw-bold mb-1" title="{{ producto.nombre }}">
-                {{ producto.nombre }}
-              </h5>
-              <h4 class="text-warning fw-bold mb-0">
-                {{ producto.precioVenta | currency:'ARS':'symbol':'1.0-0' }}
-              </h4>
-            </div>
-
-            <div class="card-hover-overlay">
-              <div class="text-content text-center p-3">
-                <h5 class="text-white fw-bold mb-2">{{ producto.nombre }}</h5>
-                <p class="text-white-50 small mb-3">
-                   {{ producto.descripcion ? (producto.descripcion | slice:0:100) + (producto.descripcion.length > 100 ? '...' : '') : 'Sin descripción detallada.' }}
-                </p>
-                <div class="bg-dark rounded p-2 mb-3 border border-secondary d-inline-block">
-                    <small class="text-white-50 d-block">CÓDIGO</small>
-                    <span class="text-white font-monospace fw-bold">{{ producto.codigo }}</span>
-                </div>
-                <div>
-                    <span *ngIf="producto.stockActual === 0" class="badge bg-danger">SIN STOCK</span>
-                    <span *ngIf="producto.stockActual > 0 && producto.stockActual <= (producto.stockMinimo || 0)" class="badge bg-warning text-dark">POCO STOCK</span>
-                    <span *ngIf="producto.stockActual > (producto.stockMinimo || 0)" class="badge bg-success">DISPONIBLE</span>
-                </div>
-              </div>
+            <div class="info-container p-3 text-center">
+              <span class="badge bg-secondary mb-2 d-inline-block">{{ producto.nombreCategoria }}</span>
+              <h5 class="product-name" title="{{ producto.nombre }}">{{ producto.nombre }}</h5>
+              <h4 class="product-price">{{ producto.precioVenta | currency:'ARS':'symbol':'1.0-0' }}</h4>
             </div>
 
           </div>
