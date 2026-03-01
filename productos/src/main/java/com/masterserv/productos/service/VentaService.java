@@ -17,18 +17,17 @@ import com.masterserv.productos.repository.UsuarioRepository;
 import com.masterserv.productos.repository.VentaRepository;
 import com.masterserv.productos.repository.AuditoriaRepository;
 import com.masterserv.productos.repository.CajaRepository; 
+import com.masterserv.productos.repository.MovimientoCajaRepository; // ✅ IMPORT NUEVO
 import com.masterserv.productos.specification.VentaSpecification;
 
 import com.masterserv.productos.event.VentaRealizadaEvent;
 import org.springframework.context.ApplicationEventPublisher;
 
-// --- IMPORTS PARA PDF (OpenPDF / iText) ---
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.pdf.draw.LineSeparator;
-// ------------------------------------------
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +67,7 @@ public class VentaService {
     @Autowired private ApplicationEventPublisher eventPublisher;
     @Autowired private AuditoriaRepository auditoriaRepository; 
     @Autowired private CajaRepository cajaRepository; 
-    
+    @Autowired private MovimientoCajaRepository movimientoCajaRepository; // ✅ REPO INYECTADO
     @Autowired private ProcesoAutomaticoService procesoAutomaticoService;
 
     @Transactional
@@ -141,6 +140,17 @@ public class VentaService {
         }
 
         Venta ventaGuardada = ventaRepository.save(venta);
+
+        // ✅ REGISTRAR MOVIMIENTO DE INGRESO EN LA CAJA (NUEVO)
+        MovimientoCaja movVenta = new MovimientoCaja();
+        movVenta.setCaja(cajaAbierta);
+        movVenta.setTipoMovimiento("INGRESO");
+        movVenta.setConcepto("Venta #" + ventaGuardada.getId());
+        movVenta.setMonto(totalFinal);
+        movVenta.setMetodoPago(metodoPago);
+        movVenta.setUsuario(vendedor);
+        movVenta.setFecha(LocalDateTime.now());
+        movimientoCajaRepository.save(movVenta);
 
         for (DetalleVenta det : ventaGuardada.getDetalles()) {
             registrarMovimientoStockSalida(ventaGuardada, det, vendedor);
@@ -221,7 +231,6 @@ public class VentaService {
         movimientoStockService.registrarMovimiento(mov);
     }
 
-    // ✅ NUEVO: CANCELAR VENTA CON MOTIVO INCLUIDO
     @Transactional
     public void cancelarVenta(Long id, String emailCancela, String motivo) {
         Venta venta = ventaRepository.findByIdWithDetails(id)
@@ -233,7 +242,6 @@ public class VentaService {
         Usuario user = usuarioRepository.findByEmail(emailCancela)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + emailCancela));
 
-        // ✅ REVERTIR DINERO DE LA CAJA AL CANCELAR
         Caja cajaAbierta = cajaRepository.findCajaAbiertaByUsuario(user.getId()).orElse(null);
         if (cajaAbierta != null) {
             String metodo = venta.getMetodoPago() != null ? venta.getMetodoPago().toUpperCase() : "EFECTIVO";
@@ -247,14 +255,24 @@ public class VentaService {
                 cajaAbierta.setVentasEfectivo(cajaAbierta.getVentasEfectivo().subtract(total));
             }
             cajaRepository.save(cajaAbierta);
+
+            // ✅ REGISTRAR MOVIMIENTO DE EGRESO POR NOTA DE CRÉDITO (NUEVO)
+            MovimientoCaja movCancelacion = new MovimientoCaja();
+            movCancelacion.setCaja(cajaAbierta);
+            movCancelacion.setTipoMovimiento("EGRESO");
+            movCancelacion.setConcepto("Anulación Vta #" + venta.getId() + " - " + motivo);
+            movCancelacion.setMonto(total);
+            movCancelacion.setMetodoPago(metodo);
+            movCancelacion.setUsuario(user);
+            movCancelacion.setFecha(LocalDateTime.now());
+            movimientoCajaRepository.save(movCancelacion);
         }
 
         for (DetalleVenta det : venta.getDetalles()) {
             productoService.reponerStock(det.getProducto().getId(), det.getCantidad());
-            registrarMovimientoStockReposicion(venta, det, user, motivo); // <- PASAMOS MOTIVO ACÁ
+            registrarMovimientoStockReposicion(venta, det, user, motivo); 
         }
 
-        // ✅ ACÁ AGREGAMOS EL SETEO DE LA OBSERVACIÓN EN LA ENTIDAD
         venta.setEstado(EstadoVenta.CANCELADA);
         venta.setObservacionCancelacion(motivo);
         
@@ -268,12 +286,9 @@ public class VentaService {
         }
 
         Venta ventaCancelada = ventaRepository.save(venta);
-        
-        // REGISTRO DE AUDITORÍA CON MOTIVO
         registrarAuditoriaCancelacion(ventaCancelada, user, motivo); 
     }
 
-    // ✅ NUEVO: REGISTRAR REPOSICIÓN CON MOTIVO RECIBIDO
     private void registrarMovimientoStockReposicion(Venta venta, DetalleVenta det, Usuario user, String motivo) {
         MovimientoStockDTO mov = new MovimientoStockDTO();
         mov.setProductoId(det.getProducto().getId());
@@ -285,7 +300,6 @@ public class VentaService {
         movimientoStockService.registrarMovimiento(mov);
     }
 
-    // ✅ NUEVO: AUDITORÍA DE CANCELACIÓN CON MOTIVO RECIBIDO
     private void registrarAuditoriaCancelacion(Venta venta, Usuario usuario, String motivo) {
         try {
             Auditoria audit = new Auditoria();
@@ -306,7 +320,6 @@ public class VentaService {
     }
 
 
-    // --- CONSULTAS ---
     @Transactional(readOnly = true)
     public VentaDTO findById(Long id) {
         return ventaRepository.findByIdWithDetails(id)
@@ -348,7 +361,6 @@ public class VentaService {
                 .orElseThrow(() -> new RuntimeException("Venta no encontrada: " + id));
     }
 
-    // --- PDF GENERATION ---
     @Transactional(readOnly = true)
     public byte[] generarComprobantePdf(Long ventaId) {
         Venta venta = findVentaByIdWithDetails(ventaId);
@@ -357,7 +369,6 @@ public class VentaService {
             PdfWriter.getInstance(document, out);
             document.open();
 
-            // 1. CABECERA
             Font fontTitulo = new Font(Font.HELVETICA, 20, Font.BOLD);
             Paragraph titulo = new Paragraph("MASTERSERV360", fontTitulo);
             titulo.setAlignment(Element.ALIGN_CENTER);
@@ -373,7 +384,6 @@ public class VentaService {
             separator.setLineColor(Color.LIGHT_GRAY);
             document.add(separator);
 
-            // 2. INFO VENTA
             Paragraph infoVenta = new Paragraph();
             infoVenta.setSpacingBefore(15);
             infoVenta.setSpacingAfter(15);
@@ -389,7 +399,6 @@ public class VentaService {
             infoVenta.add("Atendido por: " + (venta.getVendedor() != null ? venta.getVendedor().getNombre() : "Sistema") + "\n");
             document.add(infoVenta);
 
-            // 3. TABLA PRODUCTOS
             PdfPTable table = new PdfPTable(4); 
             table.setWidthPercentage(100);
             table.setWidths(new float[]{45f, 10f, 20f, 25f});
@@ -423,7 +432,6 @@ public class VentaService {
             }
             document.add(table);
 
-            // 4. TOTALES
             Paragraph totales = new Paragraph();
             totales.setAlignment(Element.ALIGN_RIGHT);
             totales.setSpacingBefore(15);

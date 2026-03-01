@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CajaService, Caja } from '../../service/caja.service';
+import { CajaService, Caja, MovimientoCajaDTO } from '../../service/caja.service';
 import { AuthService } from '../../service/auth.service';
 import { mostrarToast } from '../../utils/toast';
 
@@ -21,7 +21,9 @@ export default class CajaComponent implements OnInit {
   cajaActual: Caja | null = null;
   isLoading = true;
   usuarioId: number = 0;
-
+  movimientos: MovimientoCajaDTO[] = [];
+  isLoadingMovimientos = false;
+ 
   // Formularios
   montoInicialInput: number = 0;
   montoDeclaradoInput: number = 0;
@@ -69,11 +71,29 @@ export default class CajaComponent implements OnInit {
       next: (caja) => {
         this.cajaActual = caja;
         this.isLoading = false;
+        if (this.cajaActual) {
+            this.cargarMovimientos(); // ✅ SI HAY CAJA, BUSCAMOS SU HISTORIA
+        }
       },
       error: (err) => {
         console.error(err);
         this.isLoading = false;
       }
+    });
+  }
+
+  cargarMovimientos() {
+    if (!this.cajaActual) return;
+    this.isLoadingMovimientos = true;
+    this.cajaService.obtenerMovimientosCaja(this.cajaActual.id).subscribe({
+        next: (movs) => {
+            this.movimientos = movs;
+            this.isLoadingMovimientos = false;
+        },
+        error: (err) => {
+            console.error('Error al cargar movimientos', err);
+            this.isLoadingMovimientos = false;
+        }
     });
   }
 

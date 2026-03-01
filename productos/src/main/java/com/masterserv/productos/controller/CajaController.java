@@ -2,11 +2,16 @@ package com.masterserv.productos.controller; // Ajusta el paquete
 
 import com.masterserv.productos.dto.AbrirCajaDTO;
 import com.masterserv.productos.dto.CerrarCajaDTO;
+import com.masterserv.productos.dto.MovimientoCajaDTO;
 import com.masterserv.productos.dto.RetiroCajaDTO;
 import com.masterserv.productos.entity.Caja;
 import com.masterserv.productos.service.CajaService;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -39,5 +44,12 @@ public class CajaController {
 	@PostMapping("/retiro")
     public ResponseEntity<Caja> registrarRetiro(@RequestBody RetiroCajaDTO dto) {
         return ResponseEntity.ok(cajaService.registrarRetiro(dto));
+    }
+
+    @GetMapping("/{id}/movimientos")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<List<MovimientoCajaDTO>> obtenerMovimientosCaja(@PathVariable Long id) {
+        List<MovimientoCajaDTO> movimientos = cajaService.obtenerMovimientosCaja(id);
+        return ResponseEntity.ok(movimientos);
     }
 }

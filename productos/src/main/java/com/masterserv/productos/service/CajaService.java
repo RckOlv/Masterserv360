@@ -3,11 +3,14 @@ package com.masterserv.productos.service;
 import com.masterserv.productos.dto.AbrirCajaDTO;
 import com.masterserv.productos.dto.CerrarCajaDTO;
 import com.masterserv.productos.dto.RetiroCajaDTO;
+import com.masterserv.productos.dto.MovimientoCajaDTO;
 import com.masterserv.productos.entity.Auditoria;
 import com.masterserv.productos.entity.Caja;
+import com.masterserv.productos.entity.MovimientoCaja;
 import com.masterserv.productos.entity.Usuario;
 import com.masterserv.productos.repository.AuditoriaRepository;
 import com.masterserv.productos.repository.CajaRepository;
+import com.masterserv.productos.repository.MovimientoCajaRepository;
 import com.masterserv.productos.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CajaService {
@@ -27,6 +32,9 @@ public class CajaService {
 
     @Autowired
     private AuditoriaRepository auditoriaRepository;
+
+    @Autowired
+    private MovimientoCajaRepository movimientoCajaRepository; // ✅ NUEVO REPOSITORIO INYECTADO
 
     // ✅ AHORA BUSCA LA CAJA DEL LOCAL, NO LA DEL USUARIO
     public Caja obtenerCajaAbierta(Long usuarioId) {
@@ -51,6 +59,19 @@ public class CajaService {
         nuevaCaja.setEstado("ABIERTA"); // Aseguramos el estado
         
         Caja guardada = cajaRepository.save(nuevaCaja);
+
+        // ✅ REGISTRAR MOVIMIENTO DE APERTURA EN EL HISTORIAL
+        if (dto.getMontoInicial().compareTo(BigDecimal.ZERO) > 0) {
+            MovimientoCaja mov = new MovimientoCaja();
+            mov.setCaja(guardada);
+            mov.setTipoMovimiento("INGRESO");
+            mov.setConcepto("Apertura de Caja (Fondo Inicial)");
+            mov.setMonto(dto.getMontoInicial());
+            mov.setMetodoPago("EFECTIVO");
+            mov.setUsuario(cajeroQueAbre);
+            mov.setFecha(LocalDateTime.now());
+            movimientoCajaRepository.save(mov);
+        }
 
         registrarAuditoriaCaja(cajeroQueAbre, guardada.getId(), "CAJA_ABRIR", 
             String.format("Apertura de caja general. Monto inicial: $%s", dto.getMontoInicial()),
@@ -111,9 +132,18 @@ public class CajaService {
         caja.setExtracciones(extraccionActual.add(dto.getMonto()));
         
         Caja actualizada = cajaRepository.save(caja);
-
-        // Opcional: si tu DTO de retiro trae el ID del usuario que lo hace, se podría usar aquí
         Usuario operario = caja.getUsuario(); 
+
+        // ✅ REGISTRAR MOVIMIENTO DE RETIRO EN EL HISTORIAL
+        MovimientoCaja mov = new MovimientoCaja();
+        mov.setCaja(actualizada);
+        mov.setTipoMovimiento("EGRESO");
+        mov.setConcepto("Retiro: " + dto.getMotivo());
+        mov.setMonto(dto.getMonto());
+        mov.setMetodoPago("EFECTIVO"); // Los retiros de cajón son en efectivo
+        mov.setUsuario(operario);
+        mov.setFecha(LocalDateTime.now());
+        movimientoCajaRepository.save(mov);
 
         String detalleRetiro = String.format("Retiro de efectivo (Sangría). Monto: $%s | Motivo: %s", 
             dto.getMonto(), dto.getMotivo());
@@ -123,6 +153,22 @@ public class CajaService {
             "{ \"Total Retiros\": " + actualizada.getExtracciones() + " }");
 
         return actualizada;
+    }
+
+    // ✅ NUEVO MÉTODO PARA OBTENER EL HISTORIAL DE LA CAJA
+    @Transactional(readOnly = true)
+    public List<MovimientoCajaDTO> obtenerMovimientosCaja(Long cajaId) {
+        return movimientoCajaRepository.findByCajaIdOrderByFechaDesc(cajaId).stream().map(m -> {
+            MovimientoCajaDTO dto = new MovimientoCajaDTO();
+            dto.setId(m.getId());
+            dto.setFecha(m.getFecha());
+            dto.setTipoMovimiento(m.getTipoMovimiento());
+            dto.setConcepto(m.getConcepto());
+            dto.setMonto(m.getMonto());
+            dto.setMetodoPago(m.getMetodoPago());
+            dto.setUsuarioNombre(m.getUsuario() != null ? m.getUsuario().getNombre() + " " + m.getUsuario().getApellido() : "Sistema");
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     private void registrarAuditoriaCaja(Usuario usuario, Long cajaId, String accion, String detalle, String anterior, String nuevo) {

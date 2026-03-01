@@ -18,6 +18,16 @@ export interface Caja {
   estado: string;
 }
 
+export interface MovimientoCajaDTO {
+  id: number;
+  fecha: string;
+  tipoMovimiento: 'INGRESO' | 'EGRESO';
+  concepto: string;
+  monto: number;
+  metodoPago: string;
+  usuarioNombre: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -45,4 +55,9 @@ export class CajaService {
   registrarRetiro(cajaId: number, monto: number, motivo: string): Observable<Caja> {
     return this.http.post<Caja>(`${this.apiUrl}/retiro`, { cajaId, monto, motivo });
   }
+
+  obtenerMovimientosCaja(cajaId: number): Observable<MovimientoCajaDTO[]> {
+    return this.http.get<MovimientoCajaDTO[]>(`${this.apiUrl}/${cajaId}/movimientos`);
+  }
+  
 }

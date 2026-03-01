@@ -62,10 +62,13 @@
         </div>
       </div>
       <div class="col-md-3">
-        <div class="card bg-dark border-secondary h-100 border-start border-success border-4">
+        <div class="card bg-dark border-secondary h-100 border-start border-4"
+             [ngClass]="cajaActual.ventasEfectivo >= 0 ? 'border-success' : 'border-danger'">
           <div class="card-body">
             <h6 class="text-white-50 mb-1">Ventas Efectivo</h6>
-            <h3 class="text-success mb-0">+ {{ cajaActual.ventasEfectivo | currency:'ARS':'symbol':'1.0-0' }}</h3>
+            <h3 class="mb-0" [ngClass]="cajaActual.ventasEfectivo >= 0 ? 'text-success' : 'text-danger'">
+              {{ cajaActual.ventasEfectivo > 0 ? '+' : '' }} {{ cajaActual.ventasEfectivo | currency:'ARS':'symbol':'1.0-0' }}
+            </h3>
           </div>
         </div>
       </div>
@@ -87,7 +90,7 @@
       </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-4 mb-5">
       <div class="col-md-6">
         <div class="card h-100" style="background: linear-gradient(45deg, #198754, #20c997); border: none;">
           <div class="card-body text-center py-4 d-flex flex-column justify-content-center">
@@ -102,7 +105,6 @@
              <div class="card-body d-flex flex-column justify-content-center p-4">
                  <h4 class="text-white-50">Total Facturado (Todo medio)</h4>
                  <h2 class="text-white mb-4">{{ totalVentasDelDia | currency:'ARS':'symbol':'1.0-0' }}</h2>
-                 
                  <div class="d-flex gap-2">
                     <button class="btn btn-warning btn-lg flex-grow-1 fw-bold" (click)="abrirModalRetiro()">
                         <i class="bi bi-wallet2"></i> RETIRAR DINERO
@@ -114,6 +116,59 @@
              </div>
          </div>
       </div>
+    </div>
+
+    <div class="card bg-dark border-secondary shadow-sm mb-4">
+        <div class="card-header border-secondary bg-transparent d-flex justify-content-between align-items-center py-3">
+            <h5 class="mb-0 text-white fw-bold"><i class="bi bi-list-check me-2 text-info"></i>Libro Diario de Caja</h5>
+            <button class="btn btn-sm btn-outline-info" (click)="cargarMovimientos()">
+                <i class="bi bi-arrow-clockwise" [class.bi-spin]="isLoadingMovimientos"></i> Refrescar
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div *ngIf="isLoadingMovimientos" class="text-center py-4 text-white-50">
+                <div class="spinner-border spinner-border-sm me-2"></div> Cargando historial...
+            </div>
+            
+            <div *ngIf="!isLoadingMovimientos && movimientos.length === 0" class="text-center py-4 text-white-50">
+                <i class="bi bi-journal-x fs-3 d-block mb-2"></i> No hay movimientos registrados en este turno aún.
+            </div>
+
+            <div class="table-responsive" *ngIf="!isLoadingMovimientos && movimientos.length > 0">
+                <table class="table table-dark table-hover table-borderless align-middle mb-0" style="background-color: #1e1e1e;">
+                    <thead style="border-bottom: 2px solid #333;">
+                        <tr class="text-white-50 small text-uppercase">
+                            <th class="ps-4">Hora</th>
+                            <th>Tipo</th>
+                            <th>Concepto</th>
+                            <th>Medio de Pago</th>
+                            <th>Usuario</th>
+                            <th class="text-end pe-4">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let mov of movimientos" style="border-bottom: 1px solid #2c2c2c;">
+                            <td class="ps-4 text-white-50 small">{{ mov.fecha | date:'HH:mm:ss' }}</td>
+                            <td>
+                                <span class="badge" [ngClass]="mov.tipoMovimiento === 'INGRESO' ? 'bg-success bg-opacity-25 text-success border border-success' : 'bg-danger bg-opacity-25 text-danger border border-danger'">
+                                    <i class="bi" [ngClass]="mov.tipoMovimiento === 'INGRESO' ? 'bi-arrow-down-left' : 'bi-arrow-up-right'"></i> {{ mov.tipoMovimiento }}
+                                </span>
+                            </td>
+                            <td class="text-white">{{ mov.concepto }}</td>
+                            <td class="text-white-50 small">
+                                <i class="bi bi-cash me-1" *ngIf="mov.metodoPago === 'EFECTIVO'"></i>
+                                <i class="bi bi-credit-card me-1" *ngIf="mov.metodoPago !== 'EFECTIVO'"></i>
+                                {{ mov.metodoPago }}
+                            </td>
+                            <td class="text-white-50 small"><i class="bi bi-person me-1"></i>{{ mov.usuarioNombre }}</td>
+                            <td class="text-end pe-4 fw-bold fs-6" [ngClass]="mov.tipoMovimiento === 'INGRESO' ? 'text-success' : 'text-danger'">
+                                {{ mov.tipoMovimiento === 'INGRESO' ? '+' : '-' }} {{ mov.monto | currency:'ARS':'symbol':'1.2-2' }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
   </div>
 </div>
