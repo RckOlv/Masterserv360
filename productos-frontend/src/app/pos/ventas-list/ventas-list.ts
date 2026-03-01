@@ -19,7 +19,7 @@ import { forkJoin, Observable, Subject, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
 
 // --- Utils ---
-import { mostrarToast, confirmarAccion } from '../../utils/toast'; // ✅ AÑADIDO confirmarAccion
+import { mostrarToast, confirmarAccion } from '../../utils/toast'; 
 import { HttpErrorResponse } from '@angular/common/http';
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
 
@@ -72,7 +72,7 @@ export default class VentasListComponent implements OnInit {
 
   // --- Paginación ---
   public currentPage = 0;
-  public pageSize = 10; // Nos aseguramos que sea 10 para coincidir con el backend
+  public pageSize = 10; 
 
   constructor() {
     this.filtroForm = this.fb.group({
@@ -89,13 +89,11 @@ export default class VentasListComponent implements OnInit {
     this.initClienteSearch();
   }
 
-  /** Método llamado cuando cambia el ng-select del HTML */
   onFiltroChange(): void {
     this.filtroForm.patchValue({ clienteId: this.filtros.clienteId });
     this.aplicarFiltros(true);
   }
 
-  /** Obtiene IDs de Rol, carga Vendedores y luego la tabla */
   obtenerIdsRolesYCargarVendedores(): void {
     this.isLoadingFilters = true;
     this.filtroForm.get('clienteId')?.disable(); 
@@ -116,7 +114,6 @@ export default class VentasListComponent implements OnInit {
 
         this.filtroForm.get('clienteId')?.enable();
         
-        // Cargamos la lista inicial
         this.aplicarFiltros(true);
         this.cargarListaVendedores();
       },
@@ -127,7 +124,6 @@ export default class VentasListComponent implements OnInit {
     });
   }
 
-  /** Carga solo la lista de Vendedores */
   cargarListaVendedores(): void {
     if (this.vendedorRoleId === null) {
       this.isLoadingFilters = false;
@@ -159,7 +155,6 @@ export default class VentasListComponent implements OnInit {
     });
   }
 
-  /** Configura el Observable para buscar Clientes dinámicamente */
   initClienteSearch(): void {
      this.clientes$ = this.clienteSearch$.pipe(
       debounceTime(350),
@@ -187,7 +182,6 @@ export default class VentasListComponent implements OnInit {
     );
   }
 
-  /** Función llamada al buscar o cambiar de página */
   aplicarFiltros(resetPage: boolean = false): void {
     if (resetPage) {
         this.currentPage = 0;
@@ -195,23 +189,10 @@ export default class VentasListComponent implements OnInit {
     this.isLoading = true;
     this.errorMessage = null;
 
-    // getRawValue incluye campos deshabilitados si los hubiera
     const filtro: VentaFiltroDTO = this.filtroForm.getRawValue();
-    
-    // --- DEBUG: ESTO SALDRÁ EN TU CONSOLA (F12) ---
-    console.log("🔍 [DEBUG] Enviando Filtro al Backend:", filtro);
-    console.log(`📄 [DEBUG] Pidiendo Página: ${this.currentPage}, Tamaño: ${this.pageSize}`);
-    // ----------------------------------------------
 
     this.ventaService.filtrarVentas(filtro, this.currentPage, this.pageSize).subscribe({
       next: (pageData) => {
-        // --- DEBUG: QUÉ RESPONDE EL BACKEND ---
-        console.log("📦 [DEBUG] Respuesta Backend:", pageData);
-        console.log(`📊 [DEBUG] Total Elementos: ${pageData.totalElements}`);
-        console.log(`📄 [DEBUG] Total Páginas: ${pageData.totalPages}`);
-        console.log(`📝 [DEBUG] Elementos en esta página: ${pageData.content.length}`);
-        // ---------------------------------------
-
         this.ventasPage = pageData;
         this.isLoading = false;
       },
@@ -222,7 +203,6 @@ export default class VentasListComponent implements OnInit {
     });
   }
 
-  /** Limpia los filtros y recarga la lista */
   limpiarFiltros(): void {
     this.filtroForm.reset({
       clienteId: null,
@@ -232,11 +212,10 @@ export default class VentasListComponent implements OnInit {
       estado: null
     });
     
-    this.filtros.clienteId = null; // Limpiar modelo HTML
+    this.filtros.clienteId = null; 
     this.aplicarFiltros(true);
   }
 
-  // --- Métodos de Paginación y Cancelar ---
   paginaAnterior(): void {
     if (this.ventasPage && this.ventasPage.number > 0) {
       this.currentPage--;
@@ -282,24 +261,31 @@ export default class VentasListComponent implements OnInit {
     }
   }
 
-  /** ✅ CANCELAR VENTA MIGRADO */
   onCancelarVenta(venta: VentaDTO): void {
     if (!venta || venta.estado !== 'COMPLETADA' || !venta.id) {
       mostrarToast("Solo se pueden cancelar ventas completadas.", 'warning');
       return;
     }
+
+    const motivo = prompt(`Estás a punto de anular la venta #${venta.id} (Nota de Crédito).\n\nPor favor, ingresa el motivo (Obligatorio):`);
+    
+    if (motivo === null) return; 
+    if (motivo.trim() === '') {
+        mostrarToast('Debes ingresar un motivo válido para anular la venta.', 'warning');
+        return;
+    }
     
     confirmarAccion(
-      'Cancelar Venta',
-      `¿Seguro que deseas cancelar la Venta #${venta.id}? Esta acción repondrá el stock y restará el dinero de la caja.`
+      'Anular Venta',
+      `¿Confirmas la anulación de la Venta #${venta.id}?\n\nMotivo: "${motivo}"\n\nEl stock será repuesto y el dinero se restará de la caja actual.`
     ).then((confirmado) => {
       if (confirmado) {
         this.cancelingVentaId = venta.id ?? null;
         this.errorMessage = null;
 
-        this.ventaService.cancelarVenta(venta.id!).subscribe({
+        this.ventaService.cancelarVenta(venta.id!, motivo).subscribe({
           next: () => {
-            mostrarToast(`Venta #${venta.id} cancelada exitosamente. Stock repuesto.`, 'success');
+            mostrarToast(`Venta #${venta.id} anulada con éxito.`, 'success');
             this.cancelingVentaId = null;
             this.aplicarFiltros(); 
           },

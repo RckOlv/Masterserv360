@@ -6,7 +6,6 @@ import com.masterserv.productos.dto.VentaDTO;
 import com.masterserv.productos.dto.VentaFiltroDTO;
 import com.masterserv.productos.dto.VentaResumenDTO;
 import com.masterserv.productos.entity.*;
-import com.masterserv.productos.entity.Caja; // ✅ Entidad de Caja
 import com.masterserv.productos.enums.EstadoCupon;
 import com.masterserv.productos.enums.EstadoVenta;
 import com.masterserv.productos.enums.TipoDescuento;
@@ -16,7 +15,7 @@ import com.masterserv.productos.mapper.VentaMapper;
 import com.masterserv.productos.repository.UsuarioRepository;
 import com.masterserv.productos.repository.VentaRepository;
 import com.masterserv.productos.repository.AuditoriaRepository;
-import com.masterserv.productos.repository.CajaRepository; // ✅ Repo de Caja
+import com.masterserv.productos.repository.CajaRepository; 
 import com.masterserv.productos.specification.VentaSpecification;
 
 import com.masterserv.productos.event.VentaRealizadaEvent;
@@ -67,7 +66,7 @@ public class VentaService {
     @Autowired private CarritoService carritoService;
     @Autowired private ApplicationEventPublisher eventPublisher;
     @Autowired private AuditoriaRepository auditoriaRepository; 
-    @Autowired private CajaRepository cajaRepository; // ✅ Inyección de Caja
+    @Autowired private CajaRepository cajaRepository; 
     
     @Autowired private ProcesoAutomaticoService procesoAutomaticoService;
 
@@ -76,7 +75,6 @@ public class VentaService {
         Usuario vendedor = usuarioRepository.findByEmail(vendedorEmail)
                 .orElseThrow(() -> new RuntimeException("Vendedor no encontrado: " + vendedorEmail));
 
-        // ✅ 1) VERIFICACIÓN ESTRICTA: ¿TIENE LA CAJA ABIERTA?
         Caja cajaAbierta = cajaRepository.findCajaAbiertaByUsuario(vendedor.getId())
                 .orElseThrow(() -> new RuntimeException("¡ALTO! No puedes vender. Debes abrir tu caja primero."));
 
@@ -91,11 +89,9 @@ public class VentaService {
         venta.setDetalles(new HashSet<>());
         venta.setMontoDescuento(null);
         
-        // Asignamos el método de pago (si no viene, por defecto es EFECTIVO)
         String metodoPago = ventaDTO.getMetodoPago() != null ? ventaDTO.getMetodoPago().toUpperCase() : "EFECTIVO";
         venta.setMetodoPago(metodoPago); 
 
-        // 2) Validar Cupón
         Cupon cuponAplicado = null;
         if (ventaDTO.getCodigoCupon() != null && !ventaDTO.getCodigoCupon().isBlank()) {
             try {
@@ -107,7 +103,6 @@ public class VentaService {
             }
         }
 
-        // 3) Procesar Detalles y calcular Subtotal
         BigDecimal subtotal = BigDecimal.ZERO;
         Set<DetalleVenta> detallesVenta = new HashSet<>(); 
 
@@ -126,50 +121,35 @@ public class VentaService {
         
         venta.setDetalles(detallesVenta);
 
-        // 4) Calcular Descuento
         BigDecimal descuentoTotal = calcularDescuento(cuponAplicado, subtotal, detallesVenta);
         
-        // 5) Calcular Total Final
         BigDecimal totalFinal = subtotal.subtract(descuentoTotal).max(BigDecimal.ZERO);
         venta.setTotalVenta(totalFinal);
 
-        // ✅ 6) ACTUALIZAR LOS FONDOS DE LA CAJA EN TIEMPO REAL
         if ("TARJETA".equals(metodoPago) || "DEBITO".equals(metodoPago) || "CREDITO".equals(metodoPago)) {
             cajaAbierta.setVentasTarjeta(cajaAbierta.getVentasTarjeta().add(totalFinal));
         } else if ("TRANSFERENCIA".equals(metodoPago)) {
             cajaAbierta.setVentasTransferencia(cajaAbierta.getVentasTransferencia().add(totalFinal));
         } else {
-            // Por defecto, si es efectivo o algo no reconocido, va al cajón físico
             cajaAbierta.setVentasEfectivo(cajaAbierta.getVentasEfectivo().add(totalFinal));
         }
-        cajaRepository.save(cajaAbierta); // Guardamos la plata en la caja
+        cajaRepository.save(cajaAbierta); 
 
-        // 7) Marcar Cupón como USADO
         if (cuponAplicado != null) {
             cuponService.marcarCuponComoUsado(cuponAplicado, venta);
         }
 
-        // 8) Guardar venta
         Venta ventaGuardada = ventaRepository.save(venta);
 
-        // 9) Registrar Movimientos de Stock
         for (DetalleVenta det : ventaGuardada.getDetalles()) {
             registrarMovimientoStockSalida(ventaGuardada, det, vendedor);
         }
 
-        // 10) Asignar puntos
         puntosService.asignarPuntosPorVenta(ventaGuardada);
-
-        // 11) Vaciar carrito
         carritoService.vaciarCarrito(vendedorEmail);
-
-        // 12) PUBLICAR EVENTO
         eventPublisher.publishEvent(new VentaRealizadaEvent(this, ventaGuardada.getId()));
-        
-        // 13) AUDITORÍA DE TRANSACCIÓN DE VENTA
         registrarAuditoriaVenta(ventaGuardada, vendedor);
 
-        // 14) DISPARADOR INTELIGENTE REPOSICIÓN
         new Thread(() -> {
             try {
                 Thread.sleep(2000); 
@@ -182,9 +162,6 @@ public class VentaService {
         return ventaMapper.toVentaDTO(ventaGuardada);
     }
 
-    /**
-     * ✅ Registra la transacción de la venta en la tabla de Auditoría General.
-     */
     private void registrarAuditoriaVenta(Venta venta, Usuario vendedor) {
         try {
             Auditoria audit = new Auditoria();
@@ -206,25 +183,6 @@ public class VentaService {
             auditoriaRepository.save(audit);
         } catch (Exception e) {
             logger.error("🔴 Error al auditar la venta: " + e.getMessage());
-        }
-    }
-
-    private void registrarAuditoriaCancelacion(Venta venta, Usuario usuario) {
-        try {
-            Auditoria audit = new Auditoria();
-            audit.setFecha(LocalDateTime.now());
-            audit.setUsuario(usuario.getEmail());
-            audit.setEntidad("Venta");
-            audit.setEntidadId(venta.getId().toString());
-            audit.setAccion("CANCELACION_VENTA");
-            
-            audit.setDetalle("Venta #" + venta.getId() + " cancelada. Stock repuesto.");
-            audit.setValorAnterior("{ \"estado\": \"COMPLETADA\" }");
-            audit.setValorNuevo("{ \"estado\": \"CANCELADA\" }");
-            
-            auditoriaRepository.save(audit);
-        } catch (Exception e) {
-            logger.error("🔴 Error al auditar cancelación: " + e.getMessage());
         }
     }
 
@@ -262,8 +220,9 @@ public class VentaService {
         movimientoStockService.registrarMovimiento(mov);
     }
 
+    // ✅ NUEVO: CANCELAR VENTA CON MOTIVO INCLUIDO
     @Transactional
-    public void cancelarVenta(Long id, String emailCancela) {
+    public void cancelarVenta(Long id, String emailCancela, String motivo) {
         Venta venta = ventaRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new RuntimeException("Venta no encontrada: " + id));
 
@@ -273,7 +232,7 @@ public class VentaService {
         Usuario user = usuarioRepository.findByEmail(emailCancela)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + emailCancela));
 
-        // ✅ REVERTIR DINERO DE LA CAJA AL CANCELAR (Opcional pero recomendado)
+        // ✅ REVERTIR DINERO DE LA CAJA AL CANCELAR
         Caja cajaAbierta = cajaRepository.findCajaAbiertaByUsuario(user.getId()).orElse(null);
         if (cajaAbierta != null) {
             String metodo = venta.getMetodoPago() != null ? venta.getMetodoPago().toUpperCase() : "EFECTIVO";
@@ -291,7 +250,7 @@ public class VentaService {
 
         for (DetalleVenta det : venta.getDetalles()) {
             productoService.reponerStock(det.getProducto().getId(), det.getCantidad());
-            registrarMovimientoStockReposicion(venta, det, user);
+            registrarMovimientoStockReposicion(venta, det, user, motivo); // <- PASAMOS MOTIVO ACÁ
         }
 
         venta.setEstado(EstadoVenta.CANCELADA);
@@ -306,20 +265,42 @@ public class VentaService {
 
         Venta ventaCancelada = ventaRepository.save(venta);
         
-        // REGISTRO DE AUDITORÍA DE CANCELACIÓN
-        registrarAuditoriaCancelacion(ventaCancelada, user);
+        // REGISTRO DE AUDITORÍA CON MOTIVO
+        registrarAuditoriaCancelacion(ventaCancelada, user, motivo); // <- PASAMOS MOTIVO ACÁ
     }
 
-    private void registrarMovimientoStockReposicion(Venta venta, DetalleVenta det, Usuario user) {
+    // ✅ NUEVO: REGISTRAR REPOSICIÓN CON MOTIVO RECIBIDO
+    private void registrarMovimientoStockReposicion(Venta venta, DetalleVenta det, Usuario user, String motivo) {
         MovimientoStockDTO mov = new MovimientoStockDTO();
         mov.setProductoId(det.getProducto().getId());
         mov.setUsuarioId(user.getId());
         mov.setTipoMovimiento(TipoMovimiento.DEVOLUCION);
         mov.setCantidad(det.getCantidad());
-        mov.setMotivo("Reposición por cancelación Venta #" + venta.getId());
+        mov.setMotivo("Cancelación Venta #" + venta.getId() + " - " + motivo);
         mov.setVentaId(venta.getId());
         movimientoStockService.registrarMovimiento(mov);
     }
+
+    // ✅ NUEVO: AUDITORÍA DE CANCELACIÓN CON MOTIVO RECIBIDO
+    private void registrarAuditoriaCancelacion(Venta venta, Usuario usuario, String motivo) {
+        try {
+            Auditoria audit = new Auditoria();
+            audit.setFecha(LocalDateTime.now());
+            audit.setUsuario(usuario.getEmail());
+            audit.setEntidad("Venta");
+            audit.setEntidadId(venta.getId().toString());
+            audit.setAccion("CANCELACION_VENTA");
+            
+            audit.setDetalle("Venta #" + venta.getId() + " ANULADA. Motivo: " + motivo + ". (Stock repuesto y plata restada de caja)");
+            audit.setValorAnterior("{ \"estado\": \"COMPLETADA\" }");
+            audit.setValorNuevo("{ \"estado\": \"CANCELADA\" }");
+            
+            auditoriaRepository.save(audit);
+        } catch (Exception e) {
+            logger.error("🔴 Error al auditar cancelación: " + e.getMessage());
+        }
+    }
+
 
     // --- CONSULTAS ---
     @Transactional(readOnly = true)
@@ -396,7 +377,6 @@ public class VentaService {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
             infoVenta.add("Fecha: " + venta.getFechaVenta().format(formatter) + "\n");
             
-            // ✅ AGREGAMOS EL MÉTODO DE PAGO AL TICKET
             String metodo = venta.getMetodoPago() != null ? venta.getMetodoPago() : "EFECTIVO";
             infoVenta.add("Método de Pago: " + metodo + "\n");
             
@@ -421,14 +401,18 @@ public class VentaService {
             BigDecimal subtotalSinDescuento = BigDecimal.ZERO;
             for (DetalleVenta det : venta.getDetalles()) {
                 table.addCell(new PdfPCell(new Phrase(det.getProducto().getNombre(), new Font(Font.HELVETICA, 10))));
+                
                 PdfPCell cCant = new PdfPCell(new Phrase(String.valueOf(det.getCantidad()), new Font(Font.HELVETICA, 10)));
                 cCant.setHorizontalAlignment(Element.ALIGN_CENTER);
                 table.addCell(cCant);
+                
                 PdfPCell cPrec = new PdfPCell(new Phrase("$" + det.getPrecioUnitario(), new Font(Font.HELVETICA, 10)));
                 cPrec.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 table.addCell(cPrec);
+                
                 BigDecimal subItem = det.getPrecioUnitario().multiply(BigDecimal.valueOf(det.getCantidad()));
                 subtotalSinDescuento = subtotalSinDescuento.add(subItem);
+                
                 PdfPCell cSub = new PdfPCell(new Phrase("$" + subItem, new Font(Font.HELVETICA, 10)));
                 cSub.setHorizontalAlignment(Element.ALIGN_RIGHT);
                 table.addCell(cSub);

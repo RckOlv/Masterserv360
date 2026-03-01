@@ -109,7 +109,6 @@ public class VentaController {
     @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
     public ResponseEntity<Page<VentaDTO>> findVentasByCriteria(
             @RequestBody VentaFiltroDTO filtro, 
-            // ✅ ORDENADO POR FECHA DESCENDENTE TAMBIÉN EN FILTRO
             @PageableDefault(page = 0, size = 10, sort = "fechaVenta", direction = Sort.Direction.DESC)
             Pageable pageable,
             Authentication authentication) {
@@ -133,14 +132,21 @@ public class VentaController {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    @PatchMapping("/{id}/cancelar")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> cancelarVenta(@PathVariable Long id, Principal principal) {
+    @PostMapping("/{id}/cancelar")
+    @PreAuthorize("hasRole('ADMIN')") 
+    public ResponseEntity<Void> cancelarVenta(
+            @PathVariable Long id, 
+            @RequestBody java.util.Map<String, String> body, 
+            Principal principal) {
+            
             if (principal == null || principal.getName() == null) {
                 return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
             }
+            
             String usuarioEmailCancela = principal.getName();
-            ventaService.cancelarVenta(id, usuarioEmailCancela);
+            String motivo = body.getOrDefault("motivo", "Sin motivo especificado");
+         
+            ventaService.cancelarVenta(id, usuarioEmailCancela, motivo);
             return ResponseEntity.noContent().build();
     }
 }

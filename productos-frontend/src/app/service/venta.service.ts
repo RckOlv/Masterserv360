@@ -56,10 +56,8 @@ export class VentaService {
   }
 
 
-  cancelarVenta(id: number): Observable<void> {
-     // Usamos http.patch y esperamos un tipo 'void' como respuesta.
-     // Enviamos un cuerpo vacío {} como requiere PATCH si no hay datos que modificar.
-     return this.http.patch<void>(`${this.apiUrl}/${id}/cancelar`, {});
+  cancelarVenta(id: number, motivo: string): Observable<void> {
+     return this.http.post<void>(`${this.apiUrl}/${id}/cancelar`, { motivo });
   }
 
   filtrarVentas(filtro: VentaFiltroDTO, page: number, size: number, sort: string = 'fechaVenta,desc'): Observable<Page<VentaDTO>> {
