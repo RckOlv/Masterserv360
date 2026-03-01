@@ -19,7 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import com.masterserv.productos.dto.reporte.StockInmovilizadoResponse;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -367,7 +367,7 @@ public class PdfService {
     }
 
     // ✅ NUEVO: REPORTE STOCK INMOVILIZADO
-    public byte[] generarReporteStockInmovilizadoPdf(List<StockInmovilizadoDTO> datos, int dias) {
+    public byte[] generarReporteStockInmovilizadoPdf(List<StockInmovilizadoResponse> datos, int dias) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Document document = new Document(PageSize.A4, 36, 36, 36, 60);
         try {
@@ -392,7 +392,7 @@ public class PdfService {
             BigDecimal capitalTotal = BigDecimal.ZERO;
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-            for (StockInmovilizadoDTO d : datos) {
+            for (StockInmovilizadoResponse d : datos) {
                 table.addCell(new Paragraph(d.getNombre(), FONT_NORMAL));
                 table.addCell(new Paragraph(d.getCategoria(), FONT_NORMAL));
                 table.addCell(crearCeldaDatoCenter(String.valueOf(d.getStockActual())));

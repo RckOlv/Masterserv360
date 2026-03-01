@@ -5,6 +5,7 @@ import { Chart, registerables } from 'chart.js';
 import { ReporteService, ValorizacionDTO, StockInmovilizadoDTO, VariacionCostoDTO } from '../../service/reporte.service';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
+import { mostrarToast } from '../../utils/toast';
 
 interface CostoAgrupado {
   producto: string;
@@ -236,7 +237,7 @@ export class ReportesComponent implements OnInit {
         error: (err) => {
           console.error('Error al descargar el PDF:', err);
           this.loading = false;
-          alert('Hubo un error al generar el PDF. Verifica la consola.');
+          mostrarToast('Error interno al generar el reporte PDF.', 'danger');
         }
       });
     } else {

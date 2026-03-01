@@ -1,6 +1,5 @@
 package com.masterserv.productos.controller;
 
-import com.masterserv.productos.dto.reporte.StockInmovilizadoDTO;
 import com.masterserv.productos.dto.reporte.StockInmovilizadoResponse;
 import com.masterserv.productos.dto.reporte.ValorizacionInventarioDTO;
 import com.masterserv.productos.dto.reporte.VariacionCostoDTO;
@@ -22,10 +21,10 @@ import java.util.List;
 public class ReporteAvanzadoController {
 
     @Autowired private ReporteAvanzadoService reporteService;
-    @Autowired private PdfService pdfService; // ✅ Inyectamos el PdfService
+    @Autowired private PdfService pdfService;
 
     // ==========================================
-    // JSON ENDPOINTS (Los que ya tenías para la vista)
+    // JSON ENDPOINTS
     // ==========================================
     
     @GetMapping("/valorizacion")
@@ -49,6 +48,10 @@ public class ReporteAvanzadoController {
         return ResponseEntity.ok(reporteService.getUltimosCostosGenerales());
     }
 
+    // ==========================================
+    // 📄 PDF ENDPOINTS
+    // ==========================================
+
     @GetMapping("/valorizacion/pdf")
     public ResponseEntity<byte[]> descargarPdfValorizacion() {
         List<ValorizacionInventarioDTO> datos = reporteService.getValorizacionInventario();
@@ -58,12 +61,9 @@ public class ReporteAvanzadoController {
 
     @GetMapping("/inmovilizado/pdf")
     public ResponseEntity<byte[]> descargarPdfInmovilizado(@RequestParam(defaultValue = "90") int dias) {
+        // Obtenemos la Response y la pasamos directamente al generador de PDF
         List<StockInmovilizadoResponse> response = reporteService.obtenerStockInmovilizado(dias);
-        
-        @SuppressWarnings("unchecked")
-        List<StockInmovilizadoDTO> datos = (List<StockInmovilizadoDTO>)(List<?>) response;
-        
-        byte[] pdfBytes = pdfService.generarReporteStockInmovilizadoPdf(datos, dias);
+        byte[] pdfBytes = pdfService.generarReporteStockInmovilizadoPdf(response, dias);
         return construirRespuestaPdf(pdfBytes, "Stock_Inmovilizado.pdf");
     }
 
@@ -79,6 +79,9 @@ public class ReporteAvanzadoController {
         return construirRespuestaPdf(pdfBytes, "Evolucion_Costos.pdf");
     }
 
+    // ==========================================
+    // MÉTODO AUXILIAR
+    // ==========================================
     private ResponseEntity<byte[]> construirRespuestaPdf(byte[] contenido, String nombreArchivo) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
