@@ -3,16 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
 import { ReporteService, ValorizacionDTO, StockInmovilizadoDTO, VariacionCostoDTO } from '../../service/reporte.service';
-
-// 📄 Librerías para PDF Profesional
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
-// 📊 Librerías para Gráficos
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 
-// ✅ Interfaz para la agrupación del acordeón
 interface CostoAgrupado {
   producto: string;
   ultimoPrecio: number;
@@ -31,7 +24,7 @@ export class ReportesComponent implements OnInit {
 
   activeTab: 'valorizacion' | 'inmovilizado' | 'costos' = 'valorizacion';
   loading = false;
-  usuarioActual: string = 'Administrador'; // 👤 Para firmar el PDF
+  usuarioActual: string = 'Administrador'; 
 
   constructor() {
     Chart.register(...registerables);
@@ -72,18 +65,18 @@ export class ReportesComponent implements OnInit {
   };
   
   ngOnInit() {
-  this.obtenerUsuarioActual();
-  this.cargarValorizacion();
-  
-  this.reporteService.getProductosParaFiltro().subscribe({
-      next: (data: any) => {
-          const productos = data.content ? data.content : data;
-          this.listaProductos = productos;
-          this.productosFiltrados = productos;
-      },
-      error: (err) => console.error("No se pudieron cargar los productos", err)
-  });
-}
+    this.obtenerUsuarioActual();
+    this.cargarValorizacion();
+    
+    this.reporteService.getProductosParaFiltro().subscribe({
+        next: (data: any) => {
+            const productos = data.content ? data.content : data;
+            this.listaProductos = productos;
+            this.productosFiltrados = productos;
+        },
+        error: (err) => console.error("No se pudieron cargar los productos", err)
+    });
+  }
 
   obtenerUsuarioActual() {
     const user = localStorage.getItem('username') || localStorage.getItem('email');
@@ -100,18 +93,18 @@ export class ReportesComponent implements OnInit {
   // --- LÓGICA DEL BUSCADOR ---
 
   filtrarProductos() {
-  if (!this.listaProductos || !Array.isArray(this.listaProductos)) {
-      this.productosFiltrados = [];
-      this.mostrarDropdown = false;
-      return;
-  }
+    if (!this.listaProductos || !Array.isArray(this.listaProductos)) {
+        this.productosFiltrados = [];
+        this.mostrarDropdown = false;
+        return;
+    }
 
-  const texto = this.busquedaInput.trim().toLowerCase();
-  if (texto === '') {
-      this.productosFiltrados = [];
-      this.mostrarDropdown = false;
-      return;
-  }
+    const texto = this.busquedaInput.trim().toLowerCase();
+    if (texto === '') {
+        this.productosFiltrados = [];
+        this.mostrarDropdown = false;
+        return;
+    }
     // Si hay texto, filtramos y abrimos el dropdown
     this.productosFiltrados = this.listaProductos.filter(p => 
         p.nombre.toLowerCase().includes(texto)
@@ -207,90 +200,47 @@ export class ReportesComponent implements OnInit {
     };
   }
 
-  // --- 🖨️ GENERACIÓN DE PDF PROFESIONAL ---
+  // --- 🖨️ DESCARGA DE PDF PROFESIONAL DESDE EL BACKEND ---
   
   exportarPDF() {
-    const doc = new jsPDF();
-    
-    // ✅ 1. Fecha, hora y usuario
-    const fechaHora = new Date().toLocaleString('es-AR');
-    const auditoria = `Generado por: ${this.usuarioActual} | Fecha y Hora: ${fechaHora}`;
+    this.loading = true;
+    let peticion;
+    let nombreArchivo = '';
 
-    // --- LÓGICA DE CADA PESTAÑA ---
     if (this.activeTab === 'valorizacion') {
-      doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-      doc.text('Reporte de Valorización de Inventario', 14, 20);
-      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-      doc.text(auditoria, 14, 28);
-      doc.text(`Valor Total: $${this.totalInventario.toLocaleString('es-AR')}`, 14, 34);
-      
-      autoTable(doc, {
-        startY: 40,
-        head: [['Categoría', 'Unidades', 'Valor Total ($)', '% Total']],
-        body: this.valorizacion.map(item => [ item.categoria, item.cantidadUnidades, `$ ${item.valorTotal.toLocaleString('es-AR')}`, ((item.valorTotal / this.totalInventario) * 100).toFixed(1) + ' %' ]),
-      });
-    }
-
+      peticion = this.reporteService.descargarPdfValorizacion();
+      nombreArchivo = 'Reporte_Valorizacion.pdf';
+    } 
     else if (this.activeTab === 'inmovilizado') {
-      doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-      doc.text('Reporte de Stock Inmovilizado', 14, 20);
-      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-      doc.text(auditoria, 14, 28);
-      doc.text(`Criterio: Sin movimientos hace más de ${this.diasInmovilizado} días`, 14, 34);
-
-      autoTable(doc, {
-        startY: 40,
-        head: [['Producto', 'Categoría', 'Stock', 'Costo Unit.', 'Capital Parado', 'Días Quieto']],
-        body: this.inmovilizado.map(item => [ item.nombre, item.categoria, item.stockActual, `$ ${item.costoUnitario.toLocaleString()}`, `$ ${item.capitalParado.toLocaleString()}`, item.diasSinVenta ]),
-      });
-    }
-
+      peticion = this.reporteService.descargarPdfInmovilizado(this.diasInmovilizado);
+      nombreArchivo = 'Reporte_Stock_Inmovilizado.pdf';
+    } 
     else if (this.activeTab === 'costos') {
-      doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-      const titulo = this.busquedaProducto ? `Historial de Costos: "${this.busquedaProducto}"` : 'Últimas Compras Generales';
-      doc.text(titulo, 14, 20);
-      
-      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-      doc.text(auditoria, 14, 28);
+      peticion = this.reporteService.descargarPdfCostos(this.busquedaProducto);
+      nombreArchivo = 'Reporte_Evolucion_Costos.pdf';
+    }
 
-      let startY = 35;
-
-      // Pegar gráfico si existe
-      if (this.chartRef && this.busquedaProducto && this.historialCostos.length > 1) {
-        try {
-            const canvas = this.chartRef.nativeElement as HTMLCanvasElement;
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
-            const ctx = tempCanvas.getContext('2d');
-            if (ctx) { ctx.fillStyle = '#212529'; ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height); ctx.drawImage(canvas, 0, 0); }
-            doc.addImage(tempCanvas.toDataURL('image/png', 1.0), 'PNG', 15, 35, 180, 80);
-            startY = 120;
-        } catch (e) { console.error("Error al exportar el gráfico", e); }
-      }
-
-      autoTable(doc, {
-        startY: startY,
-        head: [['Fecha Compra', 'Producto', 'Proveedor', 'Orden #', 'Costo Pagado']],
-        body: this.historialCostos.map(item => [ new Date(item.fechaCompra).toLocaleDateString('es-AR'), item.producto, item.proveedor, item.nroOrden, `$ ${item.costoPagado.toLocaleString('es-AR')}` ]),
+    if (peticion) {
+      peticion.subscribe({
+        next: (blob: Blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = nombreArchivo;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          a.remove();
+          this.loading = false;
+        },
+        error: (err) => {
+          console.error('Error al descargar el PDF:', err);
+          this.loading = false;
+          alert('Hubo un error al generar el PDF. Verifica la consola.');
+        }
       });
+    } else {
+        this.loading = false;
     }
-
-    // ✅ 4. MAGIA DE PAGINACIÓN Y PIE DE PÁGINA (Con el fix ts)
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(9);
-        doc.setTextColor(150);
-        doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
-        doc.text(`Sistema POS Masterserv - Auditoría`, 14, pageHeight - 10);
-        doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
-    }
-
-    // ✅ 5. GUARDAR
-    const nombreArchivo = `Reporte_${this.activeTab}_${fechaHora.replace(/[\/:, ]/g, '-')}.pdf`;
-    doc.save(nombreArchivo);
   }
 }

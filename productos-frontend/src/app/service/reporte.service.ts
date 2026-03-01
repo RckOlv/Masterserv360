@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Observable } from 'rxjs';
 
@@ -16,7 +16,7 @@ export interface StockInmovilizadoDTO {
   stockActual: number;
   costoUnitario: number;
   capitalParado: number;
-  ultimaVenta: string; // Fecha ISO
+  ultimaVenta: string; 
   diasSinVenta: number;
 }
 
@@ -50,14 +50,29 @@ export class ReporteService {
     return this.http.get<VariacionCostoDTO[]>(`${this.apiUrl}/historial-costos-general`);
   }
 
-  // 4. Historial de Costos (Búsqueda por Nombre) - ✅ NUEVO
+  // 4. Historial de Costos (Búsqueda por Nombre)
   buscarHistorialPorNombre(nombre: string): Observable<VariacionCostoDTO[]> {
-    // Usamos encodeURIComponent por si el nombre tiene espacios o tildes
     return this.http.get<VariacionCostoDTO[]>(`${this.apiUrl}/historial-costos/buscar?nombre=${encodeURIComponent(nombre)}`);
   }
 
   getProductosParaFiltro(): Observable<any[]> {
-    // Le pegamos al endpoint normal de productos para traer la lista
     return this.http.get<any[]>(`${environment.apiUrl}/productos`);
+  }
+  
+  descargarPdfValorizacion(): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/valorizacion/pdf`, { responseType: 'blob' });
+  }
+
+  descargarPdfInmovilizado(dias: number): Observable<Blob> {
+    let params = new HttpParams().set('dias', dias.toString());
+    return this.http.get(`${this.apiUrl}/inmovilizado/pdf`, { params, responseType: 'blob' });
+  }
+
+  descargarPdfCostos(nombre?: string): Observable<Blob> {
+    let params = new HttpParams();
+    if (nombre) {
+      params = params.set('nombre', nombre);
+    }
+    return this.http.get(`${this.apiUrl}/historial-costos/pdf`, { params, responseType: 'blob' });
   }
 }
