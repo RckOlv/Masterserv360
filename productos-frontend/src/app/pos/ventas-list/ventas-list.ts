@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+
 import { FormBuilder, FormGroup, ReactiveFormsModule, FormsModule } from '@angular/forms'; 
 
 // --- Servicios y Modelos ---
@@ -19,7 +20,7 @@ import { forkJoin, Observable, Subject, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
 
 // --- Utils ---
-import { mostrarToast, confirmarAccion } from '../../utils/toast'; 
+import { mostrarToast, confirmarAccion,pedirMotivoAccion } from '../../utils/toast'; 
 import { HttpErrorResponse } from '@angular/common/http';
 import { HasPermissionDirective } from '../../directives/has-permission.directive'; 
 
@@ -267,25 +268,29 @@ export default class VentasListComponent implements OnInit {
       return;
     }
 
-    const motivo = prompt(`Estás a punto de anular la venta #${venta.id} (Nota de Crédito).\n\nPor favor, ingresa el motivo (Obligatorio):`);
-    
-    if (motivo === null) return; 
-    if (motivo.trim() === '') {
-        mostrarToast('Debes ingresar un motivo válido para anular la venta.', 'warning');
-        return;
-    }
-    
-    confirmarAccion(
-      'Anular Venta',
-      `¿Confirmas la anulación de la Venta #${venta.id}?\n\nMotivo: "${motivo}"\n\nEl stock será repuesto y el dinero se restará de la caja actual.`
-    ).then((confirmado) => {
-      if (confirmado) {
+    const htmlMensaje = `
+      <p class="mb-2">Estás a punto de anular la venta <b>#${venta.id}</b>.</p>
+      <ul class="text-warning small mb-3">
+        <li>El stock de los productos será devuelto al inventario.</li>
+        <li>El monto total será restado de la caja actual.</li>
+      </ul>
+      <label class="form-label fw-bold">Motivo de la anulación:</label>
+    `;
+
+    // Usamos nuestra función centralizada
+    pedirMotivoAccion(
+      'Anular Venta (Nota de Crédito)', 
+      htmlMensaje, 
+      'Ej: Error de facturación, el cliente se arrepintió...'
+    ).then((motivo) => {
+      
+      if (motivo) { 
         this.cancelingVentaId = venta.id ?? null;
         this.errorMessage = null;
 
         this.ventaService.cancelarVenta(venta.id!, motivo).subscribe({
           next: () => {
-            mostrarToast(`Venta #${venta.id} anulada con éxito.`, 'success');
+            mostrarToast(`Venta #${venta.id} anulada. Stock y caja actualizados.`, 'success');
             this.cancelingVentaId = null;
             this.aplicarFiltros(); 
           },
