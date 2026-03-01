@@ -74,4 +74,9 @@ export class ProductoService {
   ajustarStock(data: { productoId: number; cantidad: number; motivo: string }): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/ajuste-stock`, data);
   }
+
+  getHistorialStock(productoId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${productoId}/movimientos`);
+  }
+  
 }

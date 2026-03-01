@@ -72,28 +72,20 @@ public class PedidoService {
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
-    // --- INYECCIONES PARA NOTIFICACIÓN ---
     @Autowired private PdfService pdfService;
     @Autowired private EmailService emailService;
     @Autowired private TemplateEngine templateEngine;
-    // -------------------------------------
 
     /**
      * Crea un Pedido Manual en estado PENDIENTE y NOTIFICA al proveedor.
      */
     @Transactional
     public PedidoDTO create(PedidoDTO pedidoDTO) {
-        
-        // 1. Cabecera del Pedido
         Pedido pedido = pedidoMapper.toPedido(pedidoDTO);
         pedido.setFechaPedido(LocalDateTime.now());
         pedido.setEstado(EstadoPedido.PENDIENTE); 
-        
-        // --- GENERAR TOKEN ÚNICO ---
         pedido.setToken(UUID.randomUUID().toString());
-        // ---------------------------
 
-        // 2. Buscar Entidades Relacionadas
         Proveedor proveedor = proveedorRepository.findById(pedidoDTO.getProveedorId())
                 .orElseThrow(() -> new EntityNotFoundException("Proveedor no encontrado"));
         Usuario usuario = usuarioRepository.findById(pedidoDTO.getUsuarioId())
@@ -102,7 +94,6 @@ public class PedidoService {
         pedido.setProveedor(proveedor);
         pedido.setUsuario(usuario);
 
-        // 3. Procesar Detalles
         Set<DetallePedido> detalles = new HashSet<>();
         BigDecimal totalPedido = BigDecimal.ZERO;
 
@@ -114,7 +105,6 @@ public class PedidoService {
             detalle.setPedido(pedido);
             detalle.setProducto(producto);
             
-            // Precio Manual o Costo Actual
             if (detalleDTO.getPrecioUnitario() != null) {
                 detalle.setPrecioUnitario(detalleDTO.getPrecioUnitario());
             } else {
@@ -128,70 +118,64 @@ public class PedidoService {
         pedido.setDetalles(detalles);
         pedido.setTotalPedido(totalPedido);
 
-        // 4. Guardar Pedido (Con token y estado pendiente)
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
-        
-        // 5. --- NOTIFICAR AL PROVEEDOR ---
         enviarNotificacionProveedor(pedidoGuardado, proveedor);
         
         return pedidoMapper.toPedidoDTO(pedidoGuardado);
     }
     
     @Transactional
-public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
-    Usuario usuarioQueConfirma = usuarioRepository.findByEmail(userEmail)
-            .orElseThrow(() -> new EntityNotFoundException("Usuario '" + userEmail + "' no encontrado."));
+    public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
+        Usuario usuarioQueConfirma = usuarioRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario '" + userEmail + "' no encontrado."));
 
-    Pedido pedido = pedidoRepository.findById(pedidoId)
-            .orElseThrow(() -> new EntityNotFoundException("Pedido no encontrado"));
-    
-    if (pedido.getEstado() != EstadoPedido.PENDIENTE && pedido.getEstado() != EstadoPedido.EN_CAMINO) {
-        throw new IllegalStateException("Solo se pueden completar pedidos PENDIENTES o EN CAMINO. Estado actual: " + pedido.getEstado());
-    }
-
-    // Usamos un Set para no procesar la misma cotización dos veces
-    Set<Cotizacion> cotizacionesACerrar = new HashSet<>();
-
-    for (DetallePedido detalle : pedido.getDetalles()) { 
-        Long productoId = detalle.getProducto().getId();
-        int cantidadRecibida = detalle.getCantidad();
+        Pedido pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new EntityNotFoundException("Pedido no encontrado"));
         
-        productoService.reponerStock(productoId, cantidadRecibida); 
-
-        //BUSCAR LA COTIZACIÓN ORIGINAL DEL ÍTEM
-        // Buscamos ítems confirmados de este producto que pertenezcan a este proveedor
-        List<ItemCotizacion> itemsCotizados = itemCotizacionRepository.findByProductoIdAndEstado(
-            productoId, EstadoItemCotizacion.CONFIRMADO
-        );
-        
-        for (ItemCotizacion itemC : itemsCotizados) {
-            if (itemC.getCotizacion().getProveedor().getId().equals(pedido.getProveedor().getId())) {
-                itemC.setEstado(EstadoItemCotizacion.COMPLETADO); // El ítem ya llegó al local
-                cotizacionesACerrar.add(itemC.getCotizacion());
-            }
+        if (pedido.getEstado() != EstadoPedido.PENDIENTE && pedido.getEstado() != EstadoPedido.EN_CAMINO) {
+            throw new IllegalStateException("Solo se pueden completar pedidos PENDIENTES o EN CAMINO. Estado actual: " + pedido.getEstado());
         }
 
-        MovimientoStockDTO movDto = new MovimientoStockDTO(
-                productoId,
-                usuarioQueConfirma.getId(), 
-                TipoMovimiento.ENTRADA_PEDIDO, 
-                cantidadRecibida,
-                "Recepción Pedido #" + pedido.getId() + " (" + pedido.getProveedor().getRazonSocial() + ")",
-                null,
-                pedidoId 
-        );
-        movimientoStockService.registrarMovimiento(movDto);
-    }
+        Set<Cotizacion> cotizacionesACerrar = new HashSet<>();
 
-    // Cerrar las cotizaciones vinculadas para que el sistema automático pueda volver a cotizar a futuro
-    for (Cotizacion cot : cotizacionesACerrar) {
-        cot.setEstado(EstadoCotizacion.RECIBIDA); 
-        cotizacionRepository.save(cot);
-    }
+        for (DetallePedido detalle : pedido.getDetalles()) { 
+            Long productoId = detalle.getProducto().getId();
+            int cantidadRecibida = detalle.getCantidad();
+            
+            productoService.reponerStock(productoId, cantidadRecibida); 
 
-    pedido.setEstado(EstadoPedido.COMPLETADO);
-    pedidoRepository.save(pedido);
-}
+            List<ItemCotizacion> itemsCotizados = itemCotizacionRepository.findByProductoIdAndEstado(
+                productoId, EstadoItemCotizacion.CONFIRMADO
+            );
+            
+            for (ItemCotizacion itemC : itemsCotizados) {
+                if (itemC.getCotizacion().getProveedor().getId().equals(pedido.getProveedor().getId())) {
+                    itemC.setEstado(EstadoItemCotizacion.COMPLETADO); 
+                    cotizacionesACerrar.add(itemC.getCotizacion());
+                }
+            }
+
+            // ✅ CORRECCIÓN DE CONSTRUCTOR: Usamos setters para evitar errores de firma
+            MovimientoStockDTO movDto = new MovimientoStockDTO();
+            movDto.setProductoId(productoId);
+            movDto.setUsuarioId(usuarioQueConfirma.getId());
+            movDto.setTipoMovimiento(TipoMovimiento.ENTRADA_PEDIDO);
+            movDto.setCantidad(cantidadRecibida);
+            movDto.setMotivo("Recepción Pedido #" + pedido.getId() + " (" + pedido.getProveedor().getRazonSocial() + ")");
+            movDto.setPedidoId(pedidoId);
+
+            movimientoStockService.registrarMovimiento(movDto);
+        }
+
+        // Cerrar las cotizaciones vinculadas
+        for (Cotizacion cot : cotizacionesACerrar) {
+            cot.setEstado(EstadoCotizacion.RECIBIDA); 
+            cotizacionRepository.save(cot);
+        }
+
+        pedido.setEstado(EstadoPedido.COMPLETADO);
+        pedidoRepository.save(pedido);
+    }
 
     @Transactional
     public void marcarPedidoCancelado(Long pedidoId) {
@@ -291,9 +275,8 @@ public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
         }
 
         pedido.setEstado(EstadoPedido.EN_CAMINO); 
-
         pedidoRepository.save(pedido);
-        logger.info("✅ Pedido #{} confirmado por proveedor. Llega el: {}", pedido.getId(), dto.getFechaEntrega());
+        logger.info("✅ Pedido #{} confirmado por proveedor.", pedido.getId());
     }
 
     @Transactional(readOnly = true)
@@ -303,10 +286,6 @@ public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
         return pedidosPage.map(pedidoMapper::toPedidoDTO);
     }
 
-    /**
-     * 🚀 GENERACIÓN MASIVA AGRUPADA POR PROVEEDOR
-     * Une ítems de diferentes cotizaciones (del mismo proveedor) en una sola orden.
-     */
     @Transactional
     public Map<String, Object> generarPedidosMasivos(List<Long> itemIds, Long usuarioId) {
         Usuario usuarioAdmin = usuarioRepository.findById(usuarioId)
@@ -318,23 +297,17 @@ public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
             throw new IllegalArgumentException("No se encontraron ítems de cotización.");
         }
 
-        // 🔥 CAMBIO CLAVE: Agrupar por PROVEEDOR (no por Cotización)
-        // Esto permite fusionar items de cotizaciones distintas en una sola Orden
         Map<Proveedor, List<ItemCotizacion>> itemsPorProveedor = itemsSeleccionados.stream()
                 .collect(Collectors.groupingBy(item -> item.getCotizacion().getProveedor()));
 
         int pedidosCreados = 0;
         List<Long> pedidosIds = new ArrayList<>();
-        
-        // Usamos un Set para rastrear qué cotizaciones se tocaron y actualizarlas al final
         Set<Cotizacion> cotizacionesAfectadas = new HashSet<>();
 
-        // Iterar por PROVEEDOR
         for (Map.Entry<Proveedor, List<ItemCotizacion>> entry : itemsPorProveedor.entrySet()) {
             Proveedor proveedor = entry.getKey();
             List<ItemCotizacion> items = entry.getValue();
 
-            // 1. Crear UN SOLO pedido para este Proveedor
             Pedido pedido = new Pedido();
             pedido.setProveedor(proveedor);
             pedido.setUsuario(usuarioAdmin);
@@ -346,7 +319,6 @@ public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
             BigDecimal total = BigDecimal.ZERO;
 
             for (ItemCotizacion item : items) {
-                // Registrar cotización afectada
                 cotizacionesAfectadas.add(item.getCotizacion());
 
                 DetallePedido detalle = new DetallePedido();
@@ -354,18 +326,15 @@ public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
                 detalle.setProducto(item.getProducto());
                 detalle.setCantidad(item.getCantidadSolicitada());
                 
-                // Precio inteligente
                 BigDecimal precio = item.getPrecioUnitarioOfertado() != null ? item.getPrecioUnitarioOfertado() 
-                                                                           : (item.getProducto().getPrecioCosto() != null ? item.getProducto().getPrecioCosto() : BigDecimal.ZERO);
+                                    : (item.getProducto().getPrecioCosto() != null ? item.getProducto().getPrecioCosto() : BigDecimal.ZERO);
 
                 detalle.setPrecioUnitario(precio);
                 detallesPedido.add(detalle);
                 total = total.add(precio.multiply(new BigDecimal(item.getCantidadSolicitada())));
 
-                // --- Limpieza de Items ---
                 item.setEstado(EstadoItemCotizacion.CONFIRMADO);
                 
-                // Cancelar rivales
                 List<ItemCotizacion> rivales = itemCotizacionRepository.findItemsRivales(
                     item.getProducto().getId(), 
                     item.getId(), 
@@ -384,22 +353,15 @@ public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
             pedidosIds.add(pedidoGuardado.getId());
             pedidosCreados++;
             
-            // Enviamos el email de orden unificada
             enviarNotificacionProveedor(pedidoGuardado, proveedor);
             
-            // --- 🛡️ DELAY ANTI-BLOQUEO MAILTRAP 🛡️ ---
             try {
-                logger.info("⏳ Esperando 15s para evitar Rate Limit del servidor de correo...");
-                Thread.sleep(15000); // 15 Segundos de pausa
+                Thread.sleep(15000); 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                logger.error("⚠️ Error en la espera del hilo de correo", e);
             }
-            // ------------------------------------------
         }
 
-        // 2. Actualizar estados de TODAS las cotizaciones involucradas
-        // Si ya no quedan items pendientes en la cotización, la marcamos como confirmada/cerrada.
         for (Cotizacion cot : cotizacionesAfectadas) {
             cot.setEstado(EstadoCotizacion.CONFIRMADA_ADMIN);
             cotizacionRepository.save(cot);
@@ -414,7 +376,6 @@ public void marcarPedidoCompletado(Long pedidoId, String userEmail) {
         );
     }
     
-    // Método auxiliar para centralizar el envío de correo
     private void enviarNotificacionProveedor(Pedido pedido, Proveedor proveedor) {
         try {
             if (proveedor.getEmail() != null && !proveedor.getEmail().isBlank()) {

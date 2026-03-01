@@ -129,4 +129,10 @@ public class ProductoController {
         
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/{id}/movimientos")
+    @PreAuthorize("hasAnyRole('ADMIN', 'VENDEDOR')")
+    public ResponseEntity<List<MovimientoStockDTO>> getHistorialStock(@PathVariable Long id) {
+        return ResponseEntity.ok(movimientoStockService.obtenerMovimientosPorProducto(id));
+    }
 }

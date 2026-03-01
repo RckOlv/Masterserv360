@@ -7,7 +7,6 @@
       </h4>
       
       <div class="d-flex gap-2">
-        
         <div class="dropdown">
           <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Plan de Contingencia">
             <i class="bi bi-download me-1"></i> Exportar Lista
@@ -24,7 +23,6 @@
           <i class="bi bi-plus-lg"></i> Nuevo Producto
         </a>
       </div>
-
     </div>
 
     <div class="card-body masterserv-card-body d-flex flex-column">
@@ -87,7 +85,6 @@
       </form>
 
       <div class="content-main flex-grow-1 d-flex flex-column">
-        
         <div *ngIf="isLoading" class="loading-container flex-grow-1 d-flex align-items-center justify-content-center">
           <div class="spinner-border masterserv-spinner" role="status">
             <span class="visually-hidden">Cargando...</span>
@@ -125,7 +122,6 @@
                 <td class="text-end masterserv-price text-nowrap pe-3">
                   {{ prod.precioVenta | currency:'ARS':'symbol':'1.2-2' }}
                 </td>
-                
                 <td class="text-end pe-3">
                     <span [ngClass]="{
                         'text-danger fw-bold': prod.stockActual <= prod.stockMinimo, 
@@ -134,17 +130,21 @@
                         {{ prod.stockActual }}
                     </span>
                 </td>
-
                 <td class="text-nowrap text-center">
                   <span class="badge masterserv-badge" 
                         [ngClass]="prod.estado === 'ACTIVO' ? 'masterserv-badge-success' : 'masterserv-badge-danger'">
                     {{ prod.estado === 'ACTIVO' ? 'ACTIVO' : 'INACTIVO' }}
                   </span>
                 </td>
-                
                 <td *appHasPermission="'PRODUCTOS_MANAGE'" class="text-center text-nowrap pe-3">
                   <div class="btn-group btn-group-sm" role="group">
                     
+                    <button class="btn btn-outline-info btn-action" 
+                            (click)="abrirKardex(prod)" 
+                            title="Ver Historial Stock (Kardex)">
+                        <i class="bi bi-clock-history"></i>
+                    </button>
+
                     <button class="btn masterserv-btn-outline-warning btn-action" 
                             (click)="abrirModalAjuste(prod)" 
                             title="Ajustar Stock Manual">
@@ -169,7 +169,6 @@
                        title="Reactivar">
                       <i class="bi bi-check-circle"></i>
                     </a>
-
                   </div>
                 </td>
               </tr>
@@ -177,28 +176,15 @@
           </table>
         </div>
 
-        <div *ngIf="!isLoading && (!productosPage || productosPage.content.length === 0)" class="empty-container flex-grow-1 d-flex align-items-center justify-content-center">
-          <div class="alert masterserv-alert-info text-center">
-            <i class="bi bi-info-circle me-2"></i> No se encontraron productos.
-          </div>
-        </div>
-
         <div *ngIf="!isLoading && productosPage && productosPage.totalPages > 1" class="card-footer bg-transparent border-top border-secondary d-flex justify-content-between align-items-center py-2">
-          
             <button class="btn masterserv-btn-secondary btn-sm" (click)="paginaAnterior()" [disabled]="productosPage.first">
             <i class="bi bi-chevron-left"></i> Anterior
           </button>
-
-          <span class="text-white-50 small"> Página <strong class="text-warning">{{ productosPage.number + 1 }}</strong> de <strong class="text-white">{{ productosPage.totalPages }}</strong>
-            <span class="d-none d-md-inline text-light"> (Total: {{ productosPage.totalElements }} productos)</span>
-          </span>
-
+          <span class="text-white-50 small"> Página <strong class="text-warning">{{ productosPage.number + 1 }}</strong> de <strong class="text-white">{{ productosPage.totalPages }}</strong></span>
           <button class="btn masterserv-btn-secondary btn-sm" (click)="paginaSiguiente()" [disabled]="productosPage.last">
             Siguiente <i class="bi bi-chevron-right"></i>
           </button>
-
         </div>
-
       </div>
     </div>
   </div>
@@ -207,65 +193,93 @@
 <div class="modal fade" id="modalAjusteStock" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content" style="background-color: #1e1e1e; border: 1px solid #ffc107; color: white;">
-        
         <div class="modal-header border-secondary">
-          <h5 class="modal-title text-warning">
-              <i class="bi bi-boxes me-2"></i>Ajuste Manual de Stock
-          </h5>
+          <h5 class="modal-title text-warning"><i class="bi bi-boxes me-2"></i>Ajuste Manual de Stock</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        
         <div class="modal-body">
           <div *ngIf="productoAjustar" class="mb-3 p-2 border border-secondary rounded bg-dark">
               <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                      <small class="text-muted d-block">Producto</small>
-                      <strong>{{ productoAjustar.nombre }}</strong>
-                  </div>
-                  <div class="text-end">
-                      <small class="text-muted d-block">Stock Actual</small>
-                      <span class="badge bg-secondary fs-6">{{ productoAjustar.stockActual }}</span>
-                  </div>
+                  <div><small class="text-muted d-block">Producto</small><strong>{{ productoAjustar.nombre }}</strong></div>
+                  <div class="text-end"><small class="text-muted d-block">Stock Actual</small><span class="badge bg-secondary fs-6">{{ productoAjustar.stockActual }}</span></div>
               </div>
           </div>
-  
           <form [formGroup]="ajusteForm">
-              
               <div class="mb-3">
                   <label class="form-label small text-white-50">Cantidad a Ajustar *</label>
                   <div class="input-group">
-                      <span class="input-group-text bg-dark border-secondary text-white">
-                          <i class="bi bi-plus-slash-minus"></i>
-                      </span>
-                      <input type="number" class="form-control masterserv-input" formControlName="cantidad" placeholder="Ej: -5 (Resta) o 10 (Suma)">
-                  </div>
-                  
-                  <div class="form-text mt-2 small" [ngClass]="ajusteForm.get('cantidad')?.value < 0 ? 'text-danger' : 'text-success'">
-                      <span *ngIf="ajusteForm.get('cantidad')?.value < 0"><i class="bi bi-arrow-down"></i> Se descontarán unidades.</span>
-                      <span *ngIf="ajusteForm.get('cantidad')?.value > 0"><i class="bi bi-arrow-up"></i> Se agregarán unidades.</span>
+                      <span class="input-group-text bg-dark border-secondary text-white"><i class="bi bi-plus-slash-minus"></i></span>
+                      <input type="number" class="form-control masterserv-input" formControlName="cantidad">
                   </div>
               </div>
-  
               <div class="mb-3">
                   <label class="form-label small text-white-50">Motivo / Justificación *</label>
-                  <textarea class="form-control masterserv-input" rows="3" formControlName="motivo" placeholder="Ej: Rotura en depósito, conteo erróneo..."></textarea>
-                  <div *ngIf="ajusteForm.get('motivo')?.invalid && ajusteForm.get('motivo')?.touched" class="text-danger small mt-1">
-                      Debe especificar un motivo (mínimo 5 letras).
-                  </div>
+                  <textarea class="form-control masterserv-input" rows="3" formControlName="motivo"></textarea>
               </div>
-  
           </form>
         </div>
-        
         <div class="modal-footer border-secondary">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-warning text-dark fw-bold" (click)="confirmarAjuste()" 
-                  [disabled]="ajusteForm.invalid || isSavingAjuste || ajusteForm.get('cantidad')?.value === 0">
-              <span *ngIf="isSavingAjuste" class="spinner-border spinner-border-sm me-1"></span>
-              Confirmar Ajuste
-          </button>
+          <button type="button" class="btn btn-warning text-dark fw-bold" (click)="confirmarAjuste()" [disabled]="ajusteForm.invalid || isSavingAjuste">Confirmar Ajuste</button>
         </div>
-  
+      </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalKardex" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content bg-dark border-info text-white">
+        <div class="modal-header border-secondary bg-dark">
+          <h5 class="modal-title text-info fw-bold">
+            <i class="bi bi-clock-history me-2"></i>Kardex: {{ productoSeleccionadoNombre }}
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div *ngIf="isLoadingKardex" class="text-center py-5">
+            <div class="spinner-border text-info" role="status"></div>
+            <p class="mt-2 text-white-50 small">Consultando historial de movimientos...</p>
+          </div>
+          
+          <div class="table-responsive" style="max-height: 450px;" *ngIf="!isLoadingKardex">
+            <table class="table table-dark table-hover mb-0 small">
+              <thead class="sticky-top bg-dark border-bottom border-secondary" style="z-index: 10;">
+                <tr class="text-white-50 text-uppercase">
+                  <th class="ps-3 py-3">Fecha</th>
+                  <th>Tipo</th>
+                  <th>Concepto / Motivo</th>
+                  <th>Usuario</th>
+                  <th class="text-end pe-4">Variación</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let mov of historialStock" class="align-middle">
+                  <td class="ps-3 text-white-50">{{ mov.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>
+                    <span class="badge bg-opacity-25" [ngClass]="{
+                      'bg-success text-success border border-success': mov.tipoMovimiento === 'ENTRADA_PEDIDO' || mov.tipoMovimiento === 'DEVOLUCION',
+                      'bg-danger text-danger border border-danger': mov.tipoMovimiento === 'SALIDA_VENTA',
+                      'bg-info text-info border border-info': mov.tipoMovimiento === 'AJUSTE_MANUAL'
+                    }">
+                      {{ mov.tipoMovimiento }}
+                    </span>
+                  </td>
+                  <td class="small text-white-50">{{ mov.motivo }}</td>
+                  <td class="small">{{ mov.usuarioNombre || 'Sistema' }}</td>
+                  <td class="text-end pe-4 fw-bold" [ngClass]="mov.cantidad > 0 ? 'text-success' : 'text-danger'">
+                    {{ mov.cantidad > 0 ? '+' : '' }}{{ mov.cantidad }}
+                  </td>
+                </tr>
+                <tr *ngIf="historialStock.length === 0">
+                  <td colspan="5" class="text-center py-5 text-white-50 italic">No hay movimientos registrados.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cerrar</button>
+        </div>
       </div>
     </div>
 </div>

@@ -10,12 +10,18 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface MovimientoStockMapper {
 
+    // DTO -> Entidad
     @Mapping(source = "productoId", target = "producto")
     @Mapping(source = "usuarioId", target = "usuario")
     MovimientoStock toMovimientoStock(MovimientoStockDTO dto);
 
-    // --- Helpers para que MapStruct convierta IDs en Entidades vacías ---
+    // ✅ NUEVO: Entidad -> DTO (Para el Kardex)
+    @Mapping(source = "producto.id", target = "productoId")
+    @Mapping(source = "usuario.id", target = "usuarioId")
+    @Mapping(target = "usuarioNombre", ignore = true) // Lo llenamos manualmente en el service para mayor seguridad
+    MovimientoStockDTO toMovimientoStockDTO(MovimientoStock entity);
 
+    // --- Helpers para que MapStruct convierta IDs en Entidades vacías ---
     default Producto mapProducto(Long id) {
         if (id == null) return null;
         Producto p = new Producto();

@@ -1,13 +1,14 @@
 package com.masterserv.productos.service;
 
 import com.lowagie.text.*;
-import com.lowagie.text.pdf.PdfPCell;
-import com.lowagie.text.pdf.PdfPTable;
-import com.lowagie.text.pdf.PdfWriter;
+import com.lowagie.text.pdf.*;
 import com.lowagie.text.pdf.draw.LineSeparator;
 import com.masterserv.productos.dto.DashboardFilterDTO;
 import com.masterserv.productos.dto.DashboardStatsDTO;
 import com.masterserv.productos.dto.TopProductoDTO;
+import com.masterserv.productos.dto.reporte.StockInmovilizadoDTO;
+import com.masterserv.productos.dto.reporte.ValorizacionInventarioDTO;
+import com.masterserv.productos.dto.reporte.VariacionCostoDTO;
 import com.masterserv.productos.entity.DetallePedido;
 import com.masterserv.productos.entity.DetalleVenta;
 import com.masterserv.productos.entity.EmpresaConfig;
@@ -34,7 +35,7 @@ public class PdfService {
 
     private static final Logger logger = LoggerFactory.getLogger(PdfService.class);
 
-    // Fuentes
+    // --- FUENTES ESTÁNDAR ---
     private static final Font FONT_TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.BLACK);
     private static final Font FONT_SUBTITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, Color.DARK_GRAY);
     private static final Font FONT_BOLD = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK);
@@ -42,493 +43,441 @@ public class PdfService {
     private static final Font FONT_DATA_EMPRESA = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.GRAY);
     private static final Font FONT_HEADER_TABLA = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.WHITE);
     private static final Font FONT_LEYENDA = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 9, Color.DARK_GRAY);
+    private static final Font FONT_FOOTER = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8, Color.GRAY);
 
-    @Autowired 
-    private DashboardService dashboardService;
-
-    // 🔥 INYECCIÓN NUEVA: Para obtener datos dinámicos
-    @Autowired
-    private EmpresaConfigService empresaConfigService;
+    @Autowired private DashboardService dashboardService;
+    @Autowired private EmpresaConfigService empresaConfigService;
 
     // ========================================================================
-    // MÉTODO AUXILIAR PARA FORMATEO DE MONEDA (ARGENTINA)
+    // ✅ CLASE DE EVENTOS: PARA "PÁGINA X DE Y" Y PIE DE PÁGINA
+    // ========================================================================
+    private static class HeaderFooterPageEvent extends PdfPageEventHelper {
+        private final String nombreEmpresa;
+        private PdfTemplate totalPaginas;
+
+        public HeaderFooterPageEvent(String nombreEmpresa) {
+            this.nombreEmpresa = nombreEmpresa;
+        }
+
+        @Override
+        public void onOpenDocument(PdfWriter writer, Document document) {
+            totalPaginas = writer.getDirectContent().createTemplate(30, 16);
+        }
+
+        @Override
+        public void onEndPage(PdfWriter writer, Document document) {
+            PdfPTable footer = new PdfPTable(3);
+            try {
+                footer.setWidths(new float[]{24, 2, 1});
+                footer.setTotalWidth(527);
+                footer.setLockedWidth(true);
+                footer.getDefaultCell().setFixedHeight(20);
+                footer.getDefaultCell().setBorder(Rectangle.TOP);
+                footer.getDefaultCell().setBorderColor(Color.LIGHT_GRAY);
+
+                footer.addCell(new Phrase(nombreEmpresa + " - Reportes y Comprobantes", FONT_FOOTER));
+
+                PdfPCell cellPagina = new PdfPCell(new Phrase(String.format("Página %d de ", writer.getPageNumber()), FONT_FOOTER));
+                cellPagina.setBorder(Rectangle.TOP);
+                cellPagina.setBorderColor(Color.LIGHT_GRAY);
+                cellPagina.setHorizontalAlignment(Element.ALIGN_RIGHT);
+                footer.addCell(cellPagina);
+
+                PdfPCell totalCell = new PdfPCell(Image.getInstance(totalPaginas));
+                totalCell.setBorder(Rectangle.TOP);
+                totalCell.setBorderColor(Color.LIGHT_GRAY);
+                footer.addCell(totalCell);
+
+                footer.writeSelectedRows(0, -1, 34, 30, writer.getDirectContent());
+            } catch (DocumentException de) {
+                throw new ExceptionConverter(de);
+            }
+        }
+
+        @Override
+        public void onCloseDocument(PdfWriter writer, Document document) {
+            ColumnText.showTextAligned(totalPaginas, Element.ALIGN_LEFT,
+                    new Phrase(String.valueOf(writer.getPageNumber() - 1), FONT_FOOTER), 2, 2, 0);
+        }
+    }
+
+    // ========================================================================
+    // MÉTODOS AUXILIARES
     // ========================================================================
     private String formatearMoneda(BigDecimal valor) {
         if (valor == null) valor = BigDecimal.ZERO;
-        
         DecimalFormatSymbols simbolos = new DecimalFormatSymbols();
         simbolos.setGroupingSeparator('.'); 
         simbolos.setDecimalSeparator(','); 
-        
-        DecimalFormat df = new DecimalFormat("#,##0.00", simbolos);
-        return "$ " + df.format(valor);
+        return "$ " + new DecimalFormat("#,##0.00", simbolos).format(valor);
     }
 
     private String obtenerUsuarioActual() {
-    try {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
-    } catch (Exception e) {
-        return "Sistema"; // Por si no hay sesión activa
-    }
-}
-
-    // ========================================================================
-    // MÉTODO AUXILIAR PARA CABECERA DINÁMICA (REUTILIZABLE)
-    // ========================================================================
-    private void construirCabeceraEmpresa(Document document, String subtituloReporte) throws DocumentException {
-    EmpresaConfig config = empresaConfigService.obtenerConfiguracion();
-
-    // 1. Creamos una tabla de 2 columnas para la cabecera
-    PdfPTable headerTable = new PdfPTable(2);
-    headerTable.setWidthPercentage(100);
-    headerTable.setSpacingAfter(10);
-    headerTable.setWidths(new float[]{6f, 4f}); // 60% izquierda, 40% derecha
-
-    // --- CELDA IZQUIERDA: DATOS DE LA EMPRESA ---
-    PdfPCell cellLeft = new PdfPCell();
-    cellLeft.setBorder(Rectangle.NO_BORDER);
-    cellLeft.setHorizontalAlignment(Element.ALIGN_LEFT);
-
-    // Logo
-    if (config.getLogoUrl() != null && !config.getLogoUrl().isEmpty()) {
         try {
-            Image logo = null;
-            String logoData = config.getLogoUrl();
-            if (logoData.startsWith("http")) {
-                logo = Image.getInstance(logoData);
-            } else if (logoData.contains("base64,")) {
-                String base64String = logoData.split(",")[1];
-                byte[] imageBytes = Base64.getDecoder().decode(base64String);
-                logo = Image.getInstance(imageBytes);
-            }
-            if (logo != null) {
-                logo.scaleToFit(90, 45);
-                cellLeft.addElement(logo);
-            }
+            return SecurityContextHolder.getContext().getAuthentication().getName();
         } catch (Exception e) {
-            logger.warn("No se pudo cargar el logo: {}", e.getMessage());
+            return "Sistema";
         }
     }
 
-    // Nombre y Datos
-    cellLeft.addElement(new Paragraph(config.getNombreFantasia().toUpperCase(), FONT_TITULO));
-    cellLeft.addElement(new Paragraph(config.getRazonSocial(), FONT_DATA_EMPRESA));
-    cellLeft.addElement(new Paragraph("CUIT: " + config.getCuit(), FONT_DATA_EMPRESA));
-    cellLeft.addElement(new Paragraph(config.getDireccion(), FONT_DATA_EMPRESA));
-    headerTable.addCell(cellLeft);
+    private void construirCabeceraEmpresa(Document document, String subtituloReporte) throws DocumentException {
+        EmpresaConfig config = empresaConfigService.obtenerConfiguracion();
+        PdfPTable headerTable = new PdfPTable(2);
+        headerTable.setWidthPercentage(100);
+        headerTable.setSpacingAfter(10);
+        headerTable.setWidths(new float[]{6f, 4f});
 
-    // --- CELDA DERECHA: FECHA Y EMISOR ---
-    PdfPCell cellRight = new PdfPCell();
-    cellRight.setBorder(Rectangle.NO_BORDER);
-    cellRight.setHorizontalAlignment(Element.ALIGN_RIGHT);
-    cellRight.setVerticalAlignment(Element.ALIGN_BOTTOM); // Alinea al fondo de la celda
+        PdfPCell cellLeft = new PdfPCell();
+        cellLeft.setBorder(Rectangle.NO_BORDER);
 
-    // Fecha actual
-    String fechaActual = java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-    
-    Paragraph pFecha = new Paragraph("Fecha: " + fechaActual, FONT_NORMAL);
-    pFecha.setAlignment(Element.ALIGN_RIGHT);
-    cellRight.addElement(pFecha);
+        if (config.getLogoUrl() != null && !config.getLogoUrl().isEmpty()) {
+            try {
+                Image logo = null;
+                String logoData = config.getLogoUrl();
+                if (logoData.startsWith("http")) {
+                    logo = Image.getInstance(logoData);
+                } else if (logoData.contains("base64,")) {
+                    byte[] imageBytes = Base64.getDecoder().decode(logoData.split(",")[1]);
+                    logo = Image.getInstance(imageBytes);
+                }
+                if (logo != null) {
+                    logo.scaleToFit(90, 45);
+                    cellLeft.addElement(logo);
+                }
+            } catch (Exception e) {
+                logger.warn("Error cargando logo en PDF");
+            }
+        }
 
-    Paragraph pEmisor = new Paragraph("Emitido por: " + obtenerUsuarioActual(), FONT_NORMAL);
-    pEmisor.setAlignment(Element.ALIGN_RIGHT);
-    cellRight.addElement(pEmisor);
-    
-    // Espacio extra y luego el tipo de documento resaltado
-    Paragraph pDoc = new Paragraph("\n" + subtituloReporte.toUpperCase(), FONT_SUBTITULO);
-    pDoc.setAlignment(Element.ALIGN_RIGHT);
-    cellRight.addElement(pDoc);
+        cellLeft.addElement(new Paragraph(config.getNombreFantasia().toUpperCase(), FONT_TITULO));
+        cellLeft.addElement(new Paragraph(config.getRazonSocial() + " | CUIT: " + config.getCuit(), FONT_DATA_EMPRESA));
+        cellLeft.addElement(new Paragraph(config.getDireccion(), FONT_DATA_EMPRESA));
+        headerTable.addCell(cellLeft);
 
-    headerTable.addCell(cellRight);
+        PdfPCell cellRight = new PdfPCell();
+        cellRight.setBorder(Rectangle.NO_BORDER);
+        cellRight.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        cellRight.setVerticalAlignment(Element.ALIGN_BOTTOM);
+        cellRight.addElement(new Paragraph("Fecha: " + java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")), FONT_NORMAL));
+        cellRight.addElement(new Paragraph("Emitido por: " + obtenerUsuarioActual(), FONT_NORMAL));
+        
+        Paragraph pDoc = new Paragraph("\n" + subtituloReporte.toUpperCase(), FONT_SUBTITULO);
+        pDoc.setAlignment(Element.ALIGN_RIGHT);
+        cellRight.addElement(pDoc);
+        headerTable.addCell(cellRight);
 
-    // Agregar la tabla al documento
-    document.add(headerTable);
-    document.add(new LineSeparator());
-}
+        document.add(headerTable);
+        document.add(new LineSeparator());
+    }
 
     // ========================================================================
-    // 1. COMPROBANTE INTERNO (CON PRECIOS) - PARA EL ADMIN
+    // COMPROBANTES: PEDIDOS Y VENTAS
     // ========================================================================
     public byte[] generarComprobantePedido(Pedido pedido) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Document document = new Document(PageSize.A4);
-
+        Document document = new Document(PageSize.A4, 36, 36, 36, 60);
         try {
-            PdfWriter.getInstance(document, baos);
+            PdfWriter writer = PdfWriter.getInstance(document, baos);
+            writer.setPageEvent(new HeaderFooterPageEvent(empresaConfigService.obtenerConfiguracion().getNombreFantasia()));
             document.open();
-
-            // 🔥 CABECERA DINÁMICA
             construirCabeceraEmpresa(document, "Orden de Compra (Interno)");
 
-            // DATOS PEDIDO Y PROVEEDOR
-            Paragraph infoPedido = new Paragraph();
-            infoPedido.setSpacingBefore(10);
-            infoPedido.setSpacingAfter(10);
-            
-            infoPedido.add(new Chunk("Nº Pedido: " + pedido.getId() + "\n", FONT_BOLD));
-            
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-            infoPedido.add(new Chunk("Fecha Emisión: " + pedido.getFechaPedido().format(formatter) + "\n", FONT_NORMAL));
-            infoPedido.add(new Chunk("Estado: " + pedido.getEstado() + "\n\n", FONT_NORMAL));
-            
-            if (pedido.getProveedor() != null) {
-                infoPedido.add(new Chunk("PROVEEDOR:\n", FONT_BOLD));
-                infoPedido.add(new Chunk("Razón Social: " + pedido.getProveedor().getRazonSocial() + "\n", FONT_NORMAL));
-                infoPedido.add(new Chunk("CUIT: " + pedido.getProveedor().getCuit() + "\n", FONT_NORMAL));
-            }
-            
-            document.add(infoPedido);
+            Paragraph info = new Paragraph();
+            info.setSpacingBefore(10);
+            info.add(new Chunk("Nº Pedido: " + pedido.getId() + "\n", FONT_BOLD));
+            info.add(new Chunk("Estado: " + pedido.getEstado() + "\n", FONT_NORMAL));
+            if (pedido.getProveedor() != null) info.add(new Chunk("PROVEEDOR: " + pedido.getProveedor().getRazonSocial() + "\n", FONT_NORMAL));
+            document.add(info);
 
-            // TABLA CON PRECIOS (4 Columnas)
             PdfPTable table = new PdfPTable(4); 
             table.setWidthPercentage(100);
             table.setWidths(new float[] { 4f, 1f, 2f, 2f });
             table.setSpacingBefore(10f);
+            table.addCell(crearCeldaHeader("Producto")); table.addCell(crearCeldaHeader("Cant."));
+            table.addCell(crearCeldaHeader("Costo Unit.")); table.addCell(crearCeldaHeader("Subtotal"));
 
-            table.addCell(crearCeldaHeader("Producto"));
-            table.addCell(crearCeldaHeader("Cant."));
-            table.addCell(crearCeldaHeader("Costo Unit."));
-            table.addCell(crearCeldaHeader("Subtotal"));
-
-            BigDecimal totalCalculado = BigDecimal.ZERO;
-
-            for (DetallePedido detalle : pedido.getDetalles()) {
-                table.addCell(new Paragraph(detalle.getProducto().getNombre(), FONT_NORMAL));
-                
-                PdfPCell cellCant = new PdfPCell(new Paragraph(String.valueOf(detalle.getCantidad()), FONT_NORMAL));
-                cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
-                table.addCell(cellCant);
-                
-                BigDecimal precio = (detalle.getPrecioUnitario() != null) ? detalle.getPrecioUnitario() : BigDecimal.ZERO;
-                PdfPCell cellPrecio = new PdfPCell(new Paragraph(formatearMoneda(precio), FONT_NORMAL));
-                cellPrecio.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                table.addCell(cellPrecio);
-                
-                BigDecimal subtotalItem = precio.multiply(new BigDecimal(detalle.getCantidad()));
-                totalCalculado = totalCalculado.add(subtotalItem);
-                
-                PdfPCell cellSub = new PdfPCell(new Paragraph(formatearMoneda(subtotalItem), FONT_NORMAL));
-                cellSub.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                table.addCell(cellSub);
+            BigDecimal total = BigDecimal.ZERO;
+            for (DetallePedido d : pedido.getDetalles()) {
+                table.addCell(new Paragraph(d.getProducto().getNombre(), FONT_NORMAL));
+                PdfPCell cCant = new PdfPCell(new Paragraph(String.valueOf(d.getCantidad()), FONT_NORMAL));
+                cCant.setHorizontalAlignment(Element.ALIGN_CENTER);
+                table.addCell(cCant);
+                BigDecimal precio = (d.getPrecioUnitario() != null) ? d.getPrecioUnitario() : BigDecimal.ZERO;
+                table.addCell(crearCeldaMoneda(precio));
+                BigDecimal sub = precio.multiply(new BigDecimal(d.getCantidad()));
+                total = total.add(sub);
+                table.addCell(crearCeldaMoneda(sub));
             }
-
             document.add(table);
-
-            // TOTALES
-            Paragraph totales = new Paragraph();
-            totales.setAlignment(Element.ALIGN_RIGHT);
-            totales.setSpacingBefore(15);
-
-            Font fontTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.BLACK);
-            BigDecimal totalFinal = (pedido.getTotalPedido() != null) ? pedido.getTotalPedido() : totalCalculado;
-            
-            totales.add(new Chunk("TOTAL: " + formatearMoneda(totalFinal), fontTotal));
-            
-            document.add(totales);
-
-        } catch (DocumentException e) {
-            throw new RuntimeException("Error al generar el comprobante de pedido PDF", e);
-        } finally {
-            document.close();
-        }
-
+            Paragraph pTot = new Paragraph("\nTOTAL: " + formatearMoneda(pedido.getTotalPedido() != null ? pedido.getTotalPedido() : total), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14));
+            pTot.setAlignment(Element.ALIGN_RIGHT);
+            document.add(pTot);
+        } catch (Exception e) { throw new RuntimeException("Error en Pedido PDF", e); } 
+        finally { document.close(); }
         return baos.toByteArray();
     }
 
-    // ========================================================================
-    // 2. ORDEN DE COMPRA EXTERNA (SIN PRECIOS) - PARA EL PROVEEDOR
-    // ========================================================================
     public byte[] generarOrdenCompraProveedor(Pedido pedido) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Document document = new Document(PageSize.A4);
-
+        Document document = new Document(PageSize.A4, 36, 36, 36, 60);
         try {
-            PdfWriter.getInstance(document, baos);
+            PdfWriter writer = PdfWriter.getInstance(document, baos);
+            EmpresaConfig config = empresaConfigService.obtenerConfiguracion();
+            writer.setPageEvent(new HeaderFooterPageEvent(config.getNombreFantasia()));
             document.open();
+            construirCabeceraEmpresa(document, "Solicitud de Mercadería");
 
-            // 🔥 CABECERA DINÁMICA
-            construirCabeceraEmpresa(document, "Orden de Compra / Solicitud de Mercadería");
-
-            Paragraph infoPedido = new Paragraph();
-            infoPedido.setSpacingBefore(10);
-            infoPedido.setSpacingAfter(10);
-            
-            infoPedido.add(new Chunk("Orden de Compra Nº: " + pedido.getId() + "\n", FONT_BOLD));
-            
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-            infoPedido.add(new Chunk("Fecha Emisión: " + pedido.getFechaPedido().format(formatter) + "\n\n", FONT_NORMAL));
-            
-            if (pedido.getProveedor() != null) {
-                infoPedido.add(new Chunk("SEÑORES PROVEEDORES:\n", FONT_BOLD));
-                infoPedido.add(new Chunk("Razón Social: " + pedido.getProveedor().getRazonSocial() + "\n", FONT_NORMAL));
-                infoPedido.add(new Chunk("CUIT: " + pedido.getProveedor().getCuit() + "\n", FONT_NORMAL));
-            }
-            
-            document.add(infoPedido);
+            Paragraph info = new Paragraph("\nOrden Nº: " + pedido.getId() + "\nFecha: " + pedido.getFechaPedido().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), FONT_BOLD);
+            if (pedido.getProveedor() != null) info.add(new Chunk("\nPROVEEDOR: " + pedido.getProveedor().getRazonSocial(), FONT_NORMAL));
+            document.add(info);
 
             PdfPTable table = new PdfPTable(2); 
-            table.setWidthPercentage(100);
-            table.setWidths(new float[] { 4f, 1f });
-            table.setSpacingBefore(10f);
+            table.setWidthPercentage(100); table.setWidths(new float[] { 5f, 1f }); table.setSpacingBefore(10f);
+            table.addCell(crearCeldaHeader("Descripción del Producto")); table.addCell(crearCeldaHeader("Cantidad"));
 
-            table.addCell(crearCeldaHeader("Descripción del Producto"));
-            table.addCell(crearCeldaHeader("Cantidad"));
-
-            for (DetallePedido detalle : pedido.getDetalles()) {
-                PdfPCell cellProd = new PdfPCell(new Paragraph(detalle.getProducto().getNombre(), FONT_NORMAL));
-                cellProd.setPadding(5);
-                table.addCell(cellProd);
-                
-                PdfPCell cellCant = new PdfPCell(new Paragraph(String.valueOf(detalle.getCantidad()), FONT_NORMAL));
-                cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
-                cellCant.setPadding(5);
-                table.addCell(cellCant);
+            for (DetallePedido d : pedido.getDetalles()) {
+                table.addCell(new Paragraph(d.getProducto().getNombre(), FONT_NORMAL));
+                PdfPCell c = new PdfPCell(new Paragraph(String.valueOf(d.getCantidad()), FONT_NORMAL));
+                c.setHorizontalAlignment(Element.ALIGN_CENTER);
+                table.addCell(c);
             }
-
             document.add(table);
-
-            // Obtener configuración para pie de página legal si fuera necesario
-            EmpresaConfig config = empresaConfigService.obtenerConfiguracion();
-            String textoPie = (config.getPiePaginaPresupuesto() != null && !config.getPiePaginaPresupuesto().isEmpty()) 
-                            ? config.getPiePaginaPresupuesto() 
-                            : "Por favor confirmar recepción, disponibilidad y fecha estimada de entrega.";
-
-            Paragraph pie = new Paragraph("\nNota: " + textoPie, FONT_DATA_EMPRESA);
-            pie.setAlignment(Element.ALIGN_CENTER);
-            document.add(pie);
-
-        } catch (DocumentException e) {
-            throw new RuntimeException("Error al generar la Orden de Compra PDF para proveedor", e);
-        } finally {
-            document.close();
-        }
-
+            String textoPie = (config.getPiePaginaPresupuesto() != null && !config.getPiePaginaPresupuesto().isEmpty()) ? config.getPiePaginaPresupuesto() : "Favor de confirmar recepción y disponibilidad.";
+            Paragraph pPie = new Paragraph("\n" + textoPie, FONT_DATA_EMPRESA);
+            pPie.setAlignment(Element.ALIGN_CENTER);
+            document.add(pPie);
+        } catch (Exception e) { throw new RuntimeException("Error en OC PDF", e); } 
+        finally { document.close(); }
         return baos.toByteArray();
     }
 
-    // ========================================================================
-    // 3. COMPROBANTE DE VENTA
-    // ========================================================================
     public byte[] generarComprobanteVenta(Venta venta) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Document document = new Document(PageSize.A4);
-
+        Document document = new Document(PageSize.A4, 36, 36, 36, 60);
         try {
-            PdfWriter.getInstance(document, baos);
+            PdfWriter writer = PdfWriter.getInstance(document, baos);
+            writer.setPageEvent(new HeaderFooterPageEvent(empresaConfigService.obtenerConfiguracion().getNombreFantasia()));
             document.open();
-
-            // 🔥 CABECERA DINÁMICA
             construirCabeceraEmpresa(document, "Comprobante de Venta (No Fiscal)");
 
-            Paragraph infoVenta = new Paragraph();
-            infoVenta.setSpacingBefore(10);
-            infoVenta.setSpacingAfter(10);
-            
-            infoVenta.add(new Chunk("Nº Venta: " + venta.getId() + "\n", FONT_BOLD));
-            
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-            infoVenta.add(new Chunk("Fecha: " + venta.getFechaVenta().format(formatter) + "\n", FONT_NORMAL));
-            
-            if (venta.getCliente() != null) {
-                infoVenta.add(new Chunk("Cliente: " + venta.getCliente().getNombre() + " " + venta.getCliente().getApellido() + "\n", FONT_NORMAL));
-                if(venta.getCliente().getDocumento() != null) {
-                    infoVenta.add(new Chunk("DNI/CUIT: " + venta.getCliente().getDocumento() + "\n", FONT_NORMAL));
-                }
+            Paragraph info = new Paragraph();
+            info.add(new Chunk("\nVenta Nº: " + venta.getId() + "\n", FONT_BOLD));
+            info.add(new Chunk("Cliente: " + (venta.getCliente() != null ? venta.getCliente().getNombre() + " " + venta.getCliente().getApellido() : "Consumidor Final") + "\n", FONT_NORMAL));
+            document.add(info);
+
+            PdfPTable table = new PdfPTable(4);
+            table.setWidthPercentage(100); table.setWidths(new float[] { 4f, 1f, 2f, 2f }); table.setSpacingBefore(10);
+            table.addCell(crearCeldaHeader("Producto")); table.addCell(crearCeldaHeader("Cant."));
+            table.addCell(crearCeldaHeader("P. Unit.")); table.addCell(crearCeldaHeader("Subtotal"));
+
+            BigDecimal subtotalReal = BigDecimal.ZERO;
+            for (DetalleVenta d : venta.getDetalles()) {
+                table.addCell(new Paragraph(d.getProducto().getNombre(), FONT_NORMAL));
+                PdfPCell c = new PdfPCell(new Paragraph(String.valueOf(d.getCantidad()), FONT_NORMAL));
+                c.setHorizontalAlignment(Element.ALIGN_CENTER); table.addCell(c);
+                table.addCell(crearCeldaMoneda(d.getPrecioUnitario()));
+                BigDecimal sub = d.getPrecioUnitario().multiply(new BigDecimal(d.getCantidad()));
+                subtotalReal = subtotalReal.add(sub);
+                table.addCell(crearCeldaMoneda(sub));
             }
-            
-            document.add(infoVenta);
-
-            PdfPTable table = new PdfPTable(4); 
-            table.setWidthPercentage(100);
-            table.setWidths(new float[] { 4f, 1f, 2f, 2f });
-            table.setSpacingBefore(10f);
-
-            table.addCell(crearCeldaHeader("Producto"));
-            table.addCell(crearCeldaHeader("Cant."));
-            table.addCell(crearCeldaHeader("Precio Unit."));
-            table.addCell(crearCeldaHeader("Subtotal"));
-
-            BigDecimal subtotalSinDescuento = BigDecimal.ZERO;
-
-            for (DetalleVenta detalle : venta.getDetalles()) {
-                table.addCell(new Paragraph(detalle.getProducto().getNombre(), FONT_NORMAL));
-                
-                PdfPCell cellCant = new PdfPCell(new Paragraph(String.valueOf(detalle.getCantidad()), FONT_NORMAL));
-                cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
-                table.addCell(cellCant);
-                
-                PdfPCell cellPrecio = new PdfPCell(new Paragraph(formatearMoneda(detalle.getPrecioUnitario()), FONT_NORMAL));
-                cellPrecio.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                table.addCell(cellPrecio);
-                
-                BigDecimal subtotalItem = detalle.getPrecioUnitario().multiply(new BigDecimal(detalle.getCantidad()));
-                subtotalSinDescuento = subtotalSinDescuento.add(subtotalItem);
-                
-                PdfPCell cellSub = new PdfPCell(new Paragraph(formatearMoneda(subtotalItem), FONT_NORMAL));
-                cellSub.setHorizontalAlignment(Element.ALIGN_RIGHT);
-                table.addCell(cellSub);
-            }
-
             document.add(table);
 
-            Paragraph totales = new Paragraph();
-            totales.setAlignment(Element.ALIGN_RIGHT);
-            totales.setSpacingBefore(15);
-
-            BigDecimal descuento = subtotalSinDescuento.subtract(venta.getTotalVenta());
-            
-            if (descuento.compareTo(BigDecimal.ZERO) > 0) {
-                totales.add(new Chunk("Subtotal: " + formatearMoneda(subtotalSinDescuento) + "\n", FONT_NORMAL));
-                Font fontRojo = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.RED);
-                totales.add(new Chunk("Descuento: -" + formatearMoneda(descuento) + "\n", fontRojo));
+            Paragraph tot = new Paragraph(); tot.setAlignment(Element.ALIGN_RIGHT);
+            BigDecimal desc = subtotalReal.subtract(venta.getTotalVenta());
+            if (desc.compareTo(BigDecimal.ZERO) > 0) {
+                tot.add(new Chunk("\nSubtotal: " + formatearMoneda(subtotalReal), FONT_NORMAL));
+                tot.add(new Chunk("\nDescuento: -" + formatearMoneda(desc), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.RED)));
             }
-
-            Font fontTotal = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Color.BLACK);
-            totales.add(new Chunk("TOTAL: " + formatearMoneda(venta.getTotalVenta()), fontTotal));
-            
-            document.add(totales);
-
-        } catch (DocumentException e) {
-            throw new RuntimeException("Error al generar el comprobante PDF", e);
-        } finally {
-            document.close();
-        }
-
+            tot.add(new Chunk("\nTOTAL: " + formatearMoneda(venta.getTotalVenta()), FONT_TITULO));
+            document.add(tot);
+        } catch (Exception e) { throw new RuntimeException("Error en Venta PDF", e); } 
+        finally { document.close(); }
         return baos.toByteArray();
     }
 
     // ========================================================================
-    // 4. REPORTE DASHBOARD (ACTUALIZADO: MÉTRICAS ÚTILES)
+    // REPORTES AVANZADOS (DASHBOARD)
     // ========================================================================
     public byte[] generarReporteDashboard(DashboardFilterDTO filtro) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Document document = new Document(PageSize.A4);
-
+        Document document = new Document(PageSize.A4, 36, 36, 36, 60);
         try {
-            PdfWriter.getInstance(document, baos);
+            PdfWriter writer = PdfWriter.getInstance(document, baos);
+            writer.setPageEvent(new HeaderFooterPageEvent(empresaConfigService.obtenerConfiguracion().getNombreFantasia()));
             document.open();
-
-            // 🔥 CABECERA DINÁMICA
-            construirCabeceraEmpresa(document, "Reporte de Gestión");
+            construirCabeceraEmpresa(document, "Reporte Analítico de Gestión");
 
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-            String inicioStr = (filtro.getFechaInicio() != null) ? filtro.getFechaInicio().format(fmt) : "Inicio";
-            String finStr = (filtro.getFechaFin() != null) ? filtro.getFechaFin().format(fmt) : "Hoy";
-            
-            Paragraph contexto = new Paragraph();
-            contexto.setAlignment(Element.ALIGN_CENTER);
-            contexto.setSpacingAfter(20);
-            
-            contexto.add(new Chunk("Periodo: " + inicioStr + " al " + finStr + "\n", FONT_SUBTITULO));
-            
-            if (filtro.getGeneradoPor() != null) {
-                contexto.add(new Chunk("Generado por: " + filtro.getGeneradoPor(), FONT_DATA_EMPRESA));
-            }
-            
-            document.add(contexto);
+            String rango = "Periodo: " + (filtro.getFechaInicio() != null ? filtro.getFechaInicio().format(fmt) : "Inicio") + 
+                           " al " + (filtro.getFechaFin() != null ? filtro.getFechaFin().format(fmt) : "Hoy");
+            Paragraph pRango = new Paragraph(rango, FONT_SUBTITULO); pRango.setAlignment(Element.ALIGN_CENTER); pRango.setSpacingAfter(15);
+            document.add(pRango);
 
-            // --- GRÁFICO (IMAGEN) ---
-            if (filtro.getGraficoBase64() != null && !filtro.getGraficoBase64().isEmpty()) {
-                try {
-                    String base64Image = filtro.getGraficoBase64().split(",")[1];
-                    byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-                    
-                    Image grafico = Image.getInstance(imageBytes);
-                    grafico.setAlignment(Element.ALIGN_CENTER);
-                    grafico.scaleToFit(500, 250); 
-                    grafico.setSpacingAfter(5);
-                    document.add(grafico);
-
-                    Paragraph leyenda = new Paragraph(
-                        "Gráfico: Evolución de ventas diarias (en pesos) durante el periodo seleccionado.", 
-                        FONT_LEYENDA
-                    );
-                    leyenda.setAlignment(Element.ALIGN_CENTER);
-                    leyenda.setSpacingAfter(20);
-                    document.add(leyenda);
-
-                } catch (Exception e) {
-                    System.err.println("Error al procesar imagen del gráfico: " + e.getMessage());
-                }
-            }
-
-            // --- OBTENCIÓN DE DATOS ---
             DashboardStatsDTO stats = dashboardService.getEstadisticasFiltradas(filtro.getFechaInicio(), filtro.getFechaFin());
-            List<TopProductoDTO> top = dashboardService.getTopProductosPorRango(filtro.getFechaInicio(), filtro.getFechaFin());
+            PdfPTable tableM = new PdfPTable(3); tableM.setWidthPercentage(100); tableM.setSpacingBefore(10);
+            tableM.addCell(crearCeldaHeader("Ventas Totales")); tableM.addCell(crearCeldaHeader("Operaciones")); tableM.addCell(crearCeldaHeader("Ticket Promedio"));
+            tableM.addCell(crearCeldaDatoCenter(formatearMoneda(stats.getTotalVentasMes())));
+            tableM.addCell(crearCeldaDatoCenter(String.valueOf(stats.getCantidadVentasPeriodo())));
+            BigDecimal avg = (stats.getCantidadVentasPeriodo() > 0) ? stats.getTotalVentasMes().divide(BigDecimal.valueOf(stats.getCantidadVentasPeriodo()), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+            tableM.addCell(crearCeldaDatoCenter(formatearMoneda(avg)));
+            document.add(tableM);
 
-            // --- TABLA DE MÉTRICAS REDISEÑADA ---
-            PdfPTable tableMetrics = new PdfPTable(3);
-            tableMetrics.setWidthPercentage(100);
-            tableMetrics.setSpacingAfter(20);
-
-            // Encabezados
-            tableMetrics.addCell(crearCeldaHeader("Ventas Totales"));
-            tableMetrics.addCell(crearCeldaHeader("Cant. Transacciones"));
-            tableMetrics.addCell(crearCeldaHeader("Ticket Promedio"));
-            
-            // 1. Total Ventas ($)
-            PdfPCell cellVentas = new PdfPCell(new Paragraph(formatearMoneda(stats.getTotalVentasMes()), FONT_NORMAL));
-            cellVentas.setHorizontalAlignment(Element.ALIGN_CENTER);
-            cellVentas.setPadding(8);
-            tableMetrics.addCell(cellVentas);
-
-            // 2. Cantidad de Ventas (#)
-            PdfPCell cellCant = new PdfPCell(new Paragraph(String.valueOf(stats.getCantidadVentasPeriodo()), FONT_NORMAL));
-            cellCant.setHorizontalAlignment(Element.ALIGN_CENTER);
-            cellCant.setPadding(8);
-            tableMetrics.addCell(cellCant);
-
-            // 3. Ticket Promedio ($)
-            BigDecimal ticketPromedio = BigDecimal.ZERO;
-            if (stats.getCantidadVentasPeriodo() > 0) {
-                ticketPromedio = stats.getTotalVentasMes()
-                    .divide(BigDecimal.valueOf(stats.getCantidadVentasPeriodo()), 2, RoundingMode.HALF_UP);
-            }
-
-            PdfPCell cellTicket = new PdfPCell(new Paragraph(formatearMoneda(ticketPromedio), FONT_NORMAL));
-            cellTicket.setHorizontalAlignment(Element.ALIGN_CENTER);
-            cellTicket.setPadding(8);
-            tableMetrics.addCell(cellTicket);
-            
-            document.add(tableMetrics);
-
-            // --- TOP PRODUCTOS ---
-            Paragraph subtituloTop = new Paragraph("Top Productos Vendidos", FONT_SUBTITULO);
-            subtituloTop.setSpacingAfter(10);
-            document.add(subtituloTop);
-
-            PdfPTable tableTop = new PdfPTable(2);
-            tableTop.setWidthPercentage(100);
-            tableTop.setWidths(new float[] { 3f, 1f });
-
-            tableTop.addCell(crearCeldaHeader("Producto"));
-            tableTop.addCell(crearCeldaHeader("Cantidad Vendida"));
-
-            for (TopProductoDTO p : top) {
-                PdfPCell cellNombre = new PdfPCell(new Paragraph(p.getNombre(), FONT_NORMAL));
-                cellNombre.setPadding(5);
-                tableTop.addCell(cellNombre);
-
-                PdfPCell cellCantProd = new PdfPCell(new Paragraph(String.valueOf(p.getCantidadVendida()), FONT_NORMAL));
-                cellCantProd.setHorizontalAlignment(Element.ALIGN_CENTER);
-                cellCantProd.setPadding(5);
-                tableTop.addCell(cellCantProd);
-            }
-            document.add(tableTop);
-
-            document.close();
-            return baos.toByteArray();
-        } catch (Exception e) {
-            throw new RuntimeException("Error generando PDF reporte: " + e.getMessage(), e);
-        }
+        } catch (Exception e) { throw new RuntimeException("Error en Reporte PDF", e); } 
+        finally { document.close(); }
+        return baos.toByteArray();
     }
 
+    // ✅ NUEVO: REPORTE VALORIZACIÓN
+    public byte[] generarReporteValorizacionPdf(List<ValorizacionInventarioDTO> datos) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4, 36, 36, 36, 60);
+        try {
+            PdfWriter writer = PdfWriter.getInstance(document, baos);
+            writer.setPageEvent(new HeaderFooterPageEvent(empresaConfigService.obtenerConfiguracion().getNombreFantasia()));
+            document.open();
+            construirCabeceraEmpresa(document, "Valorización de Inventario");
+
+            PdfPTable table = new PdfPTable(3);
+            table.setWidthPercentage(100);
+            table.setWidths(new float[]{4f, 2f, 3f});
+            table.setSpacingBefore(15);
+            table.addCell(crearCeldaHeader("Categoría"));
+            table.addCell(crearCeldaHeader("Unidades Físicas"));
+            table.addCell(crearCeldaHeader("Valor Total Costo"));
+
+            long totalUnidades = 0;
+            BigDecimal totalGlobal = BigDecimal.ZERO;
+
+            for (ValorizacionInventarioDTO d : datos) {
+                table.addCell(new Paragraph(d.getCategoria(), FONT_NORMAL));
+                table.addCell(crearCeldaDatoCenter(String.valueOf(d.getCantidadUnidades())));
+                table.addCell(crearCeldaMoneda(d.getValorTotal()));
+
+                totalUnidades += d.getCantidadUnidades();
+                totalGlobal = totalGlobal.add(d.getValorTotal() != null ? d.getValorTotal() : BigDecimal.ZERO);
+            }
+            document.add(table);
+
+            Paragraph pTot = new Paragraph("\nResumen: " + totalUnidades + " unidades | Capital Invertido: " + formatearMoneda(totalGlobal), FONT_TITULO);
+            pTot.setAlignment(Element.ALIGN_RIGHT);
+            document.add(pTot);
+        } catch (Exception e) { throw new RuntimeException("Error PDF Valorizacion", e); } 
+        finally { document.close(); }
+        return baos.toByteArray();
+    }
+
+    // ✅ NUEVO: REPORTE STOCK INMOVILIZADO
+    public byte[] generarReporteStockInmovilizadoPdf(List<StockInmovilizadoDTO> datos, int dias) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4, 36, 36, 36, 60);
+        try {
+            PdfWriter writer = PdfWriter.getInstance(document, baos);
+            writer.setPageEvent(new HeaderFooterPageEvent(empresaConfigService.obtenerConfiguracion().getNombreFantasia()));
+            document.open();
+            construirCabeceraEmpresa(document, "Reporte de Stock Inmovilizado");
+            
+            Paragraph desc = new Paragraph("Productos sin ventas en los últimos " + dias + " días.", FONT_SUBTITULO);
+            desc.setSpacingAfter(10);
+            document.add(desc);
+
+            PdfPTable table = new PdfPTable(5);
+            table.setWidthPercentage(100);
+            table.setWidths(new float[]{4f, 2f, 1f, 2f, 2f});
+            table.addCell(crearCeldaHeader("Producto"));
+            table.addCell(crearCeldaHeader("Categoría"));
+            table.addCell(crearCeldaHeader("Stock"));
+            table.addCell(crearCeldaHeader("Capital Parado"));
+            table.addCell(crearCeldaHeader("Últ. Venta"));
+
+            BigDecimal capitalTotal = BigDecimal.ZERO;
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+            for (StockInmovilizadoDTO d : datos) {
+                table.addCell(new Paragraph(d.getNombre(), FONT_NORMAL));
+                table.addCell(new Paragraph(d.getCategoria(), FONT_NORMAL));
+                table.addCell(crearCeldaDatoCenter(String.valueOf(d.getStockActual())));
+                table.addCell(crearCeldaMoneda(d.getCapitalParado()));
+                
+                String fechaUltima = d.getUltimaVenta() != null ? d.getUltimaVenta().format(fmt) : "Nunca";
+                table.addCell(crearCeldaDatoCenter(fechaUltima));
+
+                capitalTotal = capitalTotal.add(d.getCapitalParado() != null ? d.getCapitalParado() : BigDecimal.ZERO);
+            }
+            document.add(table);
+
+            Paragraph pTot = new Paragraph("\nCapital Total Parado: " + formatearMoneda(capitalTotal), FONT_TITULO);
+            pTot.setAlignment(Element.ALIGN_RIGHT);
+            document.add(pTot);
+        } catch (Exception e) { throw new RuntimeException("Error PDF Inmovilizado", e); } 
+        finally { document.close(); }
+        return baos.toByteArray();
+    }
+
+    // ✅ NUEVO: REPORTE EVOLUCIÓN DE COSTOS
+    public byte[] generarReporteEvolucionCostosPdf(List<VariacionCostoDTO> datos, String productoId) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4, 36, 36, 36, 60);
+        try {
+            PdfWriter writer = PdfWriter.getInstance(document, baos);
+            writer.setPageEvent(new HeaderFooterPageEvent(empresaConfigService.obtenerConfiguracion().getNombreFantasia()));
+            document.open();
+            construirCabeceraEmpresa(document, "Evolución de Costos de Compra");
+            
+            // Si el nombre del producto viene en el primer elemento, lo mostramos
+            String nombreProd = (!datos.isEmpty()) ? datos.get(0).getProducto() : "Producto " + productoId;
+            Paragraph desc = new Paragraph("Historial de precios para: " + nombreProd, FONT_SUBTITULO);
+            desc.setSpacingAfter(10);
+            document.add(desc);
+
+            PdfPTable table = new PdfPTable(4);
+            table.setWidthPercentage(100);
+            table.setWidths(new float[]{2f, 4f, 2f, 2f});
+            table.addCell(crearCeldaHeader("Fecha"));
+            table.addCell(crearCeldaHeader("Proveedor"));
+            table.addCell(crearCeldaHeader("Nro. Orden"));
+            table.addCell(crearCeldaHeader("Costo Pagado"));
+
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+            for (VariacionCostoDTO d : datos) {
+                String fecha = d.getFechaCompra() != null ? d.getFechaCompra().format(fmt) : "N/A";
+                table.addCell(crearCeldaDatoCenter(fecha));
+                table.addCell(new Paragraph(d.getProveedor(), FONT_NORMAL));
+                table.addCell(crearCeldaDatoCenter(d.getNroOrden()));
+                table.addCell(crearCeldaMoneda(d.getCostoPagado()));
+            }
+            document.add(table);
+
+        } catch (Exception e) { throw new RuntimeException("Error PDF Evolucion", e); } 
+        finally { document.close(); }
+        return baos.toByteArray();
+    }
+
+    // ========================================================================
+    // HELPERS DE TABLA
+    // ========================================================================
     private PdfPCell crearCeldaHeader(String texto) {
         PdfPCell cell = new PdfPCell(new Paragraph(texto, FONT_HEADER_TABLA));
         cell.setBackgroundColor(Color.DARK_GRAY);
         cell.setHorizontalAlignment(Element.ALIGN_CENTER);
         cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
         cell.setPadding(8);
+        return cell;
+    }
+
+    private PdfPCell crearCeldaMoneda(BigDecimal valor) {
+        PdfPCell cell = new PdfPCell(new Paragraph(formatearMoneda(valor), FONT_NORMAL));
+        cell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setPadding(6);
+        return cell;
+    }
+
+    private PdfPCell crearCeldaDatoCenter(String texto) {
+        PdfPCell cell = new PdfPCell(new Paragraph(texto, FONT_NORMAL));
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setPadding(6);
         return cell;
     }
 }

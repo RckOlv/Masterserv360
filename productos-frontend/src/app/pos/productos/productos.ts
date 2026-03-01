@@ -9,7 +9,7 @@ import { AuthService } from '../../service/auth.service';
 import { ProductoDTO } from '../../models/producto.model';
 import { ProductoFiltroDTO } from '../../models/producto-filtro.model';
 import { CategoriaDTO } from '../../models/categoria.model';
-import { mostrarToast, confirmarAccion } from '../../utils/toast'; // ✅ AÑADIDO confirmarAccion
+import { mostrarToast, confirmarAccion } from '../../utils/toast'; 
 import { Page } from '../../models/page.model'; 
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
@@ -55,6 +55,11 @@ export default class ProductosComponent implements OnInit {
   public productoAjustar: ProductoDTO | null = null;
   public isSavingAjuste = false;
   private modalAjusteInstance: any;
+
+  // ✅ NUEVAS VARIABLES PARA KARDEX
+  public historialStock: any[] = [];
+  public productoSeleccionadoNombre: string = '';
+  public isLoadingKardex = false;
 
   constructor() {
     this.filtroForm = this.fb.group({
@@ -115,6 +120,34 @@ export default class ProductosComponent implements OnInit {
         console.error(err);
         this.handleError(err, 'cargar');
         this.isLoading = false;
+      }
+    });
+  }
+
+  // ✅ NUEVO MÉTODO: ABRIR KARDEX
+  abrirKardex(producto: ProductoDTO) {
+    if (!producto.id) return;
+    this.productoSeleccionadoNombre = producto.nombre;
+    this.historialStock = [];
+    this.isLoadingKardex = true;
+
+    // Abrimos el modal
+    const modalEl = document.getElementById('modalKardex');
+    if (modalEl) {
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+
+    // Pedimos los datos al backend
+    this.productoService.getHistorialStock(producto.id).subscribe({
+      next: (movs) => {
+        this.historialStock = movs;
+        this.isLoadingKardex = false;
+      },
+      error: (err) => {
+        console.error(err);
+        mostrarToast('Error al cargar el historial de stock', 'danger');
+        this.isLoadingKardex = false;
       }
     });
   }
@@ -189,7 +222,6 @@ export default class ProductosComponent implements OnInit {
     });
   }
 
-  /** ✅ ELIMINAR PRODUCTO MIGRADO */
   eliminarProducto(id: number | undefined): void {
     if (!id) return;
     
@@ -207,7 +239,6 @@ export default class ProductosComponent implements OnInit {
             this.cargarProductos(); 
           },
           error: (err: HttpErrorResponse) => { 
-            console.error('Error al eliminar producto:', err); 
             this.handleError(err, 'eliminar'); 
             this.isLoading = false; 
           }
@@ -222,10 +253,6 @@ export default class ProductosComponent implements OnInit {
     else this.errorMessage = err.error?.message || `Error al ${context} el producto.`;
     mostrarToast(this.errorMessage!, 'danger');
   }
-
-  // ==========================================
-  // 📥 MÉTODOS DE EXPORTACIÓN (Catálogo)
-  // ==========================================
 
   private obtenerTodosParaExportar(callback: (productos: ProductoDTO[]) => void) {
     this.isLoading = true;
@@ -250,7 +277,6 @@ export default class ProductosComponent implements OnInit {
   exportarCatalogoPDF() {
     this.obtenerTodosParaExportar((productos) => {
         const doc = new jsPDF();
-        
         const fechaHora = new Date().toLocaleString('es-AR'); 
         const usuario = localStorage.getItem('username') || localStorage.getItem('email') || 'Administrador';
 
@@ -286,7 +312,6 @@ export default class ProductosComponent implements OnInit {
             doc.setPage(i);
             doc.setFontSize(9);
             doc.setTextColor(150); 
-            
             doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15);
             doc.text(`Sistema POS Masterserv - Auditoría`, 14, pageHeight - 10);
             doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
@@ -300,7 +325,6 @@ export default class ProductosComponent implements OnInit {
   exportarCatalogoExcel() {
     this.obtenerTodosParaExportar((productos) => {
         const fecha = new Date().toLocaleDateString().replace(/\//g, '-');
-        
         const data = productos.map(p => ({
             'Código': p.codigo || 'N/A',
             'Nombre del Producto': p.nombre,
@@ -314,7 +338,6 @@ export default class ProductosComponent implements OnInit {
         const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
         const wb: XLSX.WorkBook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Catálogo');
-
         XLSX.writeFile(wb, `Catalogo_Productos_${fecha}.xlsx`);
     });
   }

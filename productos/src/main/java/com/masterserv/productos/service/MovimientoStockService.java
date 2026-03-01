@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MovimientoStockService {
@@ -66,7 +68,6 @@ public class MovimientoStockService {
             audit.setEntidadId(producto.getId().toString());
             audit.setAccion(tipo.name()); 
 
-            // --- DETALLE INTELIGENTE ---
             String detallePrefix = "";
             if (tipo == TipoMovimiento.SALIDA_VENTA) {
                 detallePrefix = "🛒 Venta registrada. ";
@@ -94,5 +95,26 @@ public class MovimientoStockService {
         } catch (Exception e) {
             System.err.println(">>> [ERROR] Auditoría: " + e.getMessage());
         }
+    }
+
+    // ✅ CORREGIDO: Mapeo manual del nombre de usuario y uso del nuevo método del mapper
+    @Transactional(readOnly = true)
+    public List<MovimientoStockDTO> obtenerMovimientosPorProducto(Long productoId) {
+        Producto producto = productoRepository.findById(productoId)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+        
+        return movimientoStockRepository.findByProductoOrderByFechaDesc(producto)
+                .stream()
+                .map(mov -> {
+                    MovimientoStockDTO dto = movimientoStockMapper.toMovimientoStockDTO(mov);
+                    // Seteamos el nombre del usuario manualmente si existe
+                    if (mov.getUsuario() != null) {
+                        dto.setUsuarioNombre(mov.getUsuario().getNombre() + " " + mov.getUsuario().getApellido());
+                    } else {
+                        dto.setUsuarioNombre("Sistema");
+                    }
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 }
