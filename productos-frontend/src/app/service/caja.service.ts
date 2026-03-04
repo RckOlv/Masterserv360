@@ -59,5 +59,9 @@ export class CajaService {
   obtenerMovimientosCaja(cajaId: number): Observable<MovimientoCajaDTO[]> {
     return this.http.get<MovimientoCajaDTO[]>(`${this.apiUrl}/${cajaId}/movimientos`);
   }
+
+  registrarIngreso(cajaId: number, monto: number, motivo: string): Observable<Caja> {
+    return this.http.post<Caja>(`${this.apiUrl}/ingreso`, { cajaId, monto, motivo });
+  }
   
 }

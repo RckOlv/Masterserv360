@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CajaService, Caja, MovimientoCajaDTO } from '../../service/caja.service';
 import { AuthService } from '../../service/auth.service';
 import { mostrarToast } from '../../utils/toast';
+import Swal from 'sweetalert2'; // ✅ IMPORTAMOS SWEETALERT
 
 declare var bootstrap: any;
 
@@ -23,21 +24,37 @@ export default class CajaComponent implements OnInit {
   usuarioId: number = 0;
   movimientos: MovimientoCajaDTO[] = [];
   isLoadingMovimientos = false;
- 
-  // Formularios
-  montoInicialInput: number = 0;
-  montoDeclaradoInput: number = 0;
-  observacionCierreInput: string = ''; // ✅ NUEVO CAMPO PARA JUSTIFICACIÓN
   
-  // Formulario de Retiro
-  montoRetiroInput: number = 0;
-  motivoRetiroInput: string = '';
+  // Formularios
+  montoInicialInput: number | null = null;
+  montoDeclaradoInput: number | null = null;
+  observacionCierreInput: string = ''; 
+  
+  // Formulario de Movimiento (Ingreso/Egreso)
+  tipoMovimientoInput: 'INGRESO' | 'EGRESO' = 'EGRESO';
+  montoMovimientoInput: number | null = null;
+  motivoMovimientoInput: string = '';
   
   isProcessing = false;
-  isRetiring = false;
+  isProcessingMov = false;
 
   ngOnInit() {
     this.obtenerUsuarioYCaja();
+  }
+
+  // ✅ BLOQUEO DE TECLAS: No deja presionar e, E, +, ni - (ni el normal ni el del teclado numérico)
+  preventInvalidChars(event: KeyboardEvent) {
+    if (['e', 'E', '-', '+', 'Subtract', 'Add'].includes(event.key) || ['e', 'E', '-', '+', 'Subtract', 'Add'].includes(event.code)) {
+      event.preventDefault();
+    }
+  }
+
+  // ✅ DEFENSA SECUNDARIA: Si el usuario logra pegar un número negativo, lo convierte en positivo al instante
+  asegurarPositivo(campo: 'montoInicialInput' | 'montoMovimientoInput' | 'montoDeclaradoInput') {
+    const valor = this[campo];
+    if (valor !== null && valor < 0) {
+      this[campo] = Math.abs(valor);
+    }
   }
 
   obtenerUsuarioYCaja() {
@@ -72,7 +89,7 @@ export default class CajaComponent implements OnInit {
         this.cajaActual = caja;
         this.isLoading = false;
         if (this.cajaActual) {
-            this.cargarMovimientos(); // ✅ SI HAY CAJA, BUSCAMOS SU HISTORIA
+            this.cargarMovimientos(); 
         }
       },
       error: (err) => {
@@ -98,8 +115,8 @@ export default class CajaComponent implements OnInit {
   }
 
   abrirCaja() {
-    if (this.montoInicialInput < 0) {
-      mostrarToast('El monto inicial no puede ser negativo.', 'warning');
+    if (this.montoInicialInput === null || this.montoInicialInput < 0) {
+      mostrarToast('Ingresa un monto inicial válido.', 'warning');
       return;
     }
 
@@ -107,7 +124,7 @@ export default class CajaComponent implements OnInit {
     this.cajaService.abrirCaja(this.usuarioId, this.montoInicialInput).subscribe({
       next: (cajaAbierta) => {
         this.cajaActual = cajaAbierta;
-        this.montoInicialInput = 0;
+        this.montoInicialInput = null;
         this.isProcessing = false;
         mostrarToast('¡Caja abierta con éxito!', 'success');
       },
@@ -118,45 +135,68 @@ export default class CajaComponent implements OnInit {
     });
   }
 
-  abrirModalRetiro() {
-    this.montoRetiroInput = 0;
-    this.motivoRetiroInput = '';
-    const modalEl = document.getElementById('modalRetiroCaja');
+  abrirModalMovimiento(tipo: 'INGRESO' | 'EGRESO') {
+    this.tipoMovimientoInput = tipo;
+    this.montoMovimientoInput = null;
+    this.motivoMovimientoInput = '';
+    const modalEl = document.getElementById('modalMovimientoCaja');
     if (modalEl) {
       new bootstrap.Modal(modalEl).show();
     }
   }
 
-  registrarRetiro() {
-    if (this.montoRetiroInput <= 0) {
+  registrarMovimiento() {
+    if (!this.montoMovimientoInput || this.montoMovimientoInput <= 0) {
       mostrarToast('Ingresa un monto válido.', 'warning');
       return;
     }
-    if (!this.motivoRetiroInput.trim()) {
-      mostrarToast('Debes indicar el motivo del gasto.', 'warning');
+    if (!this.motivoMovimientoInput.trim()) {
+      mostrarToast('Debes indicar el motivo del movimiento.', 'warning');
       return;
     }
     if (!this.cajaActual) return;
 
-    this.isRetiring = true;
-    this.cajaService.registrarRetiro(this.cajaActual.id, this.montoRetiroInput, this.motivoRetiroInput).subscribe({
-      next: (cajaActualizada) => {
-        this.cajaActual = cajaActualizada;
-        this.isRetiring = false;
-        const modalEl = document.getElementById('modalRetiroCaja');
-        if (modalEl) { bootstrap.Modal.getInstance(modalEl)?.hide(); }
-        mostrarToast('Retiro registrado correctamente.', 'success');
-      },
-      error: (err) => {
-        this.isRetiring = false;
-        mostrarToast('Error al registrar el retiro.', 'danger');
+    if (this.tipoMovimientoInput === 'EGRESO') {
+      if (this.montoMovimientoInput > this.totalEsperadoEfectivo) {
+        // ✅ SWEET ALERT EN LUGAR DE TOAST PARA SALDO INSUFICIENTE
+        Swal.fire({
+          icon: 'error',
+          title: 'Saldo Insuficiente',
+          html: `Estás intentando retirar <b>$${this.montoMovimientoInput.toLocaleString('es-AR')}</b><br>pero solo tienes <b>$${this.totalEsperadoEfectivo.toLocaleString('es-AR')}</b> físico en cajón.`,
+          confirmButtonColor: '#E41E26',
+          confirmButtonText: 'Entendido',
+          background: '#1e1e1e',
+          color: '#ffffff'
+        });
+        return;
       }
-    });
+
+      this.isProcessingMov = true;
+      this.cajaService.registrarRetiro(this.cajaActual.id, this.montoMovimientoInput, this.motivoMovimientoInput).subscribe({
+        next: (cajaActualizada) => this.completarMovimiento(cajaActualizada, 'Retiro registrado correctamente.'),
+        error: () => { this.isProcessingMov = false; mostrarToast('Error al registrar el retiro.', 'danger'); }
+      });
+    } else {
+      this.isProcessingMov = true;
+      this.cajaService.registrarIngreso(this.cajaActual.id, this.montoMovimientoInput, this.motivoMovimientoInput).subscribe({
+        next: (cajaActualizada) => this.completarMovimiento(cajaActualizada, 'Ingreso registrado correctamente.'),
+        error: () => { this.isProcessingMov = false; mostrarToast('Error al registrar el ingreso.', 'danger'); }
+      });
+    }
+  }
+
+  private completarMovimiento(cajaActualizada: Caja, mensaje: string) {
+    this.cajaActual = cajaActualizada;
+    this.isProcessingMov = false;
+    const modalEl = document.getElementById('modalMovimientoCaja');
+    if (modalEl) { bootstrap.Modal.getInstance(modalEl)?.hide(); }
+    mostrarToast(mensaje, 'success');
+    this.cargarMovimientos();
   }
 
   abrirModalCierre() {
-    this.montoDeclaradoInput = 0;
-    this.observacionCierreInput = ''; // Limpiamos la observación anterior
+    this.montoDeclaradoInput = null;
+    this.observacionCierreInput = ''; 
     const modalEl = document.getElementById('modalCierreCaja');
     if (modalEl) {
       new bootstrap.Modal(modalEl).show();
@@ -164,9 +204,11 @@ export default class CajaComponent implements OnInit {
   }
 
   cerrarCaja() {
-    if (!this.cajaActual) return;
+    if (!this.cajaActual || this.montoDeclaradoInput === null) {
+        mostrarToast('Ingresa el monto físico contado en el cajón.', 'warning');
+        return;
+    }
 
-    // ✅ VALIDACIÓN: Si hay diferencia, obligamos a poner observación
     const dif = this.montoDeclaradoInput - this.totalEsperadoEfectivo;
     if (dif !== 0 && !this.observacionCierreInput.trim()) {
         mostrarToast('Hay una diferencia en caja. Debes ingresar un motivo obligatoriamente.', 'warning');
@@ -174,8 +216,6 @@ export default class CajaComponent implements OnInit {
     }
 
     this.isProcessing = true;
-
-    // ✅ ACA ESTA EL CAMBIO: Le pasamos la observación al servicio
     this.cajaService.cerrarCaja(this.cajaActual.id, this.usuarioId, this.montoDeclaradoInput, this.observacionCierreInput).subscribe({
       next: (cajaCerrada) => {
         this.cajaActual = null;
@@ -195,7 +235,6 @@ export default class CajaComponent implements OnInit {
     });
   }
 
-  // Cálculos dinámicos
   get totalEsperadoEfectivo(): number {
     if (!this.cajaActual) return 0;
     const extracciones = this.cajaActual.extracciones || 0;

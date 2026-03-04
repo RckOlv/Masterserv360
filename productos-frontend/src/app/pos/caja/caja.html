@@ -22,7 +22,10 @@
           <label class="text-white fw-bold mb-2">Fondo inicial de caja (Cambio) *</label>
           <div class="input-group input-group-lg">
             <span class="input-group-text bg-dark text-success border-secondary">$</span>
-            <input type="number" class="form-control bg-dark text-white border-secondary fw-bold" 
+            <input type="number" min="0" 
+                   (keydown)="preventInvalidChars($event)"
+                   (ngModelChange)="asegurarPositivo('montoInicialInput')"
+                   class="form-control bg-dark text-white border-secondary fw-bold" 
                    [(ngModel)]="montoInicialInput" placeholder="Ej: 5000">
           </div>
         </div>
@@ -105,14 +108,25 @@
              <div class="card-body d-flex flex-column justify-content-center p-4">
                  <h4 class="text-white-50">Total Facturado (Todo medio)</h4>
                  <h2 class="text-white mb-4">{{ totalVentasDelDia | currency:'ARS':'symbol':'1.0-0' }}</h2>
-                 <div class="d-flex gap-2">
-                    <button class="btn btn-warning btn-lg flex-grow-1 fw-bold" (click)="abrirModalRetiro()">
-                        <i class="bi bi-wallet2"></i> RETIRAR DINERO
-                    </button>
-                    <button class="btn btn-danger btn-lg flex-grow-1 fw-bold" (click)="abrirModalCierre()">
-                        <i class="bi bi-box-arrow-right"></i> CERRAR CAJA
-                    </button>
+                 
+                 <div class="row g-2">
+                    <div class="col-6">
+                        <button class="btn btn-success w-100 fw-bold p-3" (click)="abrirModalMovimiento('INGRESO')">
+                            <i class="bi bi-arrow-down-circle"></i> INGRESAR
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-warning text-dark w-100 fw-bold p-3" (click)="abrirModalMovimiento('EGRESO')">
+                            <i class="bi bi-arrow-up-circle"></i> RETIRAR
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-danger w-100 fw-bold p-3 mt-1" (click)="abrirModalCierre()">
+                            <i class="bi bi-box-arrow-right"></i> CERRAR CAJA
+                        </button>
+                    </div>
                  </div>
+
              </div>
          </div>
       </div>
@@ -173,30 +187,52 @@
   </div>
 </div>
 
-<div class="modal fade" id="modalRetiroCaja" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+<div class="modal fade" id="modalMovimientoCaja" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content bg-dark border-warning text-white">
-      <div class="modal-header border-secondary bg-warning text-dark">
-        <h5 class="modal-title fw-bold"><i class="bi bi-wallet2"></i> Registrar Gasto / Retiro</h5>
-        <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal"></button>
+    <div class="modal-content bg-dark text-white" [ngClass]="tipoMovimientoInput === 'EGRESO' ? 'border-warning' : 'border-success'">
+      <div class="modal-header border-secondary text-dark" [ngClass]="tipoMovimientoInput === 'EGRESO' ? 'bg-warning' : 'bg-success'">
+        <h5 class="modal-title fw-bold text-white">
+            <i class="bi" [ngClass]="tipoMovimientoInput === 'EGRESO' ? 'bi-arrow-up-circle' : 'bi-arrow-down-circle'"></i> 
+            {{ tipoMovimientoInput === 'EGRESO' ? 'Registrar Retiro / Gasto' : 'Registrar Ingreso de Plata' }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body p-4 text-center">
-        <div class="mb-4">
-            <label class="h5 text-warning fw-bold">¿Cuánto dinero retiras?</label>
+      <div class="modal-body p-4">
+        
+        <div class="btn-group w-100 mb-4" role="group">
+          <input type="radio" class="btn-check" name="btnTipoMov" id="btnRetiro" autocomplete="off" 
+                 [checked]="tipoMovimientoInput === 'EGRESO'" (click)="tipoMovimientoInput = 'EGRESO'">
+          <label class="btn btn-outline-warning fw-bold py-2" for="btnRetiro">Retirar Plata</label>
+
+          <input type="radio" class="btn-check" name="btnTipoMov" id="btnIngreso" autocomplete="off"
+                 [checked]="tipoMovimientoInput === 'INGRESO'" (click)="tipoMovimientoInput = 'INGRESO'">
+          <label class="btn btn-outline-success fw-bold py-2" for="btnIngreso">Ingresar Plata</label>
+        </div>
+
+        <div class="mb-4 text-center">
+            <label class="h5 fw-bold mb-2" [ngClass]="tipoMovimientoInput === 'EGRESO' ? 'text-warning' : 'text-success'">¿Cuál es el monto?</label>
             <div class="input-group input-group-lg w-75 mx-auto">
-                <span class="input-group-text bg-dark text-warning border-secondary">$</span>
-                <input type="number" class="form-control bg-dark text-white border-secondary text-center" [(ngModel)]="montoRetiroInput">
+                <span class="input-group-text bg-dark border-secondary" [ngClass]="tipoMovimientoInput === 'EGRESO' ? 'text-warning' : 'text-success'">$</span>
+                <input type="number" min="0" 
+                       (keydown)="preventInvalidChars($event)"
+                       (ngModelChange)="asegurarPositivo('montoMovimientoInput')"
+                       class="form-control bg-dark text-white border-secondary text-center" 
+                       [(ngModel)]="montoMovimientoInput" placeholder="0">
             </div>
         </div>
         <div class="text-start">
-            <label class="small text-white-50 mb-1">Motivo (Ej: Facturas, Limpieza, Yerba...)</label>
-            <input type="text" class="form-control bg-dark text-white border-secondary" [(ngModel)]="motivoRetiroInput">
+            <label class="small text-white-50 mb-1">Motivo / Descripción</label>
+            <input type="text" class="form-control bg-dark text-white border-secondary" [(ngModel)]="motivoMovimientoInput" 
+                   [placeholder]="tipoMovimientoInput === 'EGRESO' ? 'Ej: Pago de flete, yerba...' : 'Ej: Fondo de cambio extra...'">
         </div>
       </div>
       <div class="modal-footer border-secondary">
         <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-warning fw-bold text-dark px-4" (click)="registrarRetiro()" [disabled]="isRetiring">
-            <span *ngIf="isRetiring" class="spinner-border spinner-border-sm me-2"></span>Confirmar Retiro
+        <button type="button" class="btn fw-bold px-4" 
+                [ngClass]="tipoMovimientoInput === 'EGRESO' ? 'btn-warning text-dark' : 'btn-success text-white'"
+                (click)="registrarMovimiento()" 
+                [disabled]="isProcessingMov">
+            <span *ngIf="isProcessingMov" class="spinner-border spinner-border-sm me-2"></span>Confirmar
         </button>
       </div>
     </div>
@@ -214,20 +250,24 @@
         <label class="h5 fw-bold text-warning mb-3">Dinero físico en cajón:</label>
         <div class="input-group input-group-lg w-75 mx-auto mb-4">
             <span class="input-group-text bg-dark text-warning border-secondary">$</span>
-            <input type="number" class="form-control bg-dark text-white border-secondary text-center fs-2" [(ngModel)]="montoDeclaradoInput">
+            <input type="number" min="0" 
+                   (keydown)="preventInvalidChars($event)"
+                   (ngModelChange)="asegurarPositivo('montoDeclaradoInput')"
+                   class="form-control bg-dark text-white border-secondary text-center fs-2" 
+                   [(ngModel)]="montoDeclaradoInput" placeholder="0">
         </div>
 
         <div class="alert alert-secondary bg-opacity-10 text-start border-0 mb-3">
             <div class="d-flex justify-content-between mb-1"><span>Esperado (Sistema):</span> <strong>{{ totalEsperadoEfectivo | currency:'ARS':'symbol':'1.0-0' }}</strong></div>
-            <div class="d-flex justify-content-between mb-1"><span>Declarado:</span> <strong>{{ montoDeclaradoInput | currency:'ARS':'symbol':'1.0-0' }}</strong></div>
+            <div class="d-flex justify-content-between mb-1"><span>Declarado:</span> <strong>{{ (montoDeclaradoInput || 0) | currency:'ARS':'symbol':'1.0-0' }}</strong></div>
             <hr class="border-secondary my-2">
             
-            <div class="d-flex justify-content-between fw-bold" [ngClass]="(montoDeclaradoInput - totalEsperadoEfectivo) < 0 ? 'text-danger' : ((montoDeclaradoInput - totalEsperadoEfectivo) > 0 ? 'text-warning' : 'text-success')">
-                <span>Diferencia:</span> <span>{{ (montoDeclaradoInput - totalEsperadoEfectivo) | currency:'ARS':'symbol':'1.0-0' }}</span>
+            <div class="d-flex justify-content-between fw-bold" [ngClass]="((montoDeclaradoInput || 0) - totalEsperadoEfectivo) < 0 ? 'text-danger' : (((montoDeclaradoInput || 0) - totalEsperadoEfectivo) > 0 ? 'text-warning' : 'text-success')">
+                <span>Diferencia:</span> <span>{{ ((montoDeclaradoInput || 0) - totalEsperadoEfectivo) | currency:'ARS':'symbol':'1.0-0' }}</span>
             </div>
         </div>
 
-        <div *ngIf="(montoDeclaradoInput - totalEsperadoEfectivo) !== 0" class="text-start animate__animated animate__fadeIn">
+        <div *ngIf="montoDeclaradoInput !== null && (montoDeclaradoInput - totalEsperadoEfectivo) !== 0" class="text-start animate__animated animate__fadeIn">
             <label class="small text-warning fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill"></i> Justificación de la diferencia *</label>
             <textarea class="form-control bg-dark text-white border-warning" rows="2" [(ngModel)]="observacionCierreInput" placeholder="Escribe el motivo del faltante o sobrante..."></textarea>
         </div>
