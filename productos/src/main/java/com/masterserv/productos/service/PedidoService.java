@@ -76,9 +76,6 @@ public class PedidoService {
     @Autowired private EmailService emailService;
     @Autowired private TemplateEngine templateEngine;
 
-    /**
-     * Crea un Pedido Manual en estado PENDIENTE y NOTIFICA al proveedor.
-     */
     @Transactional
     public PedidoDTO create(PedidoDTO pedidoDTO) {
         Pedido pedido = pedidoMapper.toPedido(pedidoDTO);
@@ -119,7 +116,9 @@ public class PedidoService {
         pedido.setTotalPedido(totalPedido);
 
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
-        enviarNotificacionProveedor(pedidoGuardado, proveedor);
+        
+        // true = Es orden directa manual (no usa plantilla de cotización)
+        enviarNotificacionProveedor(pedidoGuardado, proveedor, true);
         
         return pedidoMapper.toPedidoDTO(pedidoGuardado);
     }
@@ -155,7 +154,6 @@ public class PedidoService {
                 }
             }
 
-            // ✅ CORRECCIÓN DE CONSTRUCTOR: Usamos setters para evitar errores de firma
             MovimientoStockDTO movDto = new MovimientoStockDTO();
             movDto.setProductoId(productoId);
             movDto.setUsuarioId(usuarioQueConfirma.getId());
@@ -167,7 +165,6 @@ public class PedidoService {
             movimientoStockService.registrarMovimiento(movDto);
         }
 
-        // Cerrar las cotizaciones vinculadas
         for (Cotizacion cot : cotizacionesACerrar) {
             cot.setEstado(EstadoCotizacion.RECIBIDA); 
             cotizacionRepository.save(cot);
@@ -353,7 +350,8 @@ public class PedidoService {
             pedidosIds.add(pedidoGuardado.getId());
             pedidosCreados++;
             
-            enviarNotificacionProveedor(pedidoGuardado, proveedor);
+            // false = Es una orden originada de una cotización
+            enviarNotificacionProveedor(pedidoGuardado, proveedor, false);
             
             try {
                 Thread.sleep(15000); 
@@ -376,7 +374,7 @@ public class PedidoService {
         );
     }
     
-    private void enviarNotificacionProveedor(Pedido pedido, Proveedor proveedor) {
+    private void enviarNotificacionProveedor(Pedido pedido, Proveedor proveedor, boolean esOrdenDirecta) {
         try {
             if (proveedor.getEmail() != null && !proveedor.getEmail().isBlank()) {
                 logger.info("📧 Enviando Orden de Compra #{} a '{}'...", pedido.getId(), proveedor.getRazonSocial());
@@ -384,12 +382,34 @@ public class PedidoService {
                 byte[] pdfBytes = pdfService.generarOrdenCompraProveedor(pedido);
                 String linkConfirmacion = frontendUrl + "/proveedor/pedido/" + pedido.getToken();
                 
-                Context context = new Context();
-                context.setVariable("proveedorNombre", proveedor.getRazonSocial());
-                context.setVariable("nroPedido", pedido.getId());
-                context.setVariable("linkConfirmacion", linkConfirmacion);
-                
-                String cuerpoHtml = templateEngine.process("email-orden-compra", context);
+                String cuerpoHtml;
+
+                if (esOrdenDirecta) {
+                    // HTML Custom para Compras Directas
+                    cuerpoHtml = String.format("""
+                        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px;">
+                            <div style="background-color: #E41E26; padding: 20px; text-align: center;">
+                                <h2 style="color: white; margin: 0;">Nueva Orden de Compra Directa</h2>
+                            </div>
+                            <div style="padding: 20px;">
+                                <p>Estimado/a <strong>%s</strong>,</p>
+                                <p>Le adjuntamos una nueva orden de compra solicitando productos para abastecimiento directo.</p>
+                                <p>Por favor, revise el documento adjunto y confirme la recepción y disponibilidad de la mercadería (con precios actualizados si corresponden) haciendo clic en el siguiente enlace:</p>
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="%s" style="background-color: #E41E26; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Confirmar Pedido</a>
+                                </div>
+                                <p>Saludos cordiales,<br>El equipo de Masterserv</p>
+                            </div>
+                        </div>
+                        """, proveedor.getRazonSocial(), linkConfirmacion);
+                } else {
+                    // Plantilla Original para Cotizaciones Aceptadas
+                    Context context = new Context();
+                    context.setVariable("proveedorNombre", proveedor.getRazonSocial());
+                    context.setVariable("nroPedido", pedido.getId());
+                    context.setVariable("linkConfirmacion", linkConfirmacion);
+                    cuerpoHtml = templateEngine.process("email-orden-compra", context);
+                }
                 
                 emailService.enviarEmailConAdjunto(
                     proveedor.getEmail(),

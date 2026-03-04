@@ -1,7 +1,8 @@
-package com.masterserv.productos.controller; // Ajusta el paquete
+package com.masterserv.productos.controller;
 
 import com.masterserv.productos.dto.AbrirCajaDTO;
 import com.masterserv.productos.dto.CerrarCajaDTO;
+import com.masterserv.productos.dto.IngresoCajaDTO;
 import com.masterserv.productos.dto.MovimientoCajaDTO;
 import com.masterserv.productos.dto.RetiroCajaDTO;
 import com.masterserv.productos.entity.Caja;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/caja")
-@CrossOrigin(origins = "*") // Ajusta los orígenes según tu seguridad
+@CrossOrigin(origins = "*") 
 public class CajaController {
 
     @Autowired
@@ -26,7 +27,7 @@ public class CajaController {
     public ResponseEntity<?> verificarCajaAbierta(@PathVariable Long usuarioId) {
         Caja caja = cajaService.obtenerCajaAbierta(usuarioId);
         if (caja == null) {
-            return ResponseEntity.ok(null); // Devuelve null si no hay caja abierta
+            return ResponseEntity.ok(null); 
         }
         return ResponseEntity.ok(caja);
     }
@@ -41,9 +42,15 @@ public class CajaController {
         return ResponseEntity.ok(cajaService.cerrarCaja(dto));
     }
 
-	@PostMapping("/retiro")
+    @PostMapping("/retiro")
     public ResponseEntity<Caja> registrarRetiro(@RequestBody RetiroCajaDTO dto) {
         return ResponseEntity.ok(cajaService.registrarRetiro(dto));
+    }
+
+
+    @PostMapping("/ingreso")
+    public ResponseEntity<Caja> registrarIngreso(@RequestBody IngresoCajaDTO dto) {
+        return ResponseEntity.ok(cajaService.registrarIngreso(dto));
     }
 
     @GetMapping("/{id}/movimientos")

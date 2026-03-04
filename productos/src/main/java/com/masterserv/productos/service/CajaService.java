@@ -2,6 +2,7 @@ package com.masterserv.productos.service;
 
 import com.masterserv.productos.dto.AbrirCajaDTO;
 import com.masterserv.productos.dto.CerrarCajaDTO;
+import com.masterserv.productos.dto.IngresoCajaDTO;
 import com.masterserv.productos.dto.RetiroCajaDTO;
 import com.masterserv.productos.dto.MovimientoCajaDTO;
 import com.masterserv.productos.entity.Auditoria;
@@ -24,27 +25,17 @@ import java.util.stream.Collectors;
 @Service
 public class CajaService {
 
-    @Autowired
-    private CajaRepository cajaRepository;
+    @Autowired private CajaRepository cajaRepository;
+    @Autowired private UsuarioRepository usuarioRepository;
+    @Autowired private AuditoriaRepository auditoriaRepository;
+    @Autowired private MovimientoCajaRepository movimientoCajaRepository;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
-    @Autowired
-    private AuditoriaRepository auditoriaRepository;
-
-    @Autowired
-    private MovimientoCajaRepository movimientoCajaRepository; // ✅ NUEVO REPOSITORIO INYECTADO
-
-    // ✅ AHORA BUSCA LA CAJA DEL LOCAL, NO LA DEL USUARIO
     public Caja obtenerCajaAbierta(Long usuarioId) {
-        // Ignoramos el usuarioId y buscamos si hay alguna caja abierta en el sistema
         return cajaRepository.findFirstByEstado("ABIERTA").orElse(null);
     }
 
     @Transactional
     public Caja abrirCaja(AbrirCajaDTO dto) {
-        // Verificamos si EL LOCAL ya tiene una caja abierta
         if (obtenerCajaAbierta(null) != null) {
             throw new RuntimeException("Ya existe una caja abierta en el local.");
         }
@@ -53,14 +44,13 @@ public class CajaService {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         Caja nuevaCaja = new Caja();
-        nuevaCaja.setUsuario(cajeroQueAbre); // Queda registrado quién la abrió
+        nuevaCaja.setUsuario(cajeroQueAbre); 
         nuevaCaja.setMontoInicial(dto.getMontoInicial());
         nuevaCaja.setExtracciones(BigDecimal.ZERO);
-        nuevaCaja.setEstado("ABIERTA"); // Aseguramos el estado
+        nuevaCaja.setEstado("ABIERTA"); 
         
         Caja guardada = cajaRepository.save(nuevaCaja);
 
-        // ✅ REGISTRAR MOVIMIENTO DE APERTURA EN EL HISTORIAL
         if (dto.getMontoInicial().compareTo(BigDecimal.ZERO) > 0) {
             MovimientoCaja mov = new MovimientoCaja();
             mov.setCaja(guardada);
@@ -129,18 +119,25 @@ public class CajaService {
         }
 
         BigDecimal extraccionActual = caja.getExtracciones() != null ? caja.getExtracciones() : BigDecimal.ZERO;
+        BigDecimal efectivoActual = caja.getVentasEfectivo() != null ? caja.getVentasEfectivo() : BigDecimal.ZERO;
+        
+        // ✅ VALIDACIÓN DE SALDO MÁXIMO (No permite retirar más de lo que hay en cajón)
+        BigDecimal totalDisponible = caja.getMontoInicial().add(efectivoActual).subtract(extraccionActual);
+        if (dto.getMonto().compareTo(totalDisponible) > 0) {
+            throw new RuntimeException("Saldo insuficiente en caja física. Disponible: $" + totalDisponible);
+        }
+
         caja.setExtracciones(extraccionActual.add(dto.getMonto()));
         
         Caja actualizada = cajaRepository.save(caja);
         Usuario operario = caja.getUsuario(); 
 
-        // ✅ REGISTRAR MOVIMIENTO DE RETIRO EN EL HISTORIAL
         MovimientoCaja mov = new MovimientoCaja();
         mov.setCaja(actualizada);
         mov.setTipoMovimiento("EGRESO");
         mov.setConcepto("Retiro: " + dto.getMotivo());
         mov.setMonto(dto.getMonto());
-        mov.setMetodoPago("EFECTIVO"); // Los retiros de cajón son en efectivo
+        mov.setMetodoPago("EFECTIVO"); 
         mov.setUsuario(operario);
         mov.setFecha(LocalDateTime.now());
         movimientoCajaRepository.save(mov);
@@ -155,7 +152,40 @@ public class CajaService {
         return actualizada;
     }
 
-    // ✅ NUEVO MÉTODO PARA OBTENER EL HISTORIAL DE LA CAJA
+    // ✅ NUEVO: LÓGICA PARA INGRESAR DINERO EXTRA A LA CAJA
+    @Transactional
+    public Caja registrarIngreso(IngresoCajaDTO dto) {
+        Caja caja = cajaRepository.findById(dto.getCajaId())
+                .orElseThrow(() -> new RuntimeException("Caja no encontrada"));
+
+        if ("CERRADA".equals(caja.getEstado())) {
+            throw new RuntimeException("No puedes ingresar dinero a una caja cerrada.");
+        }
+
+        // Sumamos el dinero extra al Monto Inicial (Fondo de caja)
+        caja.setMontoInicial(caja.getMontoInicial().add(dto.getMonto()));
+        
+        Caja actualizada = cajaRepository.save(caja);
+        Usuario operario = caja.getUsuario(); 
+
+        MovimientoCaja mov = new MovimientoCaja();
+        mov.setCaja(actualizada);
+        mov.setTipoMovimiento("INGRESO");
+        mov.setConcepto("Ingreso Extra: " + dto.getMotivo());
+        mov.setMonto(dto.getMonto());
+        mov.setMetodoPago("EFECTIVO"); 
+        mov.setUsuario(operario);
+        mov.setFecha(LocalDateTime.now());
+        movimientoCajaRepository.save(mov);
+
+        String detalleIngreso = String.format("Ingreso extra de efectivo. Monto: $%s | Motivo: %s", 
+            dto.getMonto(), dto.getMotivo());
+        
+        registrarAuditoriaCaja(operario, actualizada.getId(), "CAJA_INGRESO", detalleIngreso, "", "");
+
+        return actualizada;
+    }
+
     @Transactional(readOnly = true)
     public List<MovimientoCajaDTO> obtenerMovimientosCaja(Long cajaId) {
         return movimientoCajaRepository.findByCajaIdOrderByFechaDesc(cajaId).stream().map(m -> {
